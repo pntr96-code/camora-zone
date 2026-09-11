@@ -19,7 +19,7 @@ const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 const activeGames = new Map(); 
 const allowedChannels = ['1547728033580847236', '1547728346081927262']; // رومات الألعاب العادية
-const allowedEconomyChannels = ['حط_ايدي_روم_الاقتصاد_هنا']; // 👈 استبدل هذا بأيدي روم الاقتصاد والشركات
+const allowedEconomyChannels = ['1547951432186077296']; // 👈 استبدل هذا بأيدي روم الاقتصاد والشركات
 
 const pointsFilePath = path.join(__dirname, 'points.json');
 const wordsFilePath = path.join(__dirname, 'words.json');
