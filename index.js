@@ -241,31 +241,34 @@ function sendGamesMenu(channel) {
     channel.send(menu);
 }
 
-// دالة متطورة لإجبار الذكاء الاصطناعي على التنويع العشوائي الشامل وعدم التكرار
+// دالة توليد الأسئلة بـ Gemini مع تفعيل أقصى درجة عشوائية لمنع التكرار نهائياً
 async function generateAIQuestion(type) {
     try {
-        const randomSeed = Math.floor(Math.random() * 100000);
+        const randomSeed = Math.floor(Math.random() * 1000000);
         let prompt = "";
         
         if (type === 'writing') {
-            prompt = `بناءً على الرقم العشوائي ${randomSeed}، أعطني جملة عربية جديدة كلياً، حماسية ومختلفة تماماً عن الجمل المعتادة للقيمرز. أرجع الجملة فقط بدون مقدمات أو تنصيص.`;
+            prompt = `معرف عشوائي ${randomSeed}: اعطني جملة عربية حماسية ومبتكرة جداً للقيمرز تحدي سرعة كتابة. ارجع الجملة فقط بدون مقدمات او تنصيص.`;
         } else if (type === 'scramble') {
-            prompt = `بناءً على الرقم العشوائي ${randomSeed}, اختر كلمة عربية فريدة ومختلفة تماماً من 4 إلى 6 أحرف. أرجع الكلمة فقط بدون شرح.`;
+            prompt = `معرف عشوائي ${randomSeed}: اختر كلمة عربية فريدة تماماً من 4 إلى 6 أحرف. ارجع الكلمة فقط بدون شرح.`;
         } else if (type === 'math') {
-            const n1 = Math.floor(Math.random() * 80) + 20;
-            const n2 = Math.floor(Math.random() * 50) + 10;
+            const n1 = Math.floor(Math.random() * 90) + 10;
+            const n2 = Math.floor(Math.random() * 60) + 10;
             return { display: `كم ناتج: ${n1} + ${n2} ؟`, answer: (n1 + n2).toString() };
         } else if (type === 'mul') {
-            const n1 = Math.floor(Math.random() * 12) + 3;
-            const n2 = Math.floor(Math.random() * 12) + 3;
+            const n1 = Math.floor(Math.random() * 12) + 4;
+            const n2 = Math.floor(Math.random() * 12) + 4;
             return { display: `كم ناتج: ${n1} × ${n2} ؟`, answer: (n1 * n2).toString() };
         } else if (type === 'capital') {
-            prompt = `بناءً على المعرف العشوائي ${randomSeed}, اختر دولة وعاصمتها غير مكررة ومن أي قارة بالعالم، ونسق الإجابة هكذا تماماً: الدولة|العاصمة. مثال: اليابان|طوكيو. لا تكتب أي شي غيرها.`;
+            prompt = `معرف عشوائي ${randomSeed}: اختر دولة وعاصمتها غير مكررة ومنوعة عالمياً، ونسق الإجابة بهذا الشكل تماماً: الدولة|العاصمة. مثال: كندا|اوتاوا. لا تكتب أي شي غيرها.`;
         }
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
+            config: {
+                temperature: 1.0, // أقصى درجة عشوائية لضمان عدم تكرار الأسئلة
+            }
         });
 
         const text = response.text ? response.text.trim() : "";
@@ -281,12 +284,12 @@ async function generateAIQuestion(type) {
             if (parts.length === 2) {
                 return { display: `ما هي عاصمة **${parts[0].trim()}** ؟`, answer: parts[1].trim() };
             }
-            return { display: `ما هي عاصمة **البرازيل** ؟`, answer: 'برازيليا' };
+            return { display: `ما هي عاصمة **أستراليا** ؟`, answer: 'كانبيرا' };
         }
     } catch (e) {
-        if (type === 'writing') return { display: `عندكم **30 ثانية** لكتابة:\n\n\`التحدي الحقيقي يبدأ الآن\``, answer: 'التحدي الحقيقي يبدأ الآن' };
-        if (type === 'scramble') return { display: `رتب الحروف: \`ك ت ب\``, answer: 'كتب' };
-        if (type === 'capital') return { display: `ما هي عاصمة **المغرب** ؟`, answer: 'الرباط' };
+        if (type === 'writing') return { display: `عندكم **30 ثانية** لكتابة:\n\n\`العب بكل قوة وحقق الانتصار\``, answer: 'العب بكل قوة وحقق الانتصار' };
+        if (type === 'scramble') return { display: `رتب الحروف: \`م س ج ل\``, answer: 'مسجل' };
+        if (type === 'capital') return { display: `ما هي عاصمة **إيطاليا** ؟`, answer: 'روما' };
     }
 }
 
