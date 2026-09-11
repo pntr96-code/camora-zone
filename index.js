@@ -43,7 +43,6 @@ const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821'];
 
 const lastActivityTime = new Map();
 
-// قائمة الـ 20 وظيفة
 const jobsList = {
     'مواطن': { name: 'مواطن 🇸🇦', salary: 500, level: 1, emoji: '🇸🇦' },
     'حارس_أمن': { name: 'حارس أمن 🛡️', salary: 700, level: 2, emoji: '🛡️' },
@@ -102,38 +101,6 @@ setInterval(async () => {
         }
     }
 }, 5 * 60 * 1000);
-
-setInterval(async () => {
-    const now = Date.now();
-    const allManagedChannels = [...new Set([...allowedChannels, ...allowedEconomyChannels])];
-
-    for (const channelId of allManagedChannels) {
-        const lastTime = lastActivityTime.get(channelId) || now;
-        if (now - lastTime >= 10 * 60 * 1000) {
-            try {
-                const channel = await client.channels.fetch(channelId);
-                if (channel) {
-                    const embed = new EmbedBuilder()
-                        .setColor('#9B59B6')
-                        .setTitle('⚡ استعراض فعاليات وألعاب 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
-                        .setDescription('✨ **الروم هادئ جداً! هل أنت مستعد للتحدي وجمع النقاط والأموال؟**\nإليك نبذة عن الأنظمة المتاحة:')
-                        .addFields(
-                            { name: '🎲 الألعاب والسريعة', value: 'استخدم أمر `!فعالية` أو أي لعبة مفضلة لديك لجمع النقاط ورفع مستواك (XP).', inline: false },
-                            { name: '🏦 نظام الاقتصاد والوظائف الـ 20', value: '• **`!وظائف` & `!وظيفة [الرمز]`**: تدرج في 20 وظيفة حسب مستواك واقبض راتبك.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات.\n• **`!سرقة [@الشخص]`** | **`!حظ [المبلغ]`** | **`!صندوق`** | **`!مهامي`**.', inline: false },
-                            { name: '🏆 لوحة الصدارة التفاعلية', value: '• **`!ت`**: لعرض لوحة الشرف بالأزرار (نقاط، سرعة، تفاعل، ثروة، والمستويات).', inline: false }
-                        )
-                        .setFooter({ text: '💡 اكتب أحد الأوامر أعلاه وابدأ الحماس الآن!' })
-                        .setTimestamp();
-
-                    channel.send({ embeds: [embed] });
-                    lastActivityTime.set(channelId, now);
-                }
-            } catch (err) {
-                console.error('Failed to send inactivity message:', err);
-            }
-        }
-    }
-}, 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
     if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
@@ -195,13 +162,15 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     doc.messagesCount += 1;
     doc.xp += 15;
 
-    let xpNeeded = doc.level * 100;
+    // --- زيادة صعوبة التلفيل ---
+    // المعادلة الجديدة: المستوى الحالي * المستوى الحالي * 150 (تصير الصعوبة تصاعدية وقوية)
+    let xpNeeded = (doc.level * doc.level) * 150;
+    
     if (doc.xp >= xpNeeded) {
         doc.level += 1;
         doc.xp = 0;
-        channel.send(`🎉 مبروك يا <@${userId}>! لقد ارتفعت إلى **المستوى (Level ${doc.level})**! 🚀✨`);
+        channel.send(`🎉 كفو يا <@${userId}>! لقد ارتفعت إلى **المستوى الأسطوري (Level ${doc.level})**! 🚀🔥`);
 
-        // منح رتبة المستوى تلقائياً إن وجدت بالسيرفر
         if (member) {
             const roleName = `Level ${doc.level}`;
             const role = member.guild.roles.cache.find(r => r.name === roleName);
@@ -233,35 +202,42 @@ function getUniqueRandomItem(pool, historyKey, propertyName = null) {
     const chosen = available[Math.floor(Math.random() * available.length)];
     const val = propertyName ? chosen[propertyName] : chosen;
     historyTracker[historyKey].push(val);
-    if (historyTracker[historyKey].length > 15) historyTracker[historyKey].shift();
+    if (historyTracker[historyKey].length > 25) historyTracker[historyKey].shift();
     return chosen;
 }
 
+// --- القواميس والكلمات الجديدة والموسعة ---
 const emojiMasterPool = [
     { e: '🚗💨', ans: 'سيارة' }, { e: '🍎🍏', ans: 'تفاح' }, { e: '⚽🏃‍♂️', ans: 'كرة قدم' }, { e: '🦁👑', ans: 'اسد' }, { e: '💻⚡', ans: 'حاسب' },
     { e: '✈️🌍', ans: 'طائرة' }, { e: '🍕🧀', ans: 'بيتزا' }, { e: '🔥🚒', ans: 'اطفاء' }, { e: '👑💎', ans: 'تاج' }, { e: '🌙⭐', ans: 'ليل' },
-    { e: '☕️📖', ans: 'قهوة' }, { e: '🐱🐟', ans: 'قطة' }, { e: '🌊🏄‍♂️', ans: 'بحر' }, { e: '🍌🐒', ans: 'موز' }, { e: '🚀🌌', ans: 'فضاء' }
+    { e: '☕️📖', ans: 'قهوة' }, { e: '🐱🐟', ans: 'قطة' }, { e: '🌊🏄‍♂️', ans: 'بحر' }, { e: '🍌🐒', ans: 'موز' }, { e: '🚀🌌', ans: 'فضاء' },
+    { e: '📸✨', ans: 'كاميرا' }, { e: '🍔🥤', ans: 'وجبة' }, { e: '🎧🎶', ans: 'سماعة' }, { e: '⚽🏆', ans: 'بطولة' }, { e: '💡🧠', ans: 'فكرة' }
 ];
 
 const meaningMasterPool = [
     { word: 'قشيب', desc: 'ثوب جديد نظيف' }, { word: 'اليم', desc: 'البحر' }, { word: 'وجيز', desc: 'مختصر' }, { word: 'باسق', desc: 'طويل وعالي' },
-    { word: 'صنديد', desc: 'شجاع قوي' }, { word: 'هوجاء', desc: 'ريح شديدة' }, { word: 'رغد', desc: 'عيش طيب واسع' }, { word: 'وثيق', desc: 'مؤكد قوي' }
+    { word: 'صنديد', desc: 'شجاع قوي' }, { word: 'هوجاء', desc: 'ريح شديدة' }, { word: 'رغد', desc: 'عيش طيب واسع' }, { word: 'وثيق', desc: 'مؤكد قوي' },
+    { word: 'همام', desc: 'عظيم الهمة شجاع' }, { word: 'حسام', desc: 'السيف القاطع' }, { word: 'عسجد', desc: 'الذهب الخالص' }, { word: 'فرات', desc: 'ماء عذب شديد العذوبة' }
 ];
 
 const scrambleMasterPool = [
     'برمجة', 'ديسكورد', 'حاسب', 'مهندس', 'تطوير', 'تقنية', 'سيرفر', 'ذكاء', 'معلومات', 'استثمار',
-    'استراحه', 'سيارات', 'جامعة', 'عقارات', 'تطبيقات', 'مليارات', 'مسابقات', 'محطات', 'مسلسلات', 'طائرات'
+    'استراحه', 'سيارات', 'جامعة', 'عقارات', 'تطبيقات', 'مليارات', 'مسابقات', 'محطات', 'مسلسلات', 'طائرات',
+    'ديجيتال', 'الاصطناعي', 'التكنولوجيا', 'البورصة', 'التجارة', 'المحركات', 'الإلكترونيات', 'المستقبل'
 ];
 
 const triviaMasterPool = [
     { q: 'ما هو أكبر كوكب في المجموعة الشمسية؟', ans: 'المشتري' }, { q: 'كم عدد سور القرآن الكريم؟', ans: '114' },
     { q: 'ما هي عاصمة أستراليا؟', ans: 'كانبرا' }, { q: 'من هو أول خلفاء المسلمين؟', ans: 'ابو بكر' },
-    { q: 'ما هي عاصمة اليابان؟', ans: 'طوكيو' }, { q: 'في أي سنة هبط الإنسان على القمر؟', ans: '1969' }
+    { q: 'ما هي عاصمة اليابان؟', ans: 'طوكيو' }, { q: 'في أي سنة هبط الإنسان على القمر؟', ans: '1969' },
+    { q: 'ما هي عاصمة المملكة العربية السعودية؟', ans: 'الرياض' }, { q: 'كم عدد أركان الإسلام؟', ans: '5' },
+    { q: 'ما هو عنصر الكيمياء الذي يرمز له بـ H2O؟', ans: 'ماء' }, { q: 'في أي قارة تقع دولة مصر؟', ans: 'افريقيا' }
 ];
 
 const capitalMasterPool = [
     { c: 'السعودية', cap: 'الرياض' }, { c: 'الإمارات', cap: 'ابوظبي' }, { c: 'الكويت', cap: 'الكويت' },
-    { c: 'مصر', cap: 'القاهرة' }, { c: 'قطر', cap: 'الدوحة' }, { c: 'عمان', cap: 'مسقط' }
+    { c: 'مصر', cap: 'القاهرة' }, { c: 'قطر', cap: 'الدوحة' }, { c: 'عمان', cap: 'مسقط' },
+    { c: 'البحرين', cap: 'المنامة' }, { c: 'الأردن', cap: 'عمان' }, { c: 'العراق', cap: 'بغداد' }, { c: 'لبنان', cap: 'بيروت' }
 ];
 
 client.once('clientReady', () => {
@@ -543,7 +519,7 @@ function startButtonGame(channel, guildId) {
 
 function startWritingGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
-    const sentence = getUniqueRandomItem(['تحدي السرعة في كتابة الجملة', 'برمجة البوتات تتطلب صبرا وتركيزا', 'المحترف لا ييأس أبدا مهما كانت الصعاب', 'الذكاء الاصطناعي يغير مستقبل العالم التقني'], 'writing');
+    const sentence = getUniqueRandomItem(['تحدي السرعة في كتابة الجملة', 'برمجة البوتات تتطلب صبرا وتركيزا', 'المحترف لا ييأس أبدا مهما كانت الصعاب', 'الذكاء الاصطناعي يغير مستقبل العالم التقني', 'تطوير الألعاب والبرمجيات فن ممتع', 'إمبراطورية كامورا زون ترحب بالجميع'], 'writing');
     channel.send(`⌨️ **[أسرع كاتب]** اكتب الجملة التالية:\n\n\`${sentence}\``).then(() => {
         const start = Date.now();
         const filter = m => !m.author.bot && m.content.trim() === sentence;
@@ -590,7 +566,6 @@ client.on('messageCreate', async message => {
           return message.reply(`💳 رصيدك الكاش بالسيرفر: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
       }
       
-      // --- عرض الـ 20 وظيفة مع شروطها ---
       if (message.content === '!وظائف') {
           const embed = new EmbedBuilder()
               .setColor('#3498DB')
@@ -606,7 +581,6 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
 
-      // --- اختيار الوظيفة ومنح الرتبة تلقائياً ---
       if (message.content.startsWith('!وظيفة')) {
           const args = message.content.split(' ');
           const jobKey = args[1];
@@ -623,10 +597,8 @@ client.on('messageCreate', async message => {
 
           let user = await getEconomyUser(guildId, userId);
           
-          // إزالة رتبة الوظيفة القديمة من ديسكورد إن وجدت
           try {
               const member = await message.guild.members.fetch(userId);
-              // إزالة كل رولات الوظائف الأخرى لتجنب تداخل الرتب
               for (let key in jobsList) {
                   const oldJobName = jobsList[key].name;
                   const oldRole = message.guild.roles.cache.find(r => r.name === oldJobName);
@@ -634,7 +606,6 @@ client.on('messageCreate', async message => {
                       await member.roles.remove(oldRole).catch(() => {});
                   }
               }
-              // إضافة رتبة الوظيفة الجديدة
               const newRole = message.guild.roles.cache.find(r => r.name === targetJob.name);
               if (newRole) {
                   await member.roles.add(newRole).catch(() => {});
@@ -903,61 +874,6 @@ client.on('messageCreate', async message => {
           return;
       }
 
-      if (message.content.startsWith('!xo')) {
-          if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-          const opponent = message.mentions.users.first();
-          let playerX = userId;
-          let playerO = opponent && !opponent.bot && opponent.id !== userId ? opponent.id : client.user.id;
-          
-          activeGames.set(message.channel.id, 'xo');
-          let board = Array(9).fill(null);
-          let turn = playerX;
-
-          const getRows = (b) => {
-              let rows = [];
-              for (let i = 0; i < 3; i++) {
-                  let row = new ActionRowBuilder();
-                  for (let j = 0; j < 3; j++) {
-                      let idx = i * 3 + j;
-                      let style = ButtonStyle.Secondary;
-                      let label = '➖';
-                      if (b[idx] === 'X') { style = ButtonStyle.Danger; label = '❌'; }
-                      else if (b[idx] === 'O') { style = ButtonStyle.Primary; label = '⭕'; }
-                      row.addComponents(new ButtonBuilder().setCustomId(`xo_${idx}`).setLabel(label).setStyle(style).setDisabled(b[idx] !== null));
-                  }
-                  rows.push(row);
-              }
-              return rows;
-          };
-
-          const checkWin = (b) => {
-              const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-              for (let w of wins) { if (b[w[0]] && b[w[0]] === b[w[1]] && b[w[0]] === b[w[2]]) return b[w[0]]; }
-              return b.every(c => c !== null) ? 'tie' : null;
-          };
-
-          const gameMsg = await message.channel.send({ content: `🎮 **تحدي XO**\nدور اللاعب: <@${turn}>`, components: getRows(board) });
-          const coll = gameMsg.createMessageComponentCollector({ time: 60000 });
-          coll.on('collect', async i => {
-              if (i.user.id !== turn) return i.reply({ content: '❌ مو دورك!', ephemeral: true });
-              const idx = parseInt(i.customId.split('_')[1]);
-              board[idx] = (turn === playerX) ? 'X' : 'O';
-              let winner = checkWin(board);
-              if (winner) {
-                  coll.stop(); activeGames.delete(message.channel.id);
-                  if (winner === 'tie') await i.update({ content: `🤝 **تعادلنا!**`, components: getRows(board) });
-                  else {
-                      let wUser = (winner === 'X') ? message.author : (playerO === client.user.id ? client.user : opponent);
-                      await i.update({ content: `🎉 **مبروك الفوز!** <@${wUser.id || wUser}>`, components: getRows(board) });
-                      if (wUser.id !== client.user.id) addPoints(guildId, wUser.id || wUser, wUser.displayName || 'لاعب', message.channel);
-                  }
-                  return sendGamesMenu(message.channel);
-              }
-              turn = (turn === playerX) ? playerO : playerX;
-              await i.update({ content: `🎮 **تحدي XO**\nدور اللاعب: <@${turn}>`, components: getRows(board) });
-          });
-      }
-
       if (message.content === '!العاب') return sendGamesMenu(message.channel);
       
       if (message.content === '!روليت') {
@@ -1004,19 +920,19 @@ client.on('messageCreate', async message => {
           ];
 
           let page = 0;
-          const getRow = () => new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId('prev').setLabel('◀️ السابق').setStyle(ButtonStyle.Primary).setDisabled(page === 0),
-              new ButtonBuilder().setCustomId('next').setLabel('التالي ▶️').setStyle(ButtonStyle.Primary).setDisabled(page === pages.length - 1)
+          const getRows = (p) => new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('prev').setLabel('◀️ السابق').setStyle(ButtonStyle.Primary).setDisabled(p === 0),
+              new ButtonBuilder().setCustomId('next').setLabel('التالي ▶️').setStyle(ButtonStyle.Primary).setDisabled(p === pages.length - 1)
           );
 
-          const msg = await message.channel.send({ embeds: [pages[page]], components: [getRow()] });
+          const msg = await message.channel.send({ embeds: [pages[page]], components: [getRows(page)] });
           const collector = msg.createMessageComponentCollector({ time: 60000 });
 
           collector.on('collect', async i => {
               if (i.user.id !== userId) return i.reply({ content: '❌ هذه القائمة ليست لك!', ephemeral: true });
               if (i.customId === 'next' && page < pages.length - 1) page++;
               if (i.customId === 'prev' && page > 0) page--;
-              await i.update({ embeds: [pages[page]], components: [getRow()] });
+              await i.update({ embeds: [pages[page]], components: [getRows(page)] });
           });
 
           collector.on('end', () => {
