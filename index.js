@@ -162,8 +162,6 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     doc.messagesCount += 1;
     doc.xp += 15;
 
-    // --- زيادة صعوبة التلفيل ---
-    // المعادلة الجديدة: المستوى الحالي * المستوى الحالي * 150 (تصير الصعوبة تصاعدية وقوية)
     let xpNeeded = (doc.level * doc.level) * 150;
     
     if (doc.xp >= xpNeeded) {
@@ -206,7 +204,6 @@ function getUniqueRandomItem(pool, historyKey, propertyName = null) {
     return chosen;
 }
 
-// --- القواميس والكلمات الجديدة والموسعة ---
 const emojiMasterPool = [
     { e: '🚗💨', ans: 'سيارة' }, { e: '🍎🍏', ans: 'تفاح' }, { e: '⚽🏃‍♂️', ans: 'كرة قدم' }, { e: '🦁👑', ans: 'اسد' }, { e: '💻⚡', ans: 'حاسب' },
     { e: '✈️🌍', ans: 'طائرة' }, { e: '🍕🧀', ans: 'بيتزا' }, { e: '🔥🚒', ans: 'اطفاء' }, { e: '👑💎', ans: 'تاج' }, { e: '🌙⭐', ans: 'ليل' },
@@ -553,6 +550,7 @@ client.on('messageCreate', async message => {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
               { name: '💵 الأساسيات', value: '`!راتب` | `!بنك`', inline: false },
+              { name: '👤 البروفايل الشخصي', value: '`!بروفايل` أو `!بروفايل [@الشخص]`', inline: false },
               { name: '👔 الوظائف (20 وظيفة تدرجية)', value: '`!وظائف` | `!وظيفة [الرمز]`', inline: false },
               { name: '📈 السوق والأملاك', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي` | `!ارباح`', inline: false },
               { name: '🦹‍♂️ الجريمة والحظ', value: '`!سرقة [@الشخص]` | `!حظ [المبلغ]` | `!صندوق`', inline: false },
@@ -564,6 +562,35 @@ client.on('messageCreate', async message => {
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
           return message.reply(`💳 رصيدك الكاش بالسيرفر: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
+      }
+
+      // --- أمر البروفايل الشامل (لك ولغيرك) ---
+      if (message.content === '!بروفايل' || message.content.startsWith('!بروفايل ')) {
+          const targetUser = message.mentions.users.first() || message.author;
+          const targetId = targetUser.id;
+          const targetName = targetUser.displayName || targetUser.username;
+
+          const ecoData = await getEconomyUser(guildId, targetId);
+          const ptsData = await getPointsUser(guildId, targetId, targetName);
+
+          const xpNeeded = (ptsData.level * ptsData.level) * 150;
+
+          const profileEmbed = new EmbedBuilder()
+              .setColor('#9B59B6')
+              .setTitle(`👤 بروفايل البطل: ${targetName}`)
+              .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+              .addFields(
+                  { name: '💳 الرصيد المالي', value: `\`$${ecoData.balance.toLocaleString()}\``, inline: true },
+                  { name: '👔 الوظيفة الحالية', value: `\`${ecoData.job}\``, inline: true },
+                  { name: '⭐ رصيد النقاط', value: `\`${ptsData.points} نقطة\``, inline: true },
+                  { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
+                  { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
+                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
+              )
+              .setFooter({ text: '💡 تفاعل بالألعاب والرسائل لرفع مستواك وجمع الثروة!' })
+              .setTimestamp();
+
+          return message.channel.send({ embeds: [profileEmbed] });
       }
       
       if (message.content === '!وظائف') {
