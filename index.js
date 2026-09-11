@@ -43,8 +43,9 @@ const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821'];
 
 const lastActivityTime = new Map();
 
+// قائمة الـ 20 وظيفة
 const jobsList = {
-    'عامل_نظافة': { name: 'عامل نظافة 🧹', salary: 500, level: 1, emoji: '🧹' },
+    'مواطن': { name: 'مواطن 🇸🇦', salary: 500, level: 1, emoji: '🇸🇦' },
     'حارس_أمن': { name: 'حارس أمن 🛡️', salary: 700, level: 2, emoji: '🛡️' },
     'عامل_توصيل': { name: 'عامل توصيل 📦', salary: 900, level: 3, emoji: '📦' },
     'كاشير': { name: 'كاشير 🛒', salary: 1100, level: 4, emoji: '🛒' },
@@ -118,7 +119,7 @@ setInterval(async () => {
                         .setDescription('✨ **الروم هادئ جداً! هل أنت مستعد للتحدي وجمع النقاط والأموال؟**\nإليك نبذة عن الأنظمة المتاحة:')
                         .addFields(
                             { name: '🎲 الألعاب والسريعة', value: 'استخدم أمر `!فعالية` أو أي لعبة مفضلة لديك لجمع النقاط ورفع مستواك (XP).', inline: false },
-                            { name: '🏦 نظام الاقتصاد والوظائف الـ 20', value: '• **`!وظائف` & `!وظيفة [الرمز]`**: تدرج في 20 وظيفة حسب مستواك واقبض راتبك العالي.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات.\n• **`!سرقة [@الشخص]`** | **`!حظ [المبلغ]`** | **`!صندوق`** | **`!مهامي`**.', inline: false },
+                            { name: '🏦 نظام الاقتصاد والوظائف الـ 20', value: '• **`!وظائف` & `!وظيفة [الرمز]`**: تدرج في 20 وظيفة حسب مستواك واقبض راتبك.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات.\n• **`!سرقة [@الشخص]`** | **`!حظ [المبلغ]`** | **`!صندوق`** | **`!مهامي`**.', inline: false },
                             { name: '🏆 لوحة الصدارة التفاعلية', value: '• **`!ت`**: لعرض لوحة الشرف بالأزرار (نقاط، سرعة، تفاعل، ثروة، والمستويات).', inline: false }
                         )
                         .setFooter({ text: '💡 اكتب أحد الأوامر أعلاه وابدأ الحماس الآن!' })
@@ -135,13 +136,13 @@ setInterval(async () => {
 }, 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
-    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'عامل نظافة 🧹', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
+    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
     let doc = await economyColl.findOne({ guildId, userId });
     if (!doc) {
-        doc = { guildId, userId, balance: 1500, properties: [], job: 'عامل نظافة 🧹', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
+        doc = { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
         await economyColl.insertOne(doc);
     }
-    if (!doc.job) doc.job = 'عامل نظافة 🧹';
+    if (!doc.job) doc.job = 'مواطن 🇸🇦';
     return doc;
 }
 
@@ -187,7 +188,7 @@ async function addPoints(guildId, userId, userTag, channel, timeElapsed = null) 
     channel.send(`⭐ **${userTag}** كسب **10 نقاط**! (رصيد النقاط: ${doc.points})`);
 }
 
-async function trackUserMessage(guildId, userId, userTag, channel) {
+async function trackUserMessage(guildId, userId, userTag, channel, member) {
     if (!pointsColl) return;
     let doc = await getPointsUser(guildId, userId, userTag);
     doc.name = userTag;
@@ -199,6 +200,19 @@ async function trackUserMessage(guildId, userId, userTag, channel) {
         doc.level += 1;
         doc.xp = 0;
         channel.send(`🎉 مبروك يا <@${userId}>! لقد ارتفعت إلى **المستوى (Level ${doc.level})**! 🚀✨`);
+
+        // منح رتبة المستوى تلقائياً إن وجدت بالسيرفر
+        if (member) {
+            const roleName = `Level ${doc.level}`;
+            const role = member.guild.roles.cache.find(r => r.name === roleName);
+            if (role) {
+                try {
+                    await member.roles.add(role);
+                } catch (e) {
+                    console.error('Failed to assign level role:', e);
+                }
+            }
+        }
     }
 
     await pointsColl.updateOne(
@@ -592,7 +606,7 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
 
-      // --- اختيار الوظيفة بناء على شرط المستوى (Level) ---
+      // --- اختيار الوظيفة ومنح الرتبة تلقائياً ---
       if (message.content.startsWith('!وظيفة')) {
           const args = message.content.split(' ');
           const jobKey = args[1];
@@ -608,9 +622,30 @@ client.on('messageCreate', async message => {
           }
 
           let user = await getEconomyUser(guildId, userId);
+          
+          // إزالة رتبة الوظيفة القديمة من ديسكورد إن وجدت
+          try {
+              const member = await message.guild.members.fetch(userId);
+              // إزالة كل رولات الوظائف الأخرى لتجنب تداخل الرتب
+              for (let key in jobsList) {
+                  const oldJobName = jobsList[key].name;
+                  const oldRole = message.guild.roles.cache.find(r => r.name === oldJobName);
+                  if (oldRole && member.roles.cache.has(oldRole.id)) {
+                      await member.roles.remove(oldRole).catch(() => {});
+                  }
+              }
+              // إضافة رتبة الوظيفة الجديدة
+              const newRole = message.guild.roles.cache.find(r => r.name === targetJob.name);
+              if (newRole) {
+                  await member.roles.add(newRole).catch(() => {});
+              }
+          } catch (e) {
+              console.error('Error managing job roles:', e);
+          }
+
           user.job = targetJob.name;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🎉 مبروك يا بطل! تم قبولك وترقيتك رسمياً في وظيفة **${user.job}**.`);
+          return message.reply(`🎉 مبروك يا بطل! تم قبولك وترقيتك رسمياً في وظيفة **${user.job}** وتم منحك الرتبة في السيرفر! 🎖️`);
       }
 
       if (message.content === '!راتب') {
@@ -848,7 +883,7 @@ client.on('messageCreate', async message => {
 
   if (allowedChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
       if (allowedChannels.includes(message.channel.id)) {
-          trackUserMessage(guildId, userId, message.author.displayName, message.channel);
+          trackUserMessage(guildId, userId, message.author.displayName, message.channel, message.member);
       }
 
       if (message.content === '!فعالية' || message.content === '!لعبة') {
