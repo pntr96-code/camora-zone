@@ -238,7 +238,7 @@ function sendGamesMenu(channel) {
 -----------------------------------------
 🛑 \`!ايقاف\` : لإلغاء أي لعبة شغالة
     `;
-    setTimeout(() => { channel.send(menu); }, 2000); 
+    channel.send(menu); // تم إزالة setTimeout لتجنب أي تداخل أو تأخير غير ضروري
 }
 
 client.on('messageCreate', async message => {
@@ -369,7 +369,7 @@ client.on('messageCreate', async message => {
       });
   }
 
-  if (message.content.startsWith('!xo')) {
+  if (message.content === '!xo') {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر الفعالية الحالية تخلص!');
       
       const opponent = message.mentions.users.first();
