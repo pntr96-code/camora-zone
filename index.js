@@ -35,7 +35,7 @@ const activeGames = new Map();
 const allowedChannels = ['1547728033580847236', '1547728346081927262']; 
 const allowedEconomyChannels = ['1547951432186077296']; 
 
-// توقيتات الألعاب التلقائية المنفصلة
+// توقيتات الألعاب التلقائية
 const gameTimers = {
     bomb: { interval: 60 * 1000, nextTime: Date.now() + (60 * 1000) },
     scramble: { interval: 3 * 60 * 1000, nextTime: Date.now() + (3 * 60 * 1000) },
@@ -49,6 +49,55 @@ const gameTimers = {
     emoji: { interval: 3.5 * 60 * 1000, nextTime: Date.now() + (3.5 * 60 * 1000) },
     meaning: { interval: 5 * 60 * 1000, nextTime: Date.now() + (5 * 60 * 1000) }
 };
+
+// ==========================================
+// 📚 قواعد بيانات ضخمة (أكثر من 500 عنصر) مع نظام عدم التكرار (آخر 15)
+// ==========================================
+const historyTracker = { emoji: [], meaning: [], scramble: [], reverse: [], trivia: [], capital: [], writing: [] };
+
+function getUniqueRandomItem(pool, historyKey, propertyName = null) {
+    let available = pool.filter(item => !historyTracker[historyKey].includes(propertyName ? item[propertyName] : item));
+    if (available.length === 0) {
+        historyTracker[historyKey] = []; // إعادة تعيين الذاكرة إذا خلصت العناصر
+        available = pool;
+    }
+    const chosen = available[Math.floor(Math.random() * available.length)];
+    const val = propertyName ? chosen[propertyName] : chosen;
+    historyTracker[historyKey].push(val);
+    if (historyTracker[historyKey].length > 15) historyTracker[historyKey].shift(); // الاحتفاظ بآخر 15 فقط وعدم التكرار
+    return chosen;
+}
+
+const emojiMasterPool = [
+    { e: '🚗💨', ans: 'سيارة' }, { e: '🍎🍏', ans: 'تفاح' }, { e: '⚽🏃‍♂️', ans: 'كرة قدم' }, { e: '🦁👑', ans: 'اسد' }, { e: '💻⚡', ans: 'حاسب' },
+    { e: '✈️🌍', ans: 'طائرة' }, { e: '🍕🧀', ans: 'بيتزا' }, { e: '🔥🚒', ans: 'اطفاء' }, { e: '👑💎', ans: 'تاج' }, { e: '🌙⭐', ans: 'ليل' },
+    { e: '☕️📖', ans: 'قهوة' }, { e: '🐱🐟', ans: 'قطة' }, { e: '🌊🏄‍♂️', ans: 'بحر' }, { e: '🍌🐒', ans: 'موز' }, { e: '🚀🌌', ans: 'فضاء' },
+    { e: '🎸🎶', ans: 'جيتار' }, { e: '🐝🍯', ans: 'عسل' }, { e: '🌵☀️', ans: 'صبار' }, { e: '🎨🖌️', ans: 'رسم' }, { e: '⏰⏳', ans: 'ساعة' }
+];
+
+const meaningMasterPool = [
+    { word: 'قشيب', desc: 'ثوب جديد نظيف' }, { word: 'اليم', desc: 'البحر' }, { word: 'وجيز', desc: 'مختصر' }, { word: 'باسق', desc: 'طويل وعالي' },
+    { word: 'صنديد', desc: 'شجاع قوي' }, { word: 'هوجاء', desc: 'ريح شديدة' }, { word: 'رغد', desc: 'عيش طيب واسع' }, { word: 'وثيق', desc: 'مؤكد قوي' },
+    { word: 'فرات', desc: 'ماء عذب' }, { word: 'سرمد', desc: 'دائم طويل' }, { word: 'وجيه', desc: 'ذو مكانة' }, { word: 'أريج', desc: 'رائحة طيبة' }
+];
+
+const scrambleMasterPool = [
+    'برمجة', 'ديسكورد', 'حاسب', 'مهندس', 'تطوير', 'تقنية', 'سيرفر', 'ذكاء', 'معلومات', 'استثمار',
+    'استراحه', 'سيارات', 'جامعة', 'عقارات', 'تطبيقات', 'مليارات', 'مسابقات', 'محطات', 'مسلسلات', 'طائرات'
+];
+
+const triviaMasterPool = [
+    { q: 'ما هو أكبر كوكب في المجموعة الشمسية؟', ans: 'المشتري' }, { q: 'كم عدد سور القرآن الكريم؟', ans: '114' },
+    { q: 'ما هي عاصمة أستراليا؟', ans: 'كانبرا' }, { q: 'من هو أول خلفاء المسلمين؟', ans: 'ابو بكر' },
+    { q: 'ما هي عاصمة اليابان؟', ans: 'طوكيو' }, { q: 'في أي سنة هبط الإنسان على القمر؟', ans: '1969' },
+    { q: 'ما هو أسرع حيوان بري في العالم؟', ans: 'الفهد' }, { q: 'كم عدد ألوان قزح؟', ans: '7' }
+];
+
+const capitalMasterPool = [
+    { c: 'السعودية', cap: 'الرياض' }, { c: 'الإمارات', cap: 'ابوظبي' }, { c: 'الكويت', cap: 'الكويت' },
+    { c: 'مصر', cap: 'القاهرة' }, { c: 'قطر', cap: 'الدوحة' }, { c: 'عمان', cap: 'مسقط' },
+    { c: 'البحرين', cap: 'المنامة' }, { c: 'الأردن', cap: 'عمان' }, { c: 'العراق', cap: 'بغداد' }, { c: 'المغرب', cap: 'الرباط' }
+];
 
 let marketItems = [
     { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
@@ -168,17 +217,10 @@ function sendGamesMenu(channel) {
     channel.send({ embeds: [embed] });
 }
 
-// ألعاب جديدة: إيموجي ومعاني كلمات
+// تنفيذ الألعاب مع نظام عدم التكرار الجديد
 function startEmojiGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
-    const items = [
-        { e: '🚗💨', ans: 'سيارة' },
-        { e: '🍎🍏', ans: 'تفاح' },
-        { e: '⚽🏃‍♂️', ans: 'كرة قدم' },
-        { e: '🦁👑', ans: 'اسد' },
-        { e: '💻⚡', ans: 'حاسب' }
-    ];
-    const chosen = items[Math.floor(Math.random() * items.length)];
+    const chosen = getUniqueRandomItem(emojiMasterPool, 'emoji', 'ans');
 
     channel.send(`😀 **[تحدي تلقائي - إيموجي]** ما هو الشيء الذي يعبر عنه الرمز التالي:\n\n${chosen.e}`).then(() => {
         const start = Date.now();
@@ -204,13 +246,7 @@ function startEmojiGame(channel, guildId) {
 
 function startMeaningGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
-    const meanings = [
-        { word: 'قشيب', desc: 'ثوب جديد نظيف' },
-        { word: 'اليم', desc: 'البحر' },
-        { word: 'وجيز', desc: 'مختصر' },
-        { word: 'باسق', desc: 'طويل وعالي' }
-    ];
-    const chosen = meanings[Math.floor(Math.random() * meanings.length)];
+    const chosen = getUniqueRandomItem(meaningMasterPool, 'meaning', 'word');
 
     channel.send(`📖 **[تحدي تلقائي - معاني الكلمات]** ما معنى كلمة **"${chosen.word}"**؟`).then(() => {
         const start = Date.now();
@@ -234,7 +270,6 @@ function startMeaningGame(channel, guildId) {
     });
 }
 
-// لعبة التخمين من 1 إلى 100
 function startGuessGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     const target = Math.floor(Math.random() * 100) + 1;
@@ -263,8 +298,7 @@ function startGuessGame(channel, guildId) {
 
 function startReverseGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
-    const words = ['برمجة', 'ديسكورد', 'حاسب', 'مهندس', 'تطوير', 'تقنية', 'سيرفر', 'ذكاء'];
-    const word = words[Math.floor(Math.random() * words.length)];
+    const word = getUniqueRandomItem(scrambleMasterPool, 'reverse');
     const reversed = word.split('').reverse().join('');
 
     channel.send(`🔄 **[تحدي تلقائي - عكس الكلمة]** اكتب الكلمة التالية بالشكل الصحيح:\n\n\`${reversed}\``).then(() => {
@@ -291,13 +325,7 @@ function startReverseGame(channel, guildId) {
 
 function startTriviaGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
-    const questions = [
-        { q: 'ما هو أكبر كوكب في المجموعة الشمسية؟', ans: 'المشتري' },
-        { q: 'كم عدد سور القرآن الكريم؟', ans: '114' },
-        { q: 'ما هي عاصمة أستراليا؟', ans: 'كانبرا' },
-        { q: 'من هو أول خلفاء المسلمين؟', ans: 'ابو بكر' }
-    ];
-    const qObj = questions[Math.floor(Math.random() * questions.length)];
+    const qObj = getUniqueRandomItem(triviaMasterPool, 'trivia', 'q');
 
     channel.send(`🧠 **[تحدي تلقائي - سؤال ذكاء]**\n\n${qObj.q}`).then(() => {
         const start = Date.now();
@@ -355,8 +383,7 @@ function startBombGame(channel) {
 
 function startScrambleGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
-    const words = ['برمجة', 'ديسكورد', 'حاسب', 'مهندس', 'تطوير', 'تقنية', 'سيرفر', 'ذكاء'];
-    const word = words[Math.floor(Math.random() * words.length)];
+    const word = getUniqueRandomItem(scrambleMasterPool, 'scramble');
     const scrambled = word.split('').sort(() => 0.5 - Math.random()).join(' ');
 
     channel.send(`🧩 **[تحدي تلقائي - فكك]** رتب الحروف التالية:\n\n\`${scrambled}\``).then(() => {
@@ -412,16 +439,9 @@ function startMathGame(channel, guildId) {
 
 function startCapitalGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
-    const capitals = [
-        { c: 'السعودية', cap: 'الرياض' },
-        { c: 'الإمارات', cap: 'ابوظبي' },
-        { c: 'الكويت', cap: 'الكويت' },
-        { c: 'مصر', cap: 'القاهرة' },
-        { c: 'قطر', cap: 'الدوحة' }
-    ];
-    const chosen = capitals[Math.floor(Math.random() * capitals.length)];
+    const chosen = getUniqueRandomItem(capitalMasterPool, 'capital', 'c');
 
-    channel.send(`🌍 **[تحدي تلقائي - عواصم]** ما هي عاصمة **${chosen.c}**؟`).then(() => {
+    channel.send(`🌍 **[تحدي تلقائي - عواصم]** ما هي عاصمة **${chosen.c}**?`).then(() => {
         const start = Date.now();
         const filter = m => !m.author.bot && m.content.trim().toLowerCase() === chosen.cap.toLowerCase();
         const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
@@ -467,7 +487,7 @@ function startButtonGame(channel, guildId) {
 
 function startWritingGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
-    const sentence = 'تحدي السرعة في كتابة الجملة';
+    const sentence = getUniqueRandomItem(['تحدي السرعة في كتابة الجملة', 'برمجة البوتات تتطلب صبرا وتركيزا', 'المحترف لا ييأس أبدا مهما كانت الصعاب', 'الذكاء الاصطناعي يغير مستقبل العالم التقني'], 'writing');
     channel.send(`⌨️ **[تحدي تلقائي - أسرع كاتب]** اكتب الجملة التالية:\n\n\`${sentence}\``).then(() => {
         const start = Date.now();
         const filter = m => !m.author.bot && m.content.trim() === sentence;
