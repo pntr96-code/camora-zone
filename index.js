@@ -550,7 +550,7 @@ client.on('messageCreate', async message => {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
               { name: '💵 الأساسيات', value: '`!راتب` | `!بنك`', inline: false },
-              { name: '👤 البروفايل الشخصي', value: '`!بروفايل` أو `!بروفايل [@الشخص]`', inline: false },
+              { name: '👤 الهوية الشخصية', value: '`!هوية` أو `!هوية [@الشخص]`', inline: false },
               { name: '👔 الوظائف (20 وظيفة تدرجية)', value: '`!وظائف` | `!وظيفة [الرمز]`', inline: false },
               { name: '📈 السوق والأملاك', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي` | `!ارباح`', inline: false },
               { name: '🦹‍♂️ الجريمة والحظ', value: '`!سرقة [@الشخص]` | `!حظ [المبلغ]` | `!صندوق`', inline: false },
@@ -564,7 +564,7 @@ client.on('messageCreate', async message => {
           return message.reply(`💳 رصيدك الكاش بالسيرفر: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
       }
 
-      // --- أمر البروفايل الشامل (لك ولغيرك) ---
+      // --- أمر الهوية الشخصية الشامل (!هوية أو !هوية @الشخص) ---
       if (message.content === '!هوية' || message.content.startsWith('!هوية ')) {
           const targetUser = message.mentions.users.first() || message.author;
           const targetId = targetUser.id;
@@ -577,7 +577,7 @@ client.on('messageCreate', async message => {
 
           const profileEmbed = new EmbedBuilder()
               .setColor('#9B59B6')
-              .setTitle(`👤 الهوية: ${targetName}`)
+              .setTitle(`👤 هوية البطل: ${targetName}`)
               .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
               .addFields(
                   { name: '💳 الرصيد المالي', value: `\`$${ecoData.balance.toLocaleString()}\``, inline: true },
