@@ -35,6 +35,21 @@ const activeGames = new Map();
 const allowedChannels = ['1547728033580847236', '1547728346081927262']; 
 const allowedEconomyChannels = ['1547951432186077296']; 
 
+// توقيتات الألعاب التلقائية المنفصلة
+const gameTimers = {
+    bomb: { interval: 60 * 1000, nextTime: Date.now() + (60 * 1000) },
+    scramble: { interval: 3 * 60 * 1000, nextTime: Date.now() + (3 * 60 * 1000) },
+    button: { interval: 5 * 60 * 1000, nextTime: Date.now() + (5 * 60 * 1000) },
+    writing: { interval: 7 * 60 * 1000, nextTime: Date.now() + (7 * 60 * 1000) },
+    math: { interval: 4 * 60 * 1000, nextTime: Date.now() + (4 * 60 * 1000) },
+    capital: { interval: 6 * 60 * 1000, nextTime: Date.now() + (6 * 60 * 1000) },
+    reverse: { interval: 4.5 * 60 * 1000, nextTime: Date.now() + (4.5 * 60 * 1000) },
+    trivia: { interval: 6.5 * 60 * 1000, nextTime: Date.now() + (6.5 * 60 * 1000) },
+    guess: { interval: 5.5 * 60 * 1000, nextTime: Date.now() + (5.5 * 60 * 1000) },
+    emoji: { interval: 3.5 * 60 * 1000, nextTime: Date.now() + (3.5 * 60 * 1000) },
+    meaning: { interval: 5 * 60 * 1000, nextTime: Date.now() + (5 * 60 * 1000) }
+};
+
 let marketItems = [
     { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
     { id: 2, name: 'ورشة سيارات', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1500, emoji: '🔧' },
@@ -102,59 +117,30 @@ async function trackUserMessage(guildId, userId, userTag) {
     await pointsColl.updateOne({ guildId, userId }, { $set: doc }, { upsert: true });
 }
 
-// تشغيل الألعاب التلقائية بالتايمرات المحددة
 client.once('clientReady', () => {
   console.log(`[BOT STATUS] Camora Zone is Online & Secured! 🎮`);
   client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
 
-  // 1. روليت تبدأ فوراً
-  setTimeout(() => {
-      allowedChannels.forEach(channelId => {
-          const ch = client.channels.cache.get(channelId);
-          if (ch) startRouletteGame(ch, ch.guild.id);
-      });
-  }, 2000);
-
-  // 2. قنبلة بعد دقيقة (1 دقيقة)
-  setTimeout(() => {
-      setInterval(() => {
-          allowedChannels.forEach(channelId => {
-              const ch = client.channels.cache.get(channelId);
-              if (ch && !activeGames.has(channelId)) startBombGame(ch);
-          });
-      }, 60 * 1000);
-  }, 60 * 1000);
-
-  // 3. فكك بعد 3 دقائق
-  setTimeout(() => {
-      setInterval(() => {
-          allowedChannels.forEach(channelId => {
-              const ch = client.channels.cache.get(channelId);
-              if (ch && !activeGames.has(channelId)) startScrambleGame(ch, ch.guild.id);
-          });
-      }, 3 * 60 * 1000);
-  }, 3 * 60 * 1000);
-
-  // 4. زر بعد 5 دقائق
-  setTimeout(() => {
-      setInterval(() => {
-          allowedChannels.forEach(channelId => {
-              const ch = client.channels.cache.get(channelId);
-              if (ch && !activeGames.has(channelId)) startButtonGame(ch, ch.guild.id);
-          });
-      }, 5 * 60 * 1000);
-  }, 5 * 60 * 1000);
-
-  // 5. كتابة بعد 7 دقائق
-  setTimeout(() => {
-      setInterval(() => {
-          allowedChannels.forEach(channelId => {
-              const ch = client.channels.cache.get(channelId);
-              if (ch && !activeGames.has(channelId)) startWritingGame(ch, ch.guild.id);
-          });
-      }, 7 * 60 * 1000);
-  }, 7 * 60 * 1000);
+  setInterval(() => { gameTimers.bomb.nextTime = Date.now() + gameTimers.bomb.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startBombGame(ch); }); }, gameTimers.bomb.interval);
+  setInterval(() => { gameTimers.scramble.nextTime = Date.now() + gameTimers.scramble.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startScrambleGame(ch, ch.guild.id); }); }, gameTimers.scramble.interval);
+  setInterval(() => { gameTimers.button.nextTime = Date.now() + gameTimers.button.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startButtonGame(ch, ch.guild.id); }); }, gameTimers.button.interval);
+  setInterval(() => { gameTimers.writing.nextTime = Date.now() + gameTimers.writing.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startWritingGame(ch, ch.guild.id); }); }, gameTimers.writing.interval);
+  setInterval(() => { gameTimers.math.nextTime = Date.now() + gameTimers.math.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startMathGame(ch, ch.guild.id); }); }, gameTimers.math.interval);
+  setInterval(() => { gameTimers.capital.nextTime = Date.now() + gameTimers.capital.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startCapitalGame(ch, ch.guild.id); }); }, gameTimers.capital.interval);
+  setInterval(() => { gameTimers.reverse.nextTime = Date.now() + gameTimers.reverse.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startReverseGame(ch, ch.guild.id); }); }, gameTimers.reverse.interval);
+  setInterval(() => { gameTimers.trivia.nextTime = Date.now() + gameTimers.trivia.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startTriviaGame(ch, ch.guild.id); }); }, gameTimers.trivia.interval);
+  setInterval(() => { gameTimers.guess.nextTime = Date.now() + gameTimers.guess.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startGuessGame(ch, ch.guild.id); }); }, gameTimers.guess.interval);
+  setInterval(() => { gameTimers.emoji.nextTime = Date.now() + gameTimers.emoji.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startEmojiGame(ch, ch.guild.id); }); }, gameTimers.emoji.interval);
+  setInterval(() => { gameTimers.meaning.nextTime = Date.now() + gameTimers.meaning.interval; allowedChannels.forEach(id => { const ch = client.channels.cache.get(id); if(ch && !activeGames.has(id)) startMeaningGame(ch, ch.guild.id); }); }, gameTimers.meaning.interval);
 });
+
+function getTimeRemaining(nextTime) {
+    const diff = nextTime - Date.now();
+    if (diff <= 0) return 'قريباً جداً...';
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    return minutes > 0 ? `${minutes}د ${seconds}ث` : `${seconds}ث`;
+}
 
 function sendGamesMenu(channel) {
     const embed = new EmbedBuilder()
@@ -162,7 +148,19 @@ function sendGamesMenu(channel) {
         .setTitle('🎮 قائمة ألعاب وقوائم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
         .addFields(
             { name: '🔪 الألعاب اليدوية', value: '`!القاتل` | `!xo` (بدون تايمر)', inline: false },
-            { name: '⏰ الألعاب التلقائية', value: '`!روليت` (الآن) | `!قنبلة` (كل 1د) | `!فكك` (كل 3د) | `!زر` (كل 5د) | `!كتابة` (كل 7د)', inline: false },
+            { name: '⏰ الألعاب التلقائية (الوقت المتبقي)', value: 
+                `• \`!روليت\` : (تبدأ الآن)\n` +
+                `• \`!قنبلة\` : (تبدأ بعد ${getTimeRemaining(gameTimers.bomb.nextTime)})\n` +
+                `• \`!فكك\` : (تبدأ بعد ${getTimeRemaining(gameTimers.scramble.nextTime)})\n` +
+                `• \`!عكس\` : (تبدأ بعد ${getTimeRemaining(gameTimers.reverse.nextTime)})\n` +
+                `• \`!إيموجي\` : (تبدأ بعد ${getTimeRemaining(gameTimers.emoji.nextTime)})\n` +
+                `• \`!معنى\` : (تبدأ بعد ${getTimeRemaining(gameTimers.meaning.nextTime)})\n` +
+                `• \`!تخمين\` : (تبدأ بعد ${getTimeRemaining(gameTimers.guess.nextTime)})\n` +
+                `• \`!ذكاء\` : (تبدأ بعد ${getTimeRemaining(gameTimers.trivia.nextTime)})\n` +
+                `• \`!رياضيات\` : (تبدأ بعد ${getTimeRemaining(gameTimers.math.nextTime)})\n` +
+                `• \`!عواصم\` : (تبدأ بعد ${getTimeRemaining(gameTimers.capital.nextTime)})\n` +
+                `• \`!زر\` : (تبدأ بعد ${getTimeRemaining(gameTimers.button.nextTime)})\n` +
+                `• \`!كتابة\` : (تبدأ بعد ${getTimeRemaining(gameTimers.writing.nextTime)})`, inline: false },
             { name: '🎲 الفعاليات', value: '`!فعالية` (عشوائي من ألعاب التايمر)', inline: false },
             { name: '🏆 لوحة الصدارة', value: '`!ت ن` (نقاط) | `!ت س` (سرعة) | `!ت ت` (تفاعل)', inline: false }
         )
@@ -170,11 +168,157 @@ function sendGamesMenu(channel) {
     channel.send({ embeds: [embed] });
 }
 
-// دوال الألعاب المنفصلة
-function startRouletteGame(channel, guildId) {
+// ألعاب جديدة: إيموجي ومعاني كلمات
+function startEmojiGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
-    activeGames.set(channel.id, 'roulette');
-    channel.send(`🎲 **[تعدي تلقائي] روليت الحظ** - من سحب الزناد أولاً؟ (اكتب \`!روليت\` للمشاركة)`);
+    const items = [
+        { e: '🚗💨', ans: 'سيارة' },
+        { e: '🍎🍏', ans: 'تفاح' },
+        { e: '⚽🏃‍♂️', ans: 'كرة قدم' },
+        { e: '🦁👑', ans: 'اسد' },
+        { e: '💻⚡', ans: 'حاسب' }
+    ];
+    const chosen = items[Math.floor(Math.random() * items.length)];
+
+    channel.send(`😀 **[تحدي تلقائي - إيموجي]** ما هو الشيء الذي يعبر عنه الرمز التالي:\n\n${chosen.e}`).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(chosen.ans.toLowerCase());
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! خمنت الرمز الصحيح في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => {
+            if (r === 'time') {
+                activeGames.delete(channel.id);
+                channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${chosen.ans}**`);
+            }
+        });
+    });
+}
+
+function startMeaningGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const meanings = [
+        { word: 'قشيب', desc: 'ثوب جديد نظيف' },
+        { word: 'اليم', desc: 'البحر' },
+        { word: 'وجيز', desc: 'مختصر' },
+        { word: 'باسق', desc: 'طويل وعالي' }
+    ];
+    const chosen = meanings[Math.floor(Math.random() * meanings.length)];
+
+    channel.send(`📖 **[تحدي تلقائي - معاني الكلمات]** ما معنى كلمة **"${chosen.word}"**؟`).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(chosen.desc.toLowerCase());
+        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
+        activeGames.set(channel.id, coll);
+
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! عرفت المعنى في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => {
+            if (r === 'time') {
+                activeGames.delete(channel.id);
+                channel.send(`⏰ انتهى الوقت! المعنى الصحيح هو: **${chosen.desc}**`);
+            }
+        });
+    });
+}
+
+// لعبة التخمين من 1 إلى 100
+function startGuessGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const target = Math.floor(Math.random() * 100) + 1;
+
+    channel.send(`🎯 **[تحدي تلقائي - تخمين الأرقام]** خمن الرقم الصحيح بين **1 و 100** (معك 25 ثانية):`).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && parseInt(m.content.trim()) === target;
+        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
+        activeGames.set(channel.id, coll);
+
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎯');
+            m.reply(`🎯 كفو ${m.author}! خمنت الرقم الصحيح **${target}** في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => {
+            if (r === 'time') {
+                activeGames.delete(channel.id);
+                channel.send(`⏰ انتهى الوقت! الرقم الصحيح كان: **${target}**`);
+            }
+        });
+    });
+}
+
+function startReverseGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const words = ['برمجة', 'ديسكورد', 'حاسب', 'مهندس', 'تطوير', 'تقنية', 'سيرفر', 'ذكاء'];
+    const word = words[Math.floor(Math.random() * words.length)];
+    const reversed = word.split('').reverse().join('');
+
+    channel.send(`🔄 **[تحدي تلقائي - عكس الكلمة]** اكتب الكلمة التالية بالشكل الصحيح:\n\n\`${reversed}\``).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim().toLowerCase() === word.toLowerCase();
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! عدلت الكلمة في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => {
+            if (r === 'time') {
+                activeGames.delete(channel.id);
+                channel.send(`⏰ انتهى الوقت! الكلمة كانت: **${word}**`);
+            }
+        });
+    });
+}
+
+function startTriviaGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const questions = [
+        { q: 'ما هو أكبر كوكب في المجموعة الشمسية؟', ans: 'المشتري' },
+        { q: 'كم عدد سور القرآن الكريم؟', ans: '114' },
+        { q: 'ما هي عاصمة أستراليا؟', ans: 'كانبرا' },
+        { q: 'من هو أول خلفاء المسلمين؟', ans: 'ابو بكر' }
+    ];
+    const qObj = questions[Math.floor(Math.random() * questions.length)];
+
+    channel.send(`🧠 **[تحدي تلقائي - سؤال ذكاء]**\n\n${qObj.q}`).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(qObj.ans.toLowerCase());
+        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
+        activeGames.set(channel.id, coll);
+
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! الإجابة صحيحة في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => {
+            if (r === 'time') {
+                activeGames.delete(channel.id);
+                channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${qObj.ans}**`);
+            }
+        });
+    });
 }
 
 function startBombGame(channel) {
@@ -238,6 +382,67 @@ function startScrambleGame(channel, guildId) {
     });
 }
 
+function startMathGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const n1 = Math.floor(Math.random() * 50) + 10;
+    const n2 = Math.floor(Math.random() * 50) + 10;
+    const ans = (n1 + n2).toString();
+
+    channel.send(`🔢 **[تحدي تلقائي - رياضيات]** كم ناتج الحساب التالي:\n\n\`${n1} + ${n2}\``).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim() === ans;
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! جاوبت في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => {
+            if (r === 'time') {
+                activeGames.delete(channel.id);
+                channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${ans}**`);
+            }
+        });
+    });
+}
+
+function startCapitalGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const capitals = [
+        { c: 'السعودية', cap: 'الرياض' },
+        { c: 'الإمارات', cap: 'ابوظبي' },
+        { c: 'الكويت', cap: 'الكويت' },
+        { c: 'مصر', cap: 'القاهرة' },
+        { c: 'قطر', cap: 'الدوحة' }
+    ];
+    const chosen = capitals[Math.floor(Math.random() * capitals.length)];
+
+    channel.send(`🌍 **[تحدي تلقائي - عواصم]** ما هي عاصمة **${chosen.c}**؟`).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim().toLowerCase() === chosen.cap.toLowerCase();
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! العاصمة صحيحة في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => {
+            if (r === 'time') {
+                activeGames.delete(channel.id);
+                channel.send(`⏰ انتهى الوقت! العاصمة كانت: **${chosen.cap}**`);
+            }
+        });
+    });
+}
+
 function startButtonGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     activeGames.set(channel.id, 'button');
@@ -289,7 +494,6 @@ client.on('messageCreate', async message => {
   if (message.author.bot) return;
   const guildId = message.guild.id;
 
-  // قسم الاقتصاد (محصور في روم الاقتصاد فقط)
   if (allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder()
@@ -391,19 +595,23 @@ client.on('messageCreate', async message => {
       }
   }
 
-  // قسم الألعاب (فقط في رومات الألعاب)
   if (allowedChannels.includes(message.channel.id)) {
       trackUserMessage(guildId, message.author.id, message.author.displayName);
 
-      // أمر !فعالية عشوائي يختار لعبة من ألعاب التايمر فقط (بدون XO والقاتل)
       if (message.content === '!فعالية' || message.content === '!لعبة') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة!');
-          const gameChoicer = Math.floor(Math.random() * 5);
+          const gameChoicer = Math.floor(Math.random() * 11);
           if (gameChoicer === 0) startRouletteGame(message.channel, guildId);
           else if (gameChoicer === 1) startBombGame(message.channel);
           else if (gameChoicer === 2) startScrambleGame(message.channel, guildId);
           else if (gameChoicer === 3) startButtonGame(message.channel, guildId);
-          else startWritingGame(message.channel, guildId);
+          else if (gameChoicer === 4) startMathGame(message.channel, guildId);
+          else if (gameChoicer === 5) startCapitalGame(message.channel, guildId);
+          else if (gameChoicer === 6) startReverseGame(message.channel, guildId);
+          else if (gameChoicer === 7) startTriviaGame(message.channel, guildId);
+          else if (gameChoicer === 8) startGuessGame(message.channel, guildId);
+          else if (gameChoicer === 9) startEmojiGame(message.channel, guildId);
+          else startMeaningGame(message.channel, guildId);
           return;
       }
 
@@ -478,25 +686,17 @@ client.on('messageCreate', async message => {
           }, 3000);
       }
 
-      if (message.content === '!قنبلة') {
-          if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-          startBombGame(message.channel);
-      }
-
-      if (message.content === '!زر') {
-          if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-          startButtonGame(message.channel, guildId);
-      }
-
-      if (message.content === '!كتابة') {
-          if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-          startWritingGame(message.channel, guildId);
-      }
-
-      if (message.content === '!فكك') {
-          if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-          startScrambleGame(message.channel, guildId);
-      }
+      if (message.content === '!قنبلة') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startBombGame(message.channel); }
+      if (message.content === '!زر') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startButtonGame(message.channel, guildId); }
+      if (message.content === '!كتابة') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startWritingGame(message.channel, guildId); }
+      if (message.content === '!فكك') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startScrambleGame(message.channel, guildId); }
+      if (message.content === '!رياضيات') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startMathGame(message.channel, guildId); }
+      if (message.content === '!عواصم') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startCapitalGame(message.channel, guildId); }
+      if (message.content === '!عكس') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startReverseGame(message.channel, guildId); }
+      if (message.content === '!ذكاء') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startTriviaGame(message.channel, guildId); }
+      if (message.content === '!تخمين') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startGuessGame(message.channel, guildId); }
+      if (message.content === '!إيموجي') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startEmojiGame(message.channel, guildId); }
+      if (message.content === '!معنى') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startMeaningGame(message.channel, guildId); }
 
       if (message.content.startsWith('!ت')) {
           if (!pointsColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
