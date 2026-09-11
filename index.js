@@ -43,6 +43,13 @@ const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821'];
 
 const lastActivityTime = new Map();
 
+const jobsList = {
+    'مهندس': { name: 'مهندس 💻', salary: 1200, emoji: '💻' },
+    'طبيب': { name: 'طبيب 🩺', salary: 1500, emoji: '🩺' },
+    'شرطي': { name: 'شرطي 👮‍♂️', salary: 1000, emoji: '👮‍♂️' },
+    'مبرمج': { name: 'مبرمج ⚡', salary: 1800, emoji: '⚡' }
+};
+
 let marketItems = [
     { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
     { id: 2, name: 'ورشة سيارات', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1500, emoji: '🔧' },
@@ -95,8 +102,8 @@ setInterval(async () => {
                         .setDescription('✨ **الروم هادئ جداً! هل أنت مستعد للتحدي وجمع النقاط والأموال؟**\nإليك نبذة عن الألعاب والأنظمة المتاحة وكيفية لعبها:')
                         .addFields(
                             { name: '🎲 الألعاب السريعة والتحديات', value: 'استخدم أمر `!فعالية` لاختيار لعبة عشوائية فوراً، أو اختر لعبتك المفضلة:\n• **`!فكك` / `!عكس`**: ترتيب الحروف أو عكسها.\n• **`!إيموجي` / `!معنى`**: تخمين الرمز أو معاني الكلمات العربية.\n• **`!تخمين` / `!رياضيات`**: تخمين الأرقام وحل العمليات الحسابية.\n• **`!قنبلة` / `!روليت` / `!زر`**: ألعاب الحظ والسرعة الفائقة.', inline: false },
-                            { name: '🏦 النظام الاقتصادي والمزايا الجديدة', value: 'في رومات الاقتصاد، يمكنك بناء إمبراطوريتك المالية:\n• **`!راتب`**: استلم راتبك الدوري كل 5 دقائق.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات والمشاريع لترفع أرباحك.\n• **`!سرقة [@الشخص]`**: حاول سرقة خويك (بحذر لتنصاد!).\n• **`!حظ [المبلغ]`**: العب بكازينو الحظ وضاعف فلوسك.\n• **`!صندوق`**: اشتري صندوقاً سرياً بغنائم عشوائية.\n• **`!مهامي`**: أنجز مهامك اليومية واكسب جوائز ضخمة.', inline: false },
-                            { name: '🏆 لوحة الصدارة العامة', value: '• **`!ت`**: لعرض لوحة الصدارة الشاملة (النقاط، السرعة، التفاعل، والثروة).', inline: false }
+                            { name: '🏦 النظام الاقتصادي والمزايا الجديدة', value: 'في رومات الاقتصاد، يمكنك بناء إمبراطوريتك:\n• **`!وظائف` & `!وظيفة [اسم]`**: اختر مهنتك واقبض راتبك.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات.\n• **`!سرقة [@الشخص]`** | **`!حظ [المبلغ]`** | **`!صندوق`** | **`!مهامي`**.', inline: false },
+                            { name: '🏆 لوحة الصدارة التفاعلية', value: '• **`!ت`**: لعرض لوحة الشرف بالأزرار التفاعلية (نقاط، سرعة، تفاعل، ثروة، والمستويات).', inline: false }
                         )
                         .setFooter({ text: '💡 اكتب أحد الأوامر أعلاه وابدأ الحماس الآن!' })
                         .setTimestamp();
@@ -112,12 +119,13 @@ setInterval(async () => {
 }, 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
-    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
+    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'بدون وظيفة', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
     let doc = await economyColl.findOne({ guildId, userId });
     if (!doc) {
-        doc = { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
+        doc = { guildId, userId, balance: 1500, properties: [], job: 'بدون وظيفة', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
         await economyColl.insertOne(doc);
     }
+    if (!doc.job) doc.job = 'بدون وظيفة';
     return doc;
 }
 
@@ -135,12 +143,14 @@ async function saveEconomyUser(guildId, userId, userData) {
 }
 
 async function getPointsUser(guildId, userId, userTag) {
-    if (!pointsColl) return { points: 0, speedWins: 0, bestTime: 999999, messagesCount: 0 };
+    if (!pointsColl) return { points: 0, speedWins: 0, bestTime: 999999, messagesCount: 0, xp: 0, level: 1 };
     let doc = await pointsColl.findOne({ guildId, userId });
     if (!doc) {
-        doc = { guildId, userId, name: userTag, points: 0, speedWins: 0, bestTime: 999999, messagesCount: 0 };
+        doc = { guildId, userId, name: userTag, points: 0, speedWins: 0, bestTime: 999999, messagesCount: 0, xp: 0, level: 1 };
         await pointsColl.insertOne(doc);
     }
+    if (doc.xp === undefined) doc.xp = 0;
+    if (doc.level === undefined) doc.level = 1;
     return doc;
 }
 
@@ -161,11 +171,21 @@ async function addPoints(guildId, userId, userTag, channel, timeElapsed = null) 
     channel.send(`⭐ **${userTag}** كسب **10 نقاط**! (رصيد النقاط: ${doc.points})`);
 }
 
-async function trackUserMessage(guildId, userId, userTag) {
+async function trackUserMessage(guildId, userId, userTag, channel) {
     if (!pointsColl) return;
     let doc = await getPointsUser(guildId, userId, userTag);
     doc.name = userTag;
     doc.messagesCount += 1;
+    doc.xp += 15; // كسب 15 XP لكل رسالة
+
+    // نظام اللفلات: كل لفل يحتاج (الفلوس الحالية * 100) XP تقريباً
+    let xpNeeded = doc.level * 100;
+    if (doc.xp >= xpNeeded) {
+        doc.level += 1;
+        doc.xp = 0;
+        channel.send(`🎉 مبروك يا <@${userId}>! لقد ارتفعت إلى **المستوى (Level ${doc.level})**! 🚀✨`);
+    }
+
     await pointsColl.updateOne(
         { guildId: guildId, userId: userId }, 
         { $set: doc }, 
@@ -227,7 +247,7 @@ function sendGamesMenu(channel) {
         .addFields(
             { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
             { name: '🎲 الفعاليات العشوائية', value: '`!فعالية` (يختار لعبة عشوائية من القائمة)', inline: false },
-            { name: '🏆 لوحة الصدارة الشاملة', value: '`!ت` (لعرض جميع الإحصائيات والصدارة)', inline: false }
+            { name: '🏆 لوحة الصدارة التفاعلية', value: '`!ت` (لعرض لوحة الشرف بالأزرار)', inline: false }
         )
         .setFooter({ text: '🛑 لإلغاء أي لعبة جارية اكتب: !ايقاف' });
     channel.send({ embeds: [embed] });
@@ -528,18 +548,42 @@ client.on('messageCreate', async message => {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
               { name: '💵 الأساسيات', value: '`!راتب` | `!بنك`', inline: false },
+              { name: '👔 الوظائف', value: '`!وظائف` | `!وظيفة [الاسم]`', inline: false },
               { name: '📈 السوق والأملاك', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي` | `!ارباح`', inline: false },
-              { name: '🦹‍♂️ الجريمة والسرقة', value: '`!سرقة [@الشخص]`', inline: false },
-              { name: '🎰 الحظ والكازينو', value: '`!حظ [المبلغ]` | `!صندوق`', inline: false },
+              { name: '🦹‍♂️ الجريمة والحظ', value: '`!سرقة [@الشخص]` | `!حظ [المبلغ]` | `!صندوق`', inline: false },
               { name: '🎯 المهام والتحويل', value: '`!مهامي` | `!تحويل [@الشخص] [المبلغ]`', inline: false },
-              { name: '🏆 لوحة الصدارة', value: '`!ت` (لعرض لوحة الشرف والصدارة الشاملة)', inline: false }
+              { name: '🏆 لوحة الصدارة', value: '`!ت` (لعرض لوحة الشرف بالأزرار التفاعلية)', inline: false }
           );
           return message.channel.send({ embeds: [embed] });
       }
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
-          return message.reply(`💳 رصيدك الكاش بالسيرفر: **$${user.balance.toLocaleString()}**`);
+          return message.reply(`💳 رصيدك الكاش بالسيرفر: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
       }
+      
+      // --- نظام الوظائف (Jobs) ---
+      if (message.content === '!وظائف') {
+          const embed = new EmbedBuilder()
+              .setColor('#3498DB')
+              .setTitle('👔 قائمة الوظائف المتاحة في السيرفر')
+              .setDescription('اختر وظيفتك واقبض راتبك الدوري كل 5 دقائق باستخدام أمر: `!وظيفة [اسم الوظيفة]`');
+          for (let key in jobsList) {
+              embed.addFields({ name: jobsList[key].name, value: `💰 الراتب: **$${jobsList[key].salary.toLocaleString()}**`, inline: true });
+          }
+          return message.channel.send({ embeds: [embed] });
+      }
+
+      if (message.content.startsWith('!وظيفة')) {
+          const args = message.content.split(' ');
+          const jobName = args[1];
+          if (!jobName || !jobsList[jobName]) return message.reply('❌ يرجى اختيار وظيفة صحيحة من القائمة باستخدام: `!وظائف`');
+
+          let user = await getEconomyUser(guildId, userId);
+          user.job = jobsList[jobName].name;
+          await saveEconomyUser(guildId, userId, user);
+          return message.reply(`🎉 مبروك! تم تعيينك بنجاح في وظيفة **${user.job}**.`);
+      }
+
       if (message.content === '!راتب') {
           if (processingUsers.has(userId)) return;
           processingUsers.add(userId);
@@ -557,8 +601,16 @@ client.on('messageCreate', async message => {
                   return message.reply(`⏳ يابن الحلال! باقي **${m} دقيقة و ${s} ثانية** على راتبك القادم.`);
               }
 
-              const salary = Math.floor(Math.random() * 800) + 700;
-              user.balance += salary; 
+              // تحديد الراتب بناء على الوظيفة أو راتب أساسي
+              let baseSalary = 800;
+              for (let key in jobsList) {
+                  if (user.job === jobsList[key].name) {
+                      baseSalary = jobsList[key].salary;
+                      break;
+                  }
+              }
+
+              user.balance += baseSalary; 
               user.lastWork = now;
               
               await saveEconomyUser(guildId, userId, user);
@@ -567,7 +619,7 @@ client.on('messageCreate', async message => {
               const salaryEmbed = new EmbedBuilder()
                   .setColor('#2ECC71')
                   .setTitle('💵 صرف الراتب')
-                  .setDescription(`👤 <@${userId}>\nتم إيداع راتبك بقيمة **$${salary}** في رصيدك بالسيرفر!`);
+                  .setDescription(`👤 <@${userId}>\nتم إيداع راتبك (${user.job}) بقيمة **$${baseSalary}** في رصيدك بالسيرفر!`);
               message.channel.send({ embeds: [salaryEmbed] });
               return;
           } catch (err) {
@@ -575,6 +627,7 @@ client.on('messageCreate', async message => {
               console.error(err);
           }
       }
+
       if (message.content === '!سوق') {
           const embed = new EmbedBuilder().setColor('#0099ff').setTitle('📈 بورصة العقارات والأعمال');
           marketItems.forEach(i => {
@@ -765,10 +818,9 @@ client.on('messageCreate', async message => {
       }
   }
 
-  // --- لوحة الصدارة الشاملة (الأمر !ت في جميع الرومات المدارة) ---
   if (allowedChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
       if (allowedChannels.includes(message.channel.id)) {
-          trackUserMessage(guildId, userId, message.author.displayName);
+          trackUserMessage(guildId, userId, message.author.displayName, message.channel);
       }
 
       if (message.content === '!فعالية' || message.content === '!لعبة') {
@@ -871,44 +923,45 @@ client.on('messageCreate', async message => {
       if (message.content === '!إيموجي') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startEmojiGame(message.channel, guildId); }
       if (message.content === '!معنى') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startMeaningGame(message.channel, guildId); }
 
-      // --- لوحة الصدارة الشاملة بأمر واحد (!ت) ---
+      // --- لوحة الصدارة الشاملة التفاعلية بالأزرار (!ت) ---
       if (message.content === '!ت') {
           if (!pointsColl || !economyColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
 
-          // جلب أعلى 3 في النقاط
           const topPoints = await pointsColl.find({ guildId }).sort({ points: -1 }).limit(3).toArray();
-          // جلب أعلى 3 في السرعة
           const topSpeed = await pointsColl.find({ guildId }).sort({ bestTime: 1 }).limit(3).toArray();
-          // جلب أعلى 3 في الرسائل والتفاعل
           const topMsgs = await pointsColl.find({ guildId }).sort({ messagesCount: -1 }).limit(3).toArray();
-          // جلب أعلى 3 في الثروة المالية
           const topRich = await economyColl.find({ guildId }).sort({ balance: -1 }).limit(3).toArray();
+          const topLevels = await pointsColl.find({ guildId }).sort({ level: -1, xp: -1 }).limit(3).toArray();
 
-          const embed = new EmbedBuilder()
-              .setColor('#FFD700')
-              .setTitle('🏆 لوحة الشرف والصدارة الشاملة لـ 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
-              .setDescription('✨ إليك صدارة الأبطال، الأسرع، المتفاعلين، وأغنى أثرياء السيرفر:')
-              .setTimestamp();
+          const pages = [
+              new EmbedBuilder().setColor('#FFD700').setTitle('🏆 لوحة صدارة النقاط').setDescription(topPoints.length > 0 ? topPoints.map((d, i) => `${i === 0 ? '👑' : i === 1 ? '🥈' : '🥉'} **${d.name}**: \`${d.points} نقطة\``).join('\n') : 'لا توجد بيانات.'),
+              new EmbedBuilder().setColor('#3498DB').setTitle('⚡ لوحة أسرع الأبطال').setDescription(topSpeed.length > 0 && topSpeed.some(d => d.bestTime < 999999) ? topSpeed.filter(d => d.bestTime < 999999).map((d, i) => `⚡ **${d.name}**: \`${d.bestTime} ثانية\``).join('\n') : 'لا توجد أرقام.'),
+              new EmbedBuilder().setColor('#E74C3C').setTitle('🔥 لوحة أكثر المتفاعلين').setDescription(topMsgs.length > 0 ? topMsgs.map((d, i) => `🔥 **${d.name}**: \`${d.messagesCount} رسالة\``).join('\n') : 'لا توجد تفاعلات.'),
+              new EmbedBuilder().setColor('#2ECC71').setTitle('💎 لوحة أثرياء السيرفر (الكاش)').setDescription(topRich.length > 0 ? topRich.map((d, i) => `💰 <@${d.userId}>: \`$${d.balance.toLocaleString()}\``).join('\n') : 'لا توجد حسابات.'),
+              new EmbedBuilder().setColor('#9B59B6').setTitle('🚀 لوحة مستويات الأعضاء (Levels)').setDescription(topLevels.length > 0 ? topLevels.map((d, i) => `⭐ **${d.name}**: المستوى \`Level ${d.level}\``).join('\n') : 'لا توجد لفلات مسجلة.')
+          ];
 
-          // 1. قسم النقاط
-          let pointsText = topPoints.length > 0 ? topPoints.map((d, i) => `${i === 0 ? '👑' : i === 1 ? '🥈' : '🥉'} **${d.name}**: \`${d.points} نقطة\``).join('\n') : 'لا توجد بيانات بعد.';
-          embed.addFields({ name: '⭐ أعلى النقاط', value: pointsText, inline: false });
+          let page = 0;
+          const getRow = () => new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('prev').setLabel('◀️ السابق').setStyle(ButtonStyle.Primary).setDisabled(page === 0),
+              new ButtonBuilder().setCustomId('next').setLabel('التالي ▶️').setStyle(ButtonStyle.Primary).setDisabled(page === pages.length - 1)
+          );
 
-          // 2. قسم السرعة
-          let speedText = topSpeed.length > 0 && topSpeed.some(d => d.bestTime < 999999) 
-              ? topSpeed.filter(d => d.bestTime < 999999).map((d, i) => `${i === 0 ? '⚡' : '🥈' ?? '🥉'} **${d.name}**: \`${d.bestTime} ثانية\``).join('\n') 
-              : 'لا توجد أرقام مسجلة.';
-          embed.addFields({ name: '⚡ أسرع الأبطال', value: speedText, inline: false });
+          const msg = await message.channel.send({ embeds: [pages[page]], components: [getRow()] });
+          const collector = msg.createMessageComponentCollector({ time: 60000 });
 
-          // 3. قسم التفاعل
-          let msgText = topMsgs.length > 0 ? topMsgs.map((d, i) => `${i === 0 ? '🔥' : i === 1 ? '🥈' : '🥉'} **${d.name}**: \`${d.messagesCount} رسالة\``).join('\n') : 'لا توجد تفاعلات مسجلة.';
-          embed.addFields({ name: '🔥 أكثر المتفاعلين', value: msgText, inline: false });
+          collector.on('collect', async i => {
+              if (i.user.id !== userId) return i.reply({ content: '❌ هذه القائمة ليست لك!', ephemeral: true });
+              if (i.customId === 'next' && page < pages.length - 1) page++;
+              if (i.customId === 'prev' && page > 0) page--;
+              await i.update({ embeds: [pages[page]], components: [getRow()] });
+          });
 
-          // 4. قسم الثروة والاقتصاد
-          let richText = topRich.length > 0 ? topRich.map((d, i) => `${i === 0 ? '💰' : i === 1 ? '🥈' : '🥉'} <@${d.userId}>: \`$${d.balance.toLocaleString()}\``).join('\n') : 'لا توجد حسابات بنكية.';
-          embed.addFields({ name: '💎 أثرياء السيرفر (الكاش)', value: richText, inline: false });
+          collector.on('end', () => {
+              msg.edit({ components: [] }).catch(() => {});
+          });
 
-          return message.channel.send({ embeds: [embed] });
+          return;
       }
 
       if (message.content === '!ايقاف') {
