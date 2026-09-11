@@ -6,7 +6,6 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const mongoUri = process.env.MONGO_URI;
 
-// إعداد الاتصال بقاعدة البيانات مع تجاوز مشاكل الـ SSL والتأمين
 const dbClient = new MongoClient(mongoUri, {
     serverSelectionTimeoutMS: 5000,
     tls: true,
@@ -75,7 +74,15 @@ async function getEconomyUser(userId) {
 
 async function saveEconomyUser(userId, userData) {
     if (!economyColl) return;
-    await economyColl.updateOne({ userId }, { $set: userData }, { upsert: true });
+    try {
+        await economyColl.updateOne(
+            { userId: userId }, 
+            { $set: userData }, 
+            { upsert: true }
+        );
+    } catch (e) {
+        console.error('Error saving economy user:', e);
+    }
 }
 
 async function getPointsUser(guildId, userId, userTag) {
@@ -97,7 +104,11 @@ async function addPoints(guildId, userId, userTag, channel, timeElapsed = null) 
         doc.speedWins += 1;
         if (timeElapsed < doc.bestTime) doc.bestTime = timeElapsed;
     }
-    await pointsColl.updateOne({ guildId, userId }, { $set: doc }, { upsert: true });
+    await pointsColl.updateOne(
+        { guildId: guildId, userId: userId }, 
+        { $set: doc }, 
+        { upsert: true }
+    );
     channel.send(`⭐ **${userTag}** كسب **10 نقاط**! (رصيد النقاط: ${doc.points})`);
 }
 
@@ -106,7 +117,11 @@ async function trackUserMessage(guildId, userId, userTag) {
     let doc = await getPointsUser(guildId, userId, userTag);
     doc.name = userTag;
     doc.messagesCount += 1;
-    await pointsColl.updateOne({ guildId, userId }, { $set: doc }, { upsert: true });
+    await pointsColl.updateOne(
+        { guildId: guildId, userId: userId }, 
+        { $set: doc }, 
+        { upsert: true }
+    );
 }
 
 const historyTracker = { emoji: [], meaning: [], scramble: [], reverse: [], trivia: [], capital: [], writing: [] };
