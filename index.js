@@ -56,7 +56,7 @@ setInterval(() => {
     });
 }, 5 * 60 * 1000);
 
-// الدالة الموحدة الثابتة برقم المستخدم فقط (userId) لمنع أي تضارب نهائياً
+// الدالة الموحدة برقم المستخدم (userId) فقط بدون أي تضارب
 async function getEconomyUser(userId) {
     if (!economyColl) return { userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
     let doc = await economyColl.findOne({ userId });
