@@ -22,6 +22,21 @@ const allowedChannels = ['1547728033580847236', '1547728346081927262'];
 
 const pointsFilePath = path.join(__dirname, 'points.json');
 
+// ذاكرة لتخزين آخر 10 كلمات لكل لعبة لمنع تكرارها نهائياً عبر الذكاء الاصطناعي
+const recentHistory = {
+    writing: [],
+    scramble: [],
+    capital: []
+};
+
+function trackHistory(type, item) {
+    if (!recentHistory[type]) recentHistory[type] = [];
+    recentHistory[type].push(item);
+    if (recentHistory[type].length > 10) {
+        recentHistory[type].shift(); // الاحتفاظ فقط بآخر 10 عناصر
+    }
+}
+
 function loadPoints() {
     if (fs.existsSync(pointsFilePath)) {
         try {
@@ -240,106 +255,61 @@ function sendGamesMenu(channel) {
     channel.send(menu);
 }
 
-// قوائم ضخمة ومنوعة جداً تمنع التكرار نهائياً وتضمن تنوع الأسئلة
-const writingPool = [
-    "الحماس والتركيز أساس الفوز الحقيقي",
-    "قيمرز سعوديين ما نعرف الهزيمة أبداً",
-    "اضغط زر السرعة وحقق الفوز بكل قوة",
-    "التحدي الحقيقي يبدأ الآن فلا تتردد",
-    "السرعة والدقة تصنعان البطل الأسطوري",
-    "انطلق نحو القمة ولا تراجع في المعركة",
-    "التركيز العالي يصنع الفارق في كل جولة"
-];
-
-const scramblePool = [
-    "برمجة", "تصميم", "حاسب", "شاشة", "مفتاح", 
-    "بطولة", "فوز", "سرعة", "تحدي", "قائد", 
-    "منطقة", "سيرفر", "لاعب", "حماس", "ذكاء"
-];
-
-const capitalsPool = [
-    { c: "السعودية", cap: "الرياض" },
-    { c: "الإمارات", cap: "أبوظبي" },
-    { c: "الكويت", cap: "الكويت" },
-    { c: "قطر", cap: "الدوحة" },
-    { c: "البحرين", cap: "المنامة" },
-    { c: "عمان", cap: "مسقط" },
-    { c: "الأردن", cap: "عمان" },
-    { c: "مصر", cap: "القاهرة" },
-    { c: "المغرب", cap: "الرباط" },
-    { c: "العراق", cap: "بغداد" },
-    { c: "تونس", cap: "تونس" },
-    { c: "الجزائر", cap: "الجزائر" },
-    { c: "اليابان", cap: "طوكيو" },
-    { c: "فرنسا", cap: "باريس" },
-    { c: "إيطاليا", cap: "روما" },
-    { c: "بريطانيا", cap: "لندن" },
-    { c: "ألمانيا", cap: "برلين" },
-    { c: "تركيا", cap: "أنقرة" }
-];
-
-function getRandomItem(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-}
-
-async function runLocalGame(gameTitle, type, channel) {
-    let display = "";
-    let answer = "";
-
-    if (type === 'writing') {
-        const sentence = getRandomItem(writingPool);
-        display = `عندكم **30 ثانية** لكتابة الجملة التالية:\n\n\`${sentence}\``;
-        answer = sentence;
-    } else if (type === 'scramble') {
-        const word = getRandomItem(scramblePool);
-        const scrambled = word.split('').sort(() => 0.5 - Math.random()).join(' ');
-        display = `رتب الحروف لتكون كلمة صحيحة:\n\n\`${scrambled}\``;
-        answer = word;
-    } else if (type === 'math') {
-        const n1 = Math.floor(Math.random() * 80) + 15;
-        const n2 = Math.floor(Math.random() * 50) + 10;
-        display = `كم ناتج: ${n1} + ${n2} ؟`;
-        answer = (n1 + n2).toString();
-    } else if (type === 'mul') {
-        const n1 = Math.floor(Math.random() * 12) + 3;
-        const n2 = Math.floor(Math.random() * 12) + 3;
-        display = `كم ناتج: ${n1} × ${n2} ؟`;
-        answer = (n1 * n2).toString();
-    } else if (type === 'capital') {
-        const chosen = getRandomItem(capitalsPool);
-        display = `ما هي عاصمة **${chosen.c}** ؟`;
-        answer = chosen.cap;
-    }
-
-    const loadingMsg = await channel.send(`🎮 **${gameTitle}**\n${display}`);
-    const startTime = Date.now();
-
-    const filter = m => !m.author.bot;
-    const collector = channel.createMessageCollector({ filter, time: 30000 });
-    activeGames.set(channel.id, collector);
-
-    let answeredCorrectly = false;
-    collector.on('collect', m => {
-        if (m.content.trim().toLowerCase() === answer.toLowerCase()) {
-            answeredCorrectly = true;
-            const endTime = Date.now();
-            const timeElapsed = ((endTime - startTime) / 1000).toFixed(2);
-
-            m.react('🎉');
-            channel.send(`🎉 فاز ${m.author} بزمن خيالي: **${timeElapsed} ثانية**! الإجابة صحيحة: **${answer}**`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(timeElapsed));
-            collector.stop('correct');
-        } else {
-            m.react('❌');
+// دالة توليد ذكية تستبعد آخر 10 عناصر ظهرت إطلاقاً
+async function generateAIQuestionWithMemory(type) {
+    try {
+        const historyList = recentHistory[type] ? recentHistory[type].join(', ') : '';
+        let prompt = "";
+        
+        if (type === 'writing') {
+            prompt = `أعطني جملة عربية جديدة كلياً ومبتكرة للقيمرز لتحدي السرعة. ملاحظة هامة: ممنوع منعاً باتاً تكرار أي جملة من هذه القائمة الأخيرة: [${historyList}]. أرجع الجملة فقط بدون مقدمات أو تنصيص.`;
+        } else if (type === 'scramble') {
+            prompt = `اختر كلمة عربية فريدة تماماً من 4 إلى 6 أحرف. ملاحظة هامة: ممنوع منعاً باتاً تكرار أي كلمة من هذه القائمة الأخيرة: [${historyList}]. أرجع الكلمة فقط بدون شرح.`;
+        } else if (type === 'math') {
+            const n1 = Math.floor(Math.random() * 90) + 10;
+            const n2 = Math.floor(Math.random() * 60) + 10;
+            return { display: `كم ناتج: ${n1} + ${n2} ؟`, answer: (n1 + n2).toString() };
+        } else if (type === 'mul') {
+            const n1 = Math.floor(Math.random() * 12) + 4;
+            const n2 = Math.floor(Math.random() * 12) + 4;
+            return { display: `كم ناتج: ${n1} × ${n2} ؟`, answer: (n1 * n2).toString() };
+        } else if (type === 'capital') {
+            prompt = `اختر دولة وعاصمتها غير مكررة ومنوعة عالمياً. ملاحظة هامة: ممنوع تكرار أي دولة من هذه القائمة الأخيرة: [${historyList}]. ونسق الإجابة هكذا تماماً: الدولة|العاصمة. مثال: كندا|اوتاوا. لا تكتب أي شي غيرها.`;
         }
-    });
 
-    collector.on('end', (collected, reason) => {
-        if (reason === 'cancelled') return;
-        activeGames.delete(channel.id);
-        if (!answeredCorrectly) channel.send(`⏰ خلص الوقت! الإجابة الصحيحة كانت: **${answer}**`);
-        sendGamesMenu(channel);
-    });
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                temperature: 1.0,
+            }
+        });
+
+        const text = response.text ? response.text.trim() : "";
+
+        if (type === 'writing') {
+            trackHistory('writing', text);
+            return { display: `عندكم **30 ثانية** لكتابة الجملة التالية:\n\n\`${text}\``, answer: text };
+        } else if (type === 'scramble') {
+            const cleanWord = text.replace(/[^أ-ي]/g, '');
+            trackHistory('scramble', cleanWord);
+            const scrambled = cleanWord.split('').sort(() => 0.5 - Math.random()).join(' ');
+            return { display: `رتب الحروف لتكون كلمة صحيحة:\n\n\`${scrambled}\``, answer: cleanWord };
+        } else if (type === 'capital') {
+            const parts = text.split('|');
+            if (parts.length === 2) {
+                const country = parts[0].trim();
+                const capital = parts[1].trim();
+                trackHistory('capital', country);
+                return { display: `ما هي عاصمة **${country}** ؟`, answer: capital };
+            }
+            return { display: `ما هي عاصمة **أستراليا** ؟`, answer: 'كانبيرا' };
+        }
+    } catch (e) {
+        if (type === 'writing') return { display: `عندكم **30 ثانية** لكتابة:\n\n\`العب بكل قوة وحقق الانتصار\``, answer: 'العب بكل قوة وحقق الانتصار' };
+        if (type === 'scramble') return { display: `رتب الحروف: \`م س ج ل\``, answer: 'مسجل' };
+        if (type === 'capital') return { display: `ما هي عاصمة **إيطاليا** ؟`, answer: 'روما' };
+    }
 }
 
 client.on('messageCreate', async message => {
@@ -704,29 +674,69 @@ client.on('messageCreate', async message => {
       return message.channel.send('🛑 **تم إيقاف اللعبة بنجاح!**');
   }
 
+  async function runQuickGameByAI(gameTitle, aiType, channel) {
+      const loadingMsg = await channel.send(`⏳ جاري توليد سؤال جديد بالذكاء الاصطناعي...`);
+      const gameData = await generateAIQuestionWithMemory(aiType);
+      
+      if (!gameData) {
+          await loadingMsg.edit(`❌ حدث خطأ أثناء جلب السؤال، حاول مرة أخرى.`);
+          return;
+      }
+
+      await loadingMsg.edit(`🎮 **${gameTitle}**\n${gameData.display}`);
+      const startTime = Date.now();
+
+      const filter = m => !m.author.bot;
+      const collector = channel.createMessageCollector({ filter, time: 30000 });
+      activeGames.set(channel.id, collector);
+
+      let answeredCorrectly = false;
+      collector.on('collect', m => {
+          if (m.content.trim().toLowerCase() === gameData.answer.toLowerCase()) {
+              answeredCorrectly = true;
+              const endTime = Date.now();
+              const timeElapsed = ((endTime - startTime) / 1000).toFixed(2);
+
+              m.react('🎉');
+              channel.send(`🎉 فاز ${m.author} بزمن خيالي: **${timeElapsed} ثانية**! الإجابة صحيحة: **${gameData.answer}**`);
+              addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(timeElapsed));
+              collector.stop('correct');
+          } else {
+              m.react('❌');
+          }
+      });
+
+      collector.on('end', (collected, reason) => {
+          if (reason === 'cancelled') return;
+          activeGames.delete(channel.id);
+          if (!answeredCorrectly) channel.send(`⏰ خلص الوقت! الإجابة الصحيحة كانت: **${gameData.answer}**`);
+          sendGamesMenu(channel);
+      });
+  }
+
   if (message.content === '!كتابة') {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      runLocalGame('تحدي أسرع كاتب!', 'writing', message.channel);
+      runQuickGameByAI('تحدي أسرع كاتب!', 'writing', message.channel);
   }
 
   if (message.content.startsWith('!فكك')) {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      runLocalGame('لعبة فكك!', 'scramble', message.channel);
+      runQuickGameByAI('لعبة فكك!', 'scramble', message.channel);
   }
 
   if (message.content.startsWith('!رياضيات')) {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      runLocalGame('تحدي الحساب السريع!', 'math', message.channel);
+      runQuickGameByAI('تحدي الحساب السريع!', 'math', message.channel);
   }
 
   if (message.content.startsWith('!قسمة') || message.content.startsWith('!ضرب')) {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      runLocalGame('تحدي الضرب!', 'mul', message.channel);
+      runQuickGameByAI('تحدي الضرب!', 'mul', message.channel);
   }
 
   if (message.content.startsWith('!عواصم')) {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      runLocalGame('لعبة العواصم!', 'capital', message.channel);
+      runQuickGameByAI('لعبة العواصم!', 'capital', message.channel);
   }
 
 });
