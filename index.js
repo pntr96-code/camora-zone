@@ -43,7 +43,6 @@ const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821'];
 
 const lastActivityTime = new Map();
 
-// قائمة الـ 20 وظيفة مرتبة تصاعدياً مع شروط المستويات والرواتب
 const jobsList = {
     'عامل_نظافة': { name: 'عامل نظافة 🧹', salary: 500, level: 1, emoji: '🧹' },
     'حارس_أمن': { name: 'حارس أمن 🛡️', salary: 700, level: 2, emoji: '🛡️' },
@@ -597,13 +596,15 @@ client.on('messageCreate', async message => {
       if (message.content.startsWith('!وظيفة')) {
           const args = message.content.split(' ');
           const jobKey = args[1];
-          if (!jobKey || !jobsList[jobKey]) return.reply ? message.reply('❌ يرجى إدخال رمز وظيفة صحيح من القائمة! استخدم أمر: `!وظائف`') : message.channel.send('❌ يرجى إدخال رمز وظيفة صحيح!');
+          if (!jobKey || !jobsList[jobKey]) {
+              return message.reply('❌ يرجى إدخال رمز وظيفة صحيح من القائمة! استخدم أمر: `!وظائف`');
+          }
 
           const targetJob = jobsList[jobKey];
           let pUser = await getPointsUser(guildId, userId, message.author.displayName);
 
           if (pUser.level < targetJob.level) {
-              return message.reply(`⛔عذراً! مستواك الحالي هو \`Level ${pUser.level}\` بينما وظيفة **${targetJob.name}** تتطلب وصولك إلى **Level ${targetJob.level}** على الأقل! تفاعل بالألعاب والرسائل لرفع مستواك.`);
+              return message.reply(`⛔ عذراً! مستواك الحالي هو \`Level ${pUser.level}\` بينما وظيفة **${targetJob.name}** تتطلب وصولك إلى **Level ${targetJob.level}** على الأقل! تفاعل بالألعاب والرسائل لرفع مستواك.`);
           }
 
           let user = await getEconomyUser(guildId, userId);
