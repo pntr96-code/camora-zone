@@ -43,11 +43,28 @@ const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821'];
 
 const lastActivityTime = new Map();
 
+// قائمة الـ 20 وظيفة مرتبة تصاعدياً مع شروط المستويات والرواتب
 const jobsList = {
-    'مهندس': { name: 'مهندس 💻', salary: 1200, emoji: '💻' },
-    'طبيب': { name: 'طبيب 🩺', salary: 1500, emoji: '🩺' },
-    'شرطي': { name: 'شرطي 👮‍♂️', salary: 1000, emoji: '👮‍♂️' },
-    'مبرمج': { name: 'مبرمج ⚡', salary: 1800, emoji: '⚡' }
+    'عامل_نظافة': { name: 'عامل نظافة 🧹', salary: 500, level: 1, emoji: '🧹' },
+    'حارس_أمن': { name: 'حارس أمن 🛡️', salary: 700, level: 2, emoji: '🛡️' },
+    'عامل_توصيل': { name: 'عامل توصيل 📦', salary: 900, level: 3, emoji: '📦' },
+    'كاشير': { name: 'كاشير 🛒', salary: 1100, level: 4, emoji: '🛒' },
+    'بارستا': { name: 'ساقي قهوة (بارستا) ☕', salary: 1350, level: 5, emoji: '☕' },
+    'كاتب_محتوى': { name: 'كاتب محتوى 📝', salary: 1600, level: 6, emoji: '📝' },
+    'محاسب': { name: 'محاسب 📊', salary: 1900, level: 7, emoji: '📊' },
+    'مصمم': { name: 'مصمم جرافيك 🎨', salary: 2200, level: 8, emoji: '🎨' },
+    'صحفي': { name: 'صحفي 📰', salary: 2500, level: 9, emoji: '📰' },
+    'شرطي': { name: 'شرطي 👮‍♂️', salary: 2900, level: 10, emoji: '👮‍♂️' },
+    'مهندس': { name: 'مهندس 💻', salary: 3400, level: 12, emoji: '💻' },
+    'محامي': { name: 'محامي ⚖️', salary: 4000, level: 14, emoji: '⚖️' },
+    'طبيب': { name: 'طبيب 🩺', salary: 4700, level: 16, emoji: '🩺' },
+    'مبرمج': { name: 'مبرمج ⚡', salary: 5500, level: 18, emoji: '⚡' },
+    'مستشار': { name: 'مستشار مالي 💼', salary: 6400, level: 20, emoji: '💼' },
+    'رائد_فضاء': { name: 'رائد فضاء 🚀', salary: 7500, level: 23, emoji: '🚀' },
+    'طيار': { name: 'طيار ✈️', salary: 8800, level: 26, emoji: '✈️' },
+    'قاضي': { name: 'قاضي 🏛️', salary: 10300, level: 30, emoji: '🏛️' },
+    'مدير_تنفيذي': { name: 'مدير تنفيذي (CEO) 👔', salary: 12500, level: 35, emoji: '👔' },
+    'رجل_أعمال': { name: 'رجل أعمال أسطوري 👑', salary: 15000, level: 40, emoji: '👑' }
 };
 
 let marketItems = [
@@ -99,11 +116,11 @@ setInterval(async () => {
                     const embed = new EmbedBuilder()
                         .setColor('#9B59B6')
                         .setTitle('⚡ استعراض فعاليات وألعاب 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
-                        .setDescription('✨ **الروم هادئ جداً! هل أنت مستعد للتحدي وجمع النقاط والأموال؟**\nإليك نبذة عن الألعاب والأنظمة المتاحة وكيفية لعبها:')
+                        .setDescription('✨ **الروم هادئ جداً! هل أنت مستعد للتحدي وجمع النقاط والأموال؟**\nإليك نبذة عن الأنظمة المتاحة:')
                         .addFields(
-                            { name: '🎲 الألعاب السريعة والتحديات', value: 'استخدم أمر `!فعالية` لاختيار لعبة عشوائية فوراً، أو اختر لعبتك المفضلة:\n• **`!فكك` / `!عكس`**: ترتيب الحروف أو عكسها.\n• **`!إيموجي` / `!معنى`**: تخمين الرمز أو معاني الكلمات العربية.\n• **`!تخمين` / `!رياضيات`**: تخمين الأرقام وحل العمليات الحسابية.\n• **`!قنبلة` / `!روليت` / `!زر`**: ألعاب الحظ والسرعة الفائقة.', inline: false },
-                            { name: '🏦 النظام الاقتصادي والمزايا الجديدة', value: 'في رومات الاقتصاد، يمكنك بناء إمبراطوريتك:\n• **`!وظائف` & `!وظيفة [اسم]`**: اختر مهنتك واقبض راتبك.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات.\n• **`!سرقة [@الشخص]`** | **`!حظ [المبلغ]`** | **`!صندوق`** | **`!مهامي`**.', inline: false },
-                            { name: '🏆 لوحة الصدارة التفاعلية', value: '• **`!ت`**: لعرض لوحة الشرف بالأزرار التفاعلية (نقاط، سرعة، تفاعل، ثروة، والمستويات).', inline: false }
+                            { name: '🎲 الألعاب والسريعة', value: 'استخدم أمر `!فعالية` أو أي لعبة مفضلة لديك لجمع النقاط ورفع مستواك (XP).', inline: false },
+                            { name: '🏦 نظام الاقتصاد والوظائف الـ 20', value: '• **`!وظائف` & `!وظيفة [الرمز]`**: تدرج في 20 وظيفة حسب مستواك واقبض راتبك العالي.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات.\n• **`!سرقة [@الشخص]`** | **`!حظ [المبلغ]`** | **`!صندوق`** | **`!مهامي`**.', inline: false },
+                            { name: '🏆 لوحة الصدارة التفاعلية', value: '• **`!ت`**: لعرض لوحة الشرف بالأزرار (نقاط، سرعة، تفاعل، ثروة، والمستويات).', inline: false }
                         )
                         .setFooter({ text: '💡 اكتب أحد الأوامر أعلاه وابدأ الحماس الآن!' })
                         .setTimestamp();
@@ -119,13 +136,13 @@ setInterval(async () => {
 }, 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
-    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'بدون وظيفة', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
+    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'عامل نظافة 🧹', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
     let doc = await economyColl.findOne({ guildId, userId });
     if (!doc) {
-        doc = { guildId, userId, balance: 1500, properties: [], job: 'بدون وظيفة', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
+        doc = { guildId, userId, balance: 1500, properties: [], job: 'عامل نظافة 🧹', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
         await economyColl.insertOne(doc);
     }
-    if (!doc.job) doc.job = 'بدون وظيفة';
+    if (!doc.job) doc.job = 'عامل نظافة 🧹';
     return doc;
 }
 
@@ -176,9 +193,8 @@ async function trackUserMessage(guildId, userId, userTag, channel) {
     let doc = await getPointsUser(guildId, userId, userTag);
     doc.name = userTag;
     doc.messagesCount += 1;
-    doc.xp += 15; // كسب 15 XP لكل رسالة
+    doc.xp += 15;
 
-    // نظام اللفلات: كل لفل يحتاج (الفلوس الحالية * 100) XP تقريباً
     let xpNeeded = doc.level * 100;
     if (doc.xp >= xpNeeded) {
         doc.level += 1;
@@ -548,7 +564,7 @@ client.on('messageCreate', async message => {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
               { name: '💵 الأساسيات', value: '`!راتب` | `!بنك`', inline: false },
-              { name: '👔 الوظائف', value: '`!وظائف` | `!وظيفة [الاسم]`', inline: false },
+              { name: '👔 الوظائف (20 وظيفة تدرجية)', value: '`!وظائف` | `!وظيفة [الرمز]`', inline: false },
               { name: '📈 السوق والأملاك', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي` | `!ارباح`', inline: false },
               { name: '🦹‍♂️ الجريمة والحظ', value: '`!سرقة [@الشخص]` | `!حظ [المبلغ]` | `!صندوق`', inline: false },
               { name: '🎯 المهام والتحويل', value: '`!مهامي` | `!تحويل [@الشخص] [المبلغ]`', inline: false },
@@ -561,27 +577,39 @@ client.on('messageCreate', async message => {
           return message.reply(`💳 رصيدك الكاش بالسيرفر: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
       }
       
-      // --- نظام الوظائف (Jobs) ---
+      // --- عرض الـ 20 وظيفة مع شروطها ---
       if (message.content === '!وظائف') {
           const embed = new EmbedBuilder()
               .setColor('#3498DB')
-              .setTitle('👔 قائمة الوظائف المتاحة في السيرفر')
-              .setDescription('اختر وظيفتك واقبض راتبك الدوري كل 5 دقائق باستخدام أمر: `!وظيفة [اسم الوظيفة]`');
+              .setTitle('👔 سلّم الوظائف في السيرفر (20 وظيفة)')
+              .setDescription('كل ما ارتفع مستواك (`Level`) في السيرفر، فتحت لك وظائف برواتب أعلى!\nلتقديم الطلب اكتب: `!وظيفة [رمز الوظيفة]`');
+          
+          let desc = '';
           for (let key in jobsList) {
-              embed.addFields({ name: jobsList[key].name, value: `💰 الراتب: **$${jobsList[key].salary.toLocaleString()}**`, inline: true });
+              const j = jobsList[key];
+              desc += `• **${j.name}** | الراتب: \`$${j.salary.toLocaleString()}\` | الشرط: \`Level ${j.level}\` (الرمز: \`${key}\`)\n`;
           }
+          embed.setDescription(desc);
           return message.channel.send({ embeds: [embed] });
       }
 
+      // --- اختيار الوظيفة بناء على شرط المستوى (Level) ---
       if (message.content.startsWith('!وظيفة')) {
           const args = message.content.split(' ');
-          const jobName = args[1];
-          if (!jobName || !jobsList[jobName]) return message.reply('❌ يرجى اختيار وظيفة صحيحة من القائمة باستخدام: `!وظائف`');
+          const jobKey = args[1];
+          if (!jobKey || !jobsList[jobKey]) return.reply ? message.reply('❌ يرجى إدخال رمز وظيفة صحيح من القائمة! استخدم أمر: `!وظائف`') : message.channel.send('❌ يرجى إدخال رمز وظيفة صحيح!');
+
+          const targetJob = jobsList[jobKey];
+          let pUser = await getPointsUser(guildId, userId, message.author.displayName);
+
+          if (pUser.level < targetJob.level) {
+              return message.reply(`⛔عذراً! مستواك الحالي هو \`Level ${pUser.level}\` بينما وظيفة **${targetJob.name}** تتطلب وصولك إلى **Level ${targetJob.level}** على الأقل! تفاعل بالألعاب والرسائل لرفع مستواك.`);
+          }
 
           let user = await getEconomyUser(guildId, userId);
-          user.job = jobsList[jobName].name;
+          user.job = targetJob.name;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🎉 مبروك! تم تعيينك بنجاح في وظيفة **${user.job}**.`);
+          return message.reply(`🎉 مبروك يا بطل! تم قبولك وترقيتك رسمياً في وظيفة **${user.job}**.`);
       }
 
       if (message.content === '!راتب') {
@@ -601,8 +629,7 @@ client.on('messageCreate', async message => {
                   return message.reply(`⏳ يابن الحلال! باقي **${m} دقيقة و ${s} ثانية** على راتبك القادم.`);
               }
 
-              // تحديد الراتب بناء على الوظيفة أو راتب أساسي
-              let baseSalary = 800;
+              let baseSalary = 500;
               for (let key in jobsList) {
                   if (user.job === jobsList[key].name) {
                       baseSalary = jobsList[key].salary;
@@ -619,7 +646,7 @@ client.on('messageCreate', async message => {
               const salaryEmbed = new EmbedBuilder()
                   .setColor('#2ECC71')
                   .setTitle('💵 صرف الراتب')
-                  .setDescription(`👤 <@${userId}>\nتم إيداع راتبك (${user.job}) بقيمة **$${baseSalary}** في رصيدك بالسيرفر!`);
+                  .setDescription(`👤 <@${userId}>\nتم إيداع راتبك (${user.job}) بقيمة **$${baseSalary.toLocaleString()}** في رصيدك بالسيرفر!`);
               message.channel.send({ embeds: [salaryEmbed] });
               return;
           } catch (err) {
@@ -923,7 +950,6 @@ client.on('messageCreate', async message => {
       if (message.content === '!إيموجي') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startEmojiGame(message.channel, guildId); }
       if (message.content === '!معنى') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startMeaningGame(message.channel, guildId); }
 
-      // --- لوحة الصدارة الشاملة التفاعلية بالأزرار (!ت) ---
       if (message.content === '!ت') {
           if (!pointsColl || !economyColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
 
