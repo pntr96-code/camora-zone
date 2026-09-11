@@ -38,29 +38,29 @@ const allowedChannels = ['1547728033580847236', '1547728346081927262'];
 const allowedEconomyChannels = ['1547951432186077296']; 
 
 // ==========================================
-// 💰 سوق العقارات والبورصة
+// 💰 سوق العقارات والبورصة (تحديث بين -45% و +50% من الأساسي)
 // ==========================================
 let marketItems = [
     { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
-    { id: 2, name: 'ورشة سيارات', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1200, emoji: '🔧' },
+    { id: 2, name: 'ورشة سيارات', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1500, emoji: '🔧' },
     { id: 3, name: 'شقة مفروشة بالرياض', type: 'عقار', basePrice: 45000, price: 45000, profit: 4500, emoji: '🏢' },
-    { id: 4, name: 'تسالي', type: 'مطعم', basePrice: 85000, price: 85000, profit: 8000, emoji: '🍔' },
+    { id: 4, name: 'تسالي', type: 'مطعم', basePrice: 85000, price: 85000, profit: 8500, emoji: '🍔' },
     { id: 5, name: 'استراحة بالمجمعة', type: 'عقار', basePrice: 120000, price: 120000, profit: 12000, emoji: '🏡' },
     { id: 6, name: 'معرض سيارات فخمة', type: 'معرض', basePrice: 350000, price: 350000, profit: 35000, emoji: '🏎️' },
     { id: 7, name: 'برج تجاري ضخم', type: 'عقار', basePrice: 1000000, price: 1000000, profit: 100000, emoji: '🏙️' },
     { id: 8, name: 'بوفية ليالي الشرقية', type: 'مشروع صغير', basePrice: 5000, price: 5000, profit: 550, emoji: '☕' },
     { id: 9, name: 'بوفية السعادة', type: 'مشروع صغير', basePrice: 3500, price: 3500, profit: 450, emoji: '☕' },
-    { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2500, profit: 200, emoji: '🏡' }
+    { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2500, profit: 250, emoji: '🏡' }
 ];
 
-// تحديث أسعار السوق والأرباح عشوائياً كل 5 دقائق
 setInterval(() => {
     marketItems.forEach(item => {
-        const fluctuation = (Math.random() * 0.30) - 0.15;
-        item.price = Math.floor(item.basePrice * (1 + fluctuation));
+        // حركة بين 0.55 إلى 1.50 من السعر الأساسي (مثال 10000 تصير بين 5500 و 15000)
+        const multiplier = (Math.random() * 0.95) + 0.55;
+        item.price = Math.floor(item.basePrice * multiplier);
         item.profit = Math.floor(item.price * 0.10);
     });
-    console.log('[MARKET] تم تحديث أسعار السوق والأرباح المباشرة!');
+    console.log('[MARKET] تم تحديث الأسعار والأرباح في البورصة!');
 }, 5 * 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
@@ -98,7 +98,7 @@ async function addPoints(guildId, userId, userTag, channel, timeElapsed = null) 
         if (timeElapsed < doc.bestTime) doc.bestTime = timeElapsed;
     }
     await pointsColl.updateOne({ guildId, userId }, { $set: doc }, { upsert: true });
-    channel.send(`⭐ **${userTag}** كسب **10 نقاط**! (رصيده: ${doc.points} نقطة)`);
+    channel.send(`⭐ **${userTag}** كسب **10 نقاط**! (رصيدك الإجمالي: **${doc.points} نقطة** 🏆)`);
 }
 
 async function trackUserMessage(guildId, userId, userTag) {
@@ -112,27 +112,100 @@ async function trackUserMessage(guildId, userId, userTag) {
 client.once('clientReady', () => {
   console.log(`[BOT STATUS] Camora Zone is Online & Secured! 🎮`);
   client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
+
+  // مؤقت تلقائي للعبة القنبلة كل 5 دقائق في قنوات الألعاب المسموحة
+  setInterval(() => {
+      allowedChannels.forEach(async channelId => {
+          const channel = client.channels.cache.get(channelId);
+          if (channel && !activeGames.has(channelId)) {
+              startBombGameAutomatically(channel);
+          }
+      });
+  }, 5 * 60 * 1000);
+
+  // مؤقت تلقائي لفكك والكلمات كل 10 دقائق
+  setInterval(() => {
+      allowedChannels.forEach(async channelId => {
+          const channel = client.channels.cache.get(channelId);
+          if (channel && !activeGames.has(channelId)) {
+              startScrambleGameAutomatically(channel, channel.guild.id);
+          }
+      });
+  }, 10 * 60 * 1000);
 });
 
 function sendGamesMenu(channel) {
-    const menu = `
-🎮 **قائمة ألعاب 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞** 🎮
------------------------------------------
-🔪 \`!القاتل\` : فعالية تحقيق ونقاش
-❌ \`!xo\` : تحدي إكس أو (مع خويك أو ضد البوت)
-🎲 \`!روليت\` : لعبة الحظ الروسية
-💣 \`!قنبلة\` : تحدي فك القنبلة
-⚡ \`!زر\` : تحدي أسرع ضغطة
-⌨️ \`!كتابة\` : تحدي أسرع كاتب
-🧩 \`!فكك\` : ترتيب الحروف المبعثرة
-🔢 \`!رياضيات\` : تحدي الحساب السريع
-➗ \`!قسمة\` : تحدي الضرب والقسمة
-🌍 \`!عواصم\` : خمن عاصمة الدولة
------------------------------------------
-🏆 **لوحة الصدارة:** \`!ت ن\` (نقاط) | \`!ت س\` (سرعة)
-🛑 \`!ايقاف\` : لإلغاء اللعبة الحالية
-    `;
-    channel.send(menu);
+    const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('🎮 قائمة ألعاب وقوائم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
+        .setDescription('اختر لعبتك المفضلة أو تفقد البورصة وصدارة السيرفر:')
+        .addFields(
+            { name: '🔪 الألعاب والفعاليات', value: '`!القاتل` | `!xo` | `!روليت` | `!قنبلة` (كل 5د) | `!فكك` (كل 10د) | `!زر` | `!كتابة` | `!فعالية` (عشوائي)', inline: false },
+            { name: '🏆 لوحة الصدارة', value: '`!ت ن` (نقاط) | `!ت س` (سرعة) | `!ت ت` (تفاعل)', inline: false },
+            { name: '🏦 النظام الاقتصادي', value: '`!سوق` | `!بنك` | `!راتب` | `!املاكي` | `!ارباح`', inline: false }
+        )
+        .setFooter({ text: '🛑 لإلغاء أي لعبة جارية اكتب: !ايقاف' });
+
+    channel.send({ embeds: [embed] });
+}
+
+// دالة بدء القنبلة تلقائياً
+async function startBombGameAutomatically(channel) {
+    activeGames.set(channel.id, 'bomb');
+    const wires = [
+        { id: 'r', label: 'أحمر 🔴', style: ButtonStyle.Danger },
+        { id: 'b', label: 'أزرق 🔵', style: ButtonStyle.Primary },
+        { id: 'g', label: 'أخضر 🟢', style: ButtonStyle.Success }
+    ].sort(() => Math.random() - 0.5);
+    const safe = wires[0].id;
+    const row = new ActionRowBuilder();
+    wires.forEach(w => row.addComponents(new ButtonBuilder().setCustomId(w.id).setLabel(w.label).setStyle(w.style)));
+    
+    const msg = await channel.send({ content: `🚨 **[تحدي تلقائي]** قنبلة زرعت في الشات! اختر السلك الصحيح قبل أن تنفجر (خلال 15 ثانية):`, components: [row] });
+    const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
+    coll.on('collect', async i => {
+        activeGames.delete(channel.id);
+        if (i.customId === safe) {
+            await i.update({ content: `🎉 **كفو ${i.user}!** فكيت القنبلة بنجاح وكسبت **10 نقاط**! 💣✨`, components: [] });
+            addPoints(i.guild.id, i.user.id, i.user.displayName, channel);
+        } else {
+            await i.update({ content: `💥 **بوووم!** قطعت السلك الخطأ يا ${i.user} وانفجرت القنبلة 💀`, components: [] });
+        }
+    });
+    coll.on('end', (c, r) => {
+        if (r === 'time') {
+            activeGames.delete(channel.id);
+            msg.edit({ content: `⏰ انتبه! انتهى الوقت وانفجرت القنبلة لعدم وجود تفاعلات.`, components: [] }).catch(()=>{});
+        }
+    });
+}
+
+// دالة بدء فكك تلقائياً
+async function startScrambleGameAutomatically(channel, guildId) {
+    const words = ['برمجة', 'ديسكورد', 'حاسب', 'مهندس', 'تطوير', 'تقنية', 'سيرفر', 'ذكاء'];
+    const word = words[Math.floor(Math.random() * words.length)];
+    const scrambled = word.split('').sort(() => 0.5 - Math.random()).join(' ');
+
+    const msg = await channel.send(`🧩 **[تحدي تلقائي]** رتب حروف الكلمة التالية بأسرع وقت:\n\n\`${scrambled}\``);
+    const startTime = Date.now();
+    const filter = m => !m.author.bot && m.content.trim().toLowerCase() === word.toLowerCase();
+    const collector = channel.createMessageCollector({ filter, time: 25000, max: 1 });
+    activeGames.set(channel.id, collector);
+
+    collector.on('collect', m => {
+        activeGames.delete(channel.id);
+        const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        m.react('🎉');
+        m.reply(`🎉 كفو ${m.author}! رتبت الكلمة في **${timeElapsed} ثانية** وكسبت **10 نقاط**! 🌟`);
+        addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(timeElapsed));
+    });
+
+    collector.on('end', (collected, reason) => {
+        if (reason === 'time') {
+            activeGames.delete(channel.id);
+            channel.send(`⏰ انتهى الوقت! الكلمة الصحيحة كانت: **${word}**`);
+        }
+    });
 }
 
 client.on('messageCreate', async message => {
@@ -162,7 +235,7 @@ client.on('messageCreate', async message => {
           return message.reply(`💵 نزل راتبك: **$${salary}**! رصيدك: **$${user.balance.toLocaleString()}**`);
       }
 
-      // عرض السوق بـ Embed فخم ومنظم
+      // عرض السوق بـ Embed فخم ومنظم بنفس الـ Style المطلوب
       if (message.content === '!سوق') {
           const embed = new EmbedBuilder()
               .setColor('#0099ff')
@@ -190,7 +263,7 @@ client.on('messageCreate', async message => {
           if (user.balance < item.price) return message.reply('💸 فلوسك ما تكفي!');
           user.balance -= item.price; user.properties.push(id);
           await saveEconomyUser(guildId, message.author.id, user);
-          return message.reply(`🎉 مبروك شريت **${item.name}**!`);
+          return message.reply(`🎉 مبروك شريت **${item.name}** بسعر **$${item.price.toLocaleString()}**!`);
       }
       if (message.content === '!املاكي') {
           const user = await getEconomyUser(guildId, message.author.id);
@@ -234,7 +307,7 @@ client.on('messageCreate', async message => {
           user.balance += total; 
           user.lastProfit = now;
           await saveEconomyUser(guildId, message.author.id, user);
-          return message.reply(`📈 استلمت أرباح ممتلكاتك: **$${total.toLocaleString()}**!`);
+          return message.reply(`📈 استلمت أرباح ممتلكاتك: **$${total.toLocaleString()}**! رصيدك الكاش: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content.startsWith('!تحويل')) {
           const args = message.content.split(' ');
@@ -256,6 +329,44 @@ client.on('messageCreate', async message => {
   // 🎮 قسم الألعاب
   if (allowedChannels.includes(message.channel.id)) {
       trackUserMessage(guildId, message.author.id, message.author.displayName);
+
+      // أمر عشوائي لاختيار لعبة فوراً بدون مؤقت
+      if (message.content === '!فعالية' || message.content === '!لعبة') {
+          if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة!');
+          const gamesList = ['روليت', 'زر', 'كتابة'];
+          const chosen = gamesList[Math.floor(Math.random() * gamesList.length)];
+          if (chosen === 'روليت') {
+              activeGames.set(message.channel.id, 'roulette');
+              message.channel.send(`🎲 **[لعبة عشوائية] روليت الحظ** - ${message.author} سحب الزناد...`);
+              setTimeout(async () => {
+                  activeGames.delete(message.channel.id);
+                  if (Math.floor(Math.random() * 6) + 1 === 1) {
+                      message.channel.send(`💥 بووووم! ${message.author} خسر الروليت 💀.`);
+                  } else {
+                      message.channel.send(`😅 المسدس فاضي! كسبت **10 نقاط** يا ${message.author}.`);
+                      addPoints(guildId, message.author.id, message.author.displayName, message.channel);
+                  }
+              }, 2500);
+          } else if (chosen === 'زر') {
+              activeGames.set(message.channel.id, 'button');
+              const msg = await message.channel.send(`⚡ **[لعبة عشوائية]** استعد لسرعة الضغط...`);
+              setTimeout(async () => {
+                  const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('fc').setLabel('⚡ اضغطني!').setStyle(ButtonStyle.Success));
+                  await msg.edit({ content: `🔥 **أسرع ضغطة!**`, components: [row] });
+                  const start = Date.now();
+                  const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
+                  coll.on('collect', async i => {
+                      activeGames.delete(message.channel.id);
+                      const t = ((Date.now() - start) / 1000).toFixed(2);
+                      await i.update({ content: `🏆 كفو ${i.user}! ضغطت في **${t} ثانية** وكسبت **10 نقاط**!`, components: [] });
+                      addPoints(guildId, i.user.id, i.user.displayName, message.channel, parseFloat(t));
+                  });
+              }, 2000);
+          } else {
+              message.channel.send(`⌨️ استخدم أمر \`!كتابة\` أو انتظر التحديات التلقائية!`);
+          }
+          return;
+      }
 
       if (message.content.startsWith('!xo')) {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة!');
@@ -351,7 +462,10 @@ client.on('messageCreate', async message => {
           setTimeout(() => {
               activeGames.delete(message.channel.id);
               if (Math.floor(Math.random() * 6) + 1 === 1) message.channel.send(`💥 **بووووم!** ${message.author} خسر 💀.`);
-              else { message.channel.send(`😅 المسدس فاضي! كسبت نقاط.`); addPoints(guildId, message.author.id, message.author.displayName, message.channel); }
+              else { 
+                  message.channel.send(`😅 المسدس فاضي! كسبت **10 نقاط** يا ${message.author}.`); 
+                  addPoints(guildId, message.author.id, message.author.displayName, message.channel); 
+              }
               sendGamesMenu(message.channel);
           }, 3000);
       }
@@ -372,9 +486,11 @@ client.on('messageCreate', async message => {
           coll.on('collect', async i => {
               activeGames.delete(message.channel.id);
               if (i.customId === safe) {
-                  await i.update({ content: `🎉 فكيت القنبلة وكسبت نقاط!`, components: [] });
+                  await i.update({ content: `🎉 **كفوو!** فكيت القنبلة وكسبت **10 نقاط** يا ${i.user}! 💣`, components: [] });
                   addPoints(guildId, message.author.id, message.author.displayName, message.channel);
-              } else { await i.update({ content: `💥 بوووم وانفجرت القنبلة 💀`, components: [] }); }
+              } else { 
+                  await i.update({ content: `💥 بوووم وانفجرت القنبلة 💀`, components: [] }); 
+              }
               sendGamesMenu(message.channel);
           });
       }
@@ -392,23 +508,36 @@ client.on('messageCreate', async message => {
               coll.on('collect', async i => {
                   activeGames.delete(message.channel.id);
                   const t = ((Date.now() - start) / 1000).toFixed(2);
-                  await i.update({ content: `🏆 كفو ${i.user}! في **${t} ثانية**!`, components: [] });
+                  await i.update({ content: `🏆 كفو ${i.user}! في **${t} ثانية** وكسبت **10 نقاط**!`, components: [] });
                   addPoints(guildId, i.user.id, i.user.displayName, message.channel, parseFloat(t));
                   sendGamesMenu(message.channel);
               });
           }, 2000);
       }
 
+      // لوحة الصدارة بنظام Embed فخم
       if (message.content.startsWith('!ت')) {
           if (!pointsColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
-          let u = await pointsColl.find({ guildId }).sort({ points: -1 }).limit(5).toArray();
+          const subType = message.content.split(' ')[1] ? message.content.split(' ')[1].toLowerCase() : 'ن';
+          let u = await pointsColl.find({ guildId }).sort(subType === 'س' ? { bestTime: 1 } : subType === 'ت' ? { messagesCount: -1 } : { points: -1 }).limit(5).toArray();
+          
           if (u.length === 0) return message.reply('🏆 ما فيه بيانات مسجلة.');
-          let txt = `🏆 **أعلى النقاط:**\n\n`;
+          
+          const embed = new EmbedBuilder()
+              .setColor('#FFD700')
+              .setTitle(subType === 'س' ? '⚡ أسرع 5 أبطال' : subType === 'ت' ? '🔥 أكثر 5 متفاعلين' : '🏆 أعلى 5 نقاط في السيرفر');
+
           u.forEach((d, i) => {
               let medal = i === 0 ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🏅';
-              txt += `${medal} **#${i + 1}** - ${d.name} ⟵ **${d.points} نقطة**\n`;
+              let val = subType === 'س' ? `${d.bestTime} ثانية` : subType === 'ت' ? `${d.messagesCount} رسالة` : `${d.points} نقطة`;
+              embed.addFields({
+                  name: `${medal} المركز #${i + 1} - ${d.name}`,
+                  value: `⭐ النتيجة: **${val}**`,
+                  inline: false
+              });
           });
-          return message.channel.send(txt);
+
+          return message.channel.send({ embeds: [embed] });
       }
   }
 });
