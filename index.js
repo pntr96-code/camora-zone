@@ -56,7 +56,7 @@ setInterval(() => {
     });
 }, 5 * 60 * 1000);
 
-// دالة الاقتصاد الموحدة والثابتة برقم المستخدم فقط (userId)
+// دالة الاقتصاد الموحدة برقم المستخدم (userId)
 async function getEconomyUser(userId) {
     if (!economyColl) return { userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
     let doc = await economyColl.findOne({ userId });
@@ -668,7 +668,7 @@ client.on('messageCreate', async message => {
       if (message.content.startsWith('!ت')) {
           if (!pointsColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
           const subType = message.content.split(' ')[1] ? message.content.split(' ')[1].toLowerCase() : 'ن';
-          let u = pointsColl.find({ guildId }).sort(subType === 'س' ? { bestTime: 1 } : subType === 'ت' ? { messagesCount: -1 } : { points: -1 }).limit(5).toArray();
+          let u = await pointsColl.find({ guildId }).sort(subType === 'س' ? { bestTime: 1 } : subType === 'ت' ? { messagesCount: -1 } : { points: -1 }).limit(5).toArray();
           
           if (u.length === 0) return message.reply('🏆 ما فيه بيانات مسجلة.');
           
