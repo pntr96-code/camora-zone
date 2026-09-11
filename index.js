@@ -32,6 +32,7 @@ const client = new Client({
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 const activeGames = new Map(); 
+const processingUsers = new Set(); // قفل فوري لمنع تكرار الأوامر السريعة
 const allowedChannels = ['1547728033580847236', '1547728346081927262']; 
 const allowedEconomyChannels = ['1547951432186077296']; 
 
@@ -56,7 +57,6 @@ setInterval(() => {
     });
 }, 5 * 60 * 1000);
 
-// دالة الاقتصاد الموحدة برقم المستخدم (userId)
 async function getEconomyUser(userId) {
     if (!economyColl) return { userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
     let doc = await economyColl.findOne({ userId });
@@ -163,7 +163,6 @@ function sendGamesMenu(channel) {
     channel.send({ embeds: [embed] });
 }
 
-// تنفيذ الألعاب
 function startEmojiGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     const chosen = getUniqueRandomItem(emojiMasterPool, 'emoji', 'ans');
@@ -467,22 +466,34 @@ client.on('messageCreate', async message => {
           return message.reply(`💳 رصيدك الكاش: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content === '!راتب') {
-          let user = await getEconomyUser(userId);
-          const now = Date.now();
-          const cooldown = 5 * 60 * 1000; // 5 دقائق
+          // قفل برمجي فوري يمنع التداخل نهائياً
+          if (processingUsers.has(userId)) return;
+          processingUsers.add(userId);
 
-          if (user.lastWork && (now - user.lastWork < cooldown)) {
-              const remainingMs = cooldown - (now - user.lastWork);
-              const m = Math.floor(remainingMs / 60000);
-              const s = Math.floor((remainingMs % 60000) / 1000);
-              return message.reply(`⏳ يابن الحلال! باقي **${m} دقيقة و ${s} ثانية** على راتبك القادم.`);
+          try {
+              let user = await getEconomyUser(userId);
+              const now = Date.now();
+              const cooldown = 5 * 60 * 1000; // 5 دقائق
+
+              if (user.lastWork && (now - user.lastWork < cooldown)) {
+                  const remainingMs = cooldown - (now - user.lastWork);
+                  const m = Math.floor(remainingMs / 60000);
+                  const s = Math.floor((remainingMs % 60000) / 1000);
+                  processingUsers.delete(userId);
+                  return message.reply(`⏳ يابن الحلال! باقي **${m} دقيقة و ${s} ثانية** على راتبك القادم.`);
+              }
+
+              const salary = Math.floor(Math.random() * 800) + 700;
+              user.balance += salary; 
+              user.lastWork = now;
+              
+              await saveEconomyUser(userId, user);
+              processingUsers.delete(userId);
+              return message.reply(`💵 نزل راتبك: **$${salary}**! رصيدك الحالي: **$${user.balance.toLocaleString()}**`);
+          } catch (err) {
+              processingUsers.delete(userId);
+              console.error(err);
           }
-
-          const salary = Math.floor(Math.random() * 800) + 700;
-          user.balance += salary; 
-          user.lastWork = now;
-          await saveEconomyUser(userId, user);
-          return message.reply(`💵 نزل راتبك: **$${salary}**! رصيدك الحالي: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content === '!سوق') {
           const embed = new EmbedBuilder().setColor('#0099ff').setTitle('📈 بورصة العقارات');
