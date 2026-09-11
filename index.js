@@ -54,12 +54,28 @@ let marketItems = [
     { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2500, profit: 250, emoji: '🏡' }
 ];
 
-setInterval(() => {
+// تحديث البورصة تلقائياً كل 5 دقائق مع إرسال إشعار في رومات الاقتصاد
+setInterval(async () => {
     marketItems.forEach(item => {
         const multiplier = (Math.random() * 0.95) + 0.55;
         item.price = Math.floor(item.basePrice * multiplier);
         item.profit = Math.floor(item.price * 0.10);
     });
+
+    const embed = new EmbedBuilder()
+        .setColor('#F1C40F')
+        .setTitle('📈 تنبيه بورصة العقارات والأعمال')
+        .setDescription('🔄 **تم تجديد وتحديث أسعار وأرباح السوق الآن!**\nتأكد من زيارة السوق باستخدام أمر `!سوق` لمعرفة الأسعار الجديدة.')
+        .setTimestamp();
+
+    for (const channelId of allowedEconomyChannels) {
+        try {
+            const channel = await client.channels.fetch(channelId);
+            if (channel) channel.send({ embeds: [embed] });
+        } catch (err) {
+            console.error('Failed to send market update notification:', err);
+        }
+    }
 }, 5 * 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
@@ -509,14 +525,21 @@ client.on('messageCreate', async message => {
               
               await saveEconomyUser(guildId, userId, user);
               processingUsers.delete(userId);
-              return message.reply(`💵 نزل راتبك: **$${salary}**! رصيدك الحالي: **$${user.balance.toLocaleString()}**`);
+              
+              // إرسال إشعار بنزول الراتب في روم السوق/الاقتصاد
+              const salaryEmbed = new EmbedBuilder()
+                  .setColor('#2ECC71')
+                  .setTitle('💵 صرف الراتب')
+                  .setDescription(`👤 <@${userId}>\nتم إيداع راتبك بقيمة **$${salary}** في رصيدك بالسيرفر!`);
+              message.channel.send({ embeds: [salaryEmbed] });
+              return;
           } catch (err) {
               processingUsers.delete(userId);
               console.error(err);
           }
       }
       if (message.content === '!سوق') {
-          const embed = new EmbedBuilder().setColor('#0099ff').setTitle('📈 بورصة العقارات');
+          const embed = new EmbedBuilder().setColor('#0099ff').setTitle('📈 بورصة العقارات والأعمال');
           marketItems.forEach(i => {
               embed.addFields({ name: `[${i.id}] ${i.emoji} ${i.name}`, value: `🏷️ \`${i.type}\`\n💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, inline: true });
           });
@@ -574,7 +597,14 @@ client.on('messageCreate', async message => {
           user.balance += total; 
           user.lastProfit = now;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`📈 استلمت أرباحك: **$${total.toLocaleString()}**!`);
+          
+          // إرسال إشعار بنزول أرباح العقارات في الروم
+          const profitEmbed = new EmbedBuilder()
+              .setColor('#3498DB')
+              .setTitle('📈 صرف أرباح العقارات والأملاك')
+              .setDescription(`👤 <@${userId}>\nتم استلام أرباح أملاكك بقيمة **$${total.toLocaleString()}** وتحويلها إلى رصيدك!`);
+          message.channel.send({ embeds: [profitEmbed] });
+          return;
       }
       if (message.content.startsWith('!تحويل')) {
           const args = message.content.split(' ');
