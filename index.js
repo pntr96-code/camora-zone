@@ -19,7 +19,7 @@ const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 const activeGames = new Map(); 
 const allowedChannels = ['1547728033580847236', '1547728346081927262']; 
-const allowedEconomyChannels = ['1547951432186077296']; // روم السوق
+const allowedEconomyChannels = ['1547951432186077296']; 
 
 const pointsFilePath = path.join(__dirname, 'points.json');
 const wordsFilePath = path.join(__dirname, 'words.json');
@@ -29,16 +29,15 @@ const economyFilePath = path.join(__dirname, 'economy.json');
 // 💰 دوال النظام الاقتصادي (السوق والبورصة)
 // ==========================================
 let marketItems = [
-    { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200 },
-    { id: 2, name: 'ورشة سيارات صناعية', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1200 },
-    { id: 3, name: 'شقة مفروشة بالرياض', type: 'عقار', basePrice: 45000, price: 45000, profit: 4500 },
-    { id: 4, name: 'فرع مطعم وجبات سريعة', type: 'مطعم', basePrice: 85000, price: 85000, profit: 8000 },
-    { id: 5, name: 'استراحة شباب بالمجمعة', type: 'عقار', basePrice: 120000, price: 120000, profit: 12000 },
-    { id: 6, name: 'معرض سيارات فخمة', type: 'معرض', basePrice: 350000, price: 350000, profit: 35000 },
-    { id: 7, name: 'برج تجاري ضخم', type: 'عقار', basePrice: 1000000, price: 1000000, profit: 100000 }
+    { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
+    { id: 2, name: 'ورشة سيارات صناعية', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1200, emoji: '🔧' },
+    { id: 3, name: 'شقة مفروشة بالرياض', type: 'عقار', basePrice: 45000, price: 45000, profit: 4500, emoji: '🏢' },
+    { id: 4, name: 'فرع مطعم وجبات سريعة', type: 'مطعم', basePrice: 85000, price: 85000, profit: 8000, emoji: '🍔' },
+    { id: 5, name: 'استراحة شباب بالمجمعة', type: 'عقار', basePrice: 120000, price: 120000, profit: 12000, emoji: '🏡' },
+    { id: 6, name: 'معرض سيارات فخمة', type: 'معرض', basePrice: 350000, price: 350000, profit: 35000, emoji: '🏎️' },
+    { id: 7, name: 'برج تجاري ضخم', type: 'عقار', basePrice: 1000000, price: 1000000, profit: 100000, emoji: '🏙️' }
 ];
 
-// تحديث أسعار البورصة كل 5 دقائق
 setInterval(() => {
     marketItems.forEach(item => {
         const fluctuation = (Math.random() * 0.30) - 0.15;
@@ -209,19 +208,15 @@ client.on('messageCreate', async message => {
       }
 
       if (message.content === '!سوق') {
-          let shopMenu = `📊 **سوق الأسهم والعقارات المباشر** 📊\n*(مؤشر السوق يتحدث كل 5 دقائق)*\n\n\`\`\`md\n`;
-          shopMenu += `| الرقم | السعر الحالي | الربح المتوقع | نوع الاستثمار | اسم المشروع/العقار |\n`;
-          shopMenu += `|-------|--------------|---------------|---------------|-----------------------|\n`;
+          let shopMenu = `📈 **سوق الأسهم والعقارات المباشر** 📈\n*(مؤشر السوق يتحدث عشوائياً كل 5 دقائق)*\n\n`;
           
           marketItems.forEach(item => {
-              const idPad = `[${item.id}]`.padEnd(5);
-              const pricePad = `$${item.price.toLocaleString()}`.padEnd(12);
-              const profitPad = `$${item.profit.toLocaleString()}`.padEnd(13);
-              const typePad = item.type.padEnd(13);
-              shopMenu += `| ${idPad} | ${pricePad} | ${profitPad} | ${typePad} | ${item.name} \n`;
+              shopMenu += `> **[${item.id}] ${item.emoji} ${item.name}**\n`;
+              shopMenu += `> 🏷️ النوع: \`${item.type}\` | 💰 السعر: **$${item.price.toLocaleString()}** | 💸 الأرباح: **$${item.profit.toLocaleString()}**\n`;
+              shopMenu += `> -----------------------------------\n`;
           });
           
-          shopMenu += `\`\`\`\n💡 *للشراء اكتب: !شراء يتبعه رقم العقار*`;
+          shopMenu += `\n💡 **لشراء أي عقار اكتب:** \`!شراء [رقم العقار]\` (مثال: \`!شراء 1\`)`;
           return message.channel.send(shopMenu);
       }
 
@@ -247,19 +242,21 @@ client.on('messageCreate', async message => {
           const { user } = getEconomyUser(guildId, message.author.id);
           if (user.properties.length === 0) return message.reply('مفلس! ما عندك أي عقارات أو مشاريع حالياً 😅.');
           
-          let propsMsg = `🏠 **المحفظة الاستثمارية لـ ${message.author.displayName}:**\n\n\`\`\`md\n`;
+          let propsMsg = `🏠 **المحفظة الاستثمارية لـ ${message.author.displayName}:**\n\n`;
           let totalDaily = 0;
           let totalValue = 0;
           
-          user.properties.forEach(propId => {
+          user.properties.forEach((propId, index) => {
               const item = marketItems.find(i => i.id === propId);
               if (item) {
-                  propsMsg += `🔹 ${item.name} (يدخل لك: $${item.profit.toLocaleString()})\n`;
+                  propsMsg += `> **${index + 1}. ${item.emoji} ${item.name}**\n`;
+                  propsMsg += `> 💰 القيمة السوقية: **$${item.price.toLocaleString()}** | 💸 الأرباح: **$${item.profit.toLocaleString()}**\n`;
+                  propsMsg += `> -----------------------------------\n`;
                   totalDaily += item.profit;
                   totalValue += item.price;
               }
           });
-          propsMsg += `\`\`\`\n📈 **إجمالي الأرباح المتوقعة: $${totalDaily.toLocaleString()}**\n💰 **القيمة السوقية لأملاكك حالياً: $${totalValue.toLocaleString()}**`;
+          propsMsg += `\n📈 **إجمالي الأرباح المتوقعة:** $${totalDaily.toLocaleString()}\n💰 **القيمة الإجمالية لأملاكك:** $${totalValue.toLocaleString()}`;
           return message.channel.send(propsMsg);
       }
 
@@ -268,7 +265,7 @@ client.on('messageCreate', async message => {
           let { data, user } = getEconomyUser(guildId, message.author.id);
           
           const propIndex = user.properties.indexOf(itemId);
-          if (propIndex === -1) return message.reply('❌ أنت ما تملك هذا الشيء عشان تبيعه!');
+          if (propIndex === -1) return message.reply('❌ أنت ما تملك هذا العقار عشان تبيعه!');
 
           const item = marketItems.find(i => i.id === itemId);
           const sellPrice = Math.floor(item.price * 0.90); 
@@ -458,13 +455,11 @@ client.on('messageCreate', async message => {
           });
       }
 
-      // --- لعبة XO (تدعم اللعب ضد البوت أو مع صديق بمنشنته) ---
       if (message.content.startsWith('!xo')) {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر الفعالية الحالية!');
           
           const opponent = message.mentions.users.first();
 
-          // 1. الوضع الفردي: ضد البوت مباشرة
           if (!opponent || opponent.id === message.author.id) {
               activeGames.set(message.channel.id, 'xo');
               let board = Array(9).fill(null);
@@ -534,7 +529,6 @@ client.on('messageCreate', async message => {
               return;
           }
 
-          // 2. وضع التحدي: ضد صديق بمنشنته
           if (opponent.bot) return message.reply('🤖 ما تقدر تتحدا بوت في XO!');
 
           const challengeMsg = await message.channel.send(`⚔️ **تحدي XO!** ${opponent}, يبي ${message.author} يتحداك. اضغط ✅ للقبول خلال 30 ثانية!`);
