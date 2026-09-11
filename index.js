@@ -1,11 +1,27 @@
 const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { GoogleGenAI } = require('@google/genai');
-const fs = require('fs');
-const path = require('path');
-const readline = require('readline');
+const { MongoClient } = require('mongodb');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const mongoUri = process.env.MONGO_URI;
+
+// اتصال قاعدة البيانات السحابية الآمنة
+const dbClient = new MongoClient(mongoUri);
+let db, pointsColl, economyColl;
+
+async function connectDB() {
+    try {
+        await dbClient.connect();
+        db = dbClient.db('camora_zone_db');
+        pointsColl = db.collection('points');
+        economyColl = db.collection('economy');
+        console.log('[DATABASE] Connected to MongoDB Atlas successfully! 🚀');
+    } catch (e) {
+        console.error('[DATABASE ERROR] Failed to connect to MongoDB:', e);
+    }
+}
+connectDB();
 
 const client = new Client({ 
     intents: [
@@ -21,12 +37,8 @@ const activeGames = new Map();
 const allowedChannels = ['1547728033580847236', '1547728346081927262']; 
 const allowedEconomyChannels = ['1547951432186077296']; 
 
-const pointsFilePath = path.join(__dirname, 'points.json');
-const wordsFilePath = path.join(__dirname, 'words.json');
-const economyFilePath = path.join(__dirname, 'economy.json');
-
 // ==========================================
-// 💰 دوال النظام الاقتصادي (السوق والبورصة)
+// 💰 دوال النظام الاقتصادي (السوق والبورصة المحدثة)
 // ==========================================
 let marketItems = [
     { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
@@ -36,105 +48,73 @@ let marketItems = [
     { id: 5, name: 'استراحة بالمجمعة', type: 'عقار', basePrice: 120000, price: 120000, profit: 12000, emoji: '🏡' },
     { id: 6, name: 'معرض سيارات فخمة', type: 'معرض', basePrice: 350000, price: 350000, profit: 35000, emoji: '🏎️' },
     { id: 7, name: 'برج تجاري ضخم', type: 'عقار', basePrice: 1000000, price: 1000000, profit: 100000, emoji: '🏙️' },
-    { id: 8, name: 'بوفية ليالي الشرقية', type: 'مشروع صغير', basePrice: 5000, price: 2000, profit: 550, emoji: '☕' },
-     { id: 9, name: 'بوفية السعادة', type: 'مشروع صغير', basePrice: 3500, price: 2000, profit: 450, emoji: '☕' },
-    { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2000, profit: 200, emoji: '🏡' }
+    { id: 8, name: 'بوفية ليالي الشرقية', type: 'مشروع صغير', basePrice: 5000, price: 5000, profit: 550, emoji: '☕' },
+    { id: 9, name: 'بوفية السعادة', type: 'مشروع صغير', basePrice: 3500, price: 3500, profit: 450, emoji: '☕' },
+    { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2500, profit: 200, emoji: '🏡' }
 ];
 
+// تحديث أسعار السوق والأرباح عشوائياً كل 5 دقائق
 setInterval(() => {
     marketItems.forEach(item => {
         const fluctuation = (Math.random() * 0.30) - 0.15;
         item.price = Math.floor(item.basePrice * (1 + fluctuation));
         item.profit = Math.floor(item.price * 0.10);
     });
-    console.log('[MARKET] تم تحديث أسعار السوق المباشرة!');
+    console.log('[MARKET] تم تحديث أسعار السوق والأرباح المباشرة!');
 }, 5 * 60 * 1000);
 
-function loadEconomy() {
-    if (fs.existsSync(economyFilePath)) {
-        try { return JSON.parse(fs.readFileSync(economyFilePath, 'utf8')); } catch (e) { return {}; }
+async function getEconomyUser(guildId, userId) {
+    if (!economyColl) return { balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
+    let doc = await economyColl.findOne({ guildId, userId });
+    if (!doc) {
+        doc = { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
+        await economyColl.insertOne(doc);
     }
-    return {};
+    return doc;
 }
 
-function saveEconomy(data) {
-    fs.writeFileSync(economyFilePath, JSON.stringify(data, null, 2), 'utf8');
-}
-
-function getEconomyUser(guildId, userId) {
-    let data = loadEconomy();
-    if (!data[guildId]) data[guildId] = {};
-    if (!data[guildId][userId]) {
-        data[guildId][userId] = { balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
-    }
-    return { data, user: data[guildId][userId] };
+async function saveEconomyUser(guildId, userId, userData) {
+    if (!economyColl) return;
+    await economyColl.updateOne({ guildId, userId }, { $set: userData }, { upsert: true });
 }
 
 // ==========================================
-// 🎮 دوال الألعاب والنقاط
+// 🎮 دوال الألعاب والنقاط (سحابية)
 // ==========================================
-function loadWords() {
-    if (fs.existsSync(wordsFilePath)) {
-        try { return JSON.parse(fs.readFileSync(wordsFilePath, 'utf8')); } catch (e) { return null; }
+async function getPointsUser(guildId, userId, userTag) {
+    if (!pointsColl) return { points: 0, speedWins: 0, bestTime: 999999, messagesCount: 0 };
+    let doc = await pointsColl.findOne({ guildId, userId });
+    if (!doc) {
+        doc = { guildId, userId, name: userTag, points: 0, speedWins: 0, bestTime: 999999, messagesCount: 0 };
+        await pointsColl.insertOne(doc);
     }
-    return null;
-}
-const wordsData = loadWords() || { writing: ["تحدي السرعة"], scramble: ["برمجة"], capitals: [{ c: "السعودية", cap: "الرياض" }] };
-
-let activeWritingPool = []; let activeScramblePool = []; let activeCapitalsPool = [];
-
-function getUniqueItem(pool, masterPool) {
-    if (!pool || pool.length === 0) {
-        pool.push(...masterPool);
-        for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [pool[i], pool[j]] = [pool[j], pool[i]];
-        }
-    }
-    return pool.pop();
+    return doc;
 }
 
-function loadPoints() {
-    if (fs.existsSync(pointsFilePath)) {
-        try { return JSON.parse(fs.readFileSync(pointsFilePath, 'utf8')); } catch (e) { return {}; }
-    }
-    return {};
-}
-
-function savePoints(pointsData) { fs.writeFileSync(pointsFilePath, JSON.stringify(pointsData, null, 2), 'utf8'); }
-
-function addPoints(guildId, userId, userTag, channel, timeElapsed = null) {
-    let pointsData = loadPoints();
-    if (!pointsData[guildId]) pointsData[guildId] = {};
-    if (!pointsData[guildId][userId]) {
-        pointsData[guildId][userId] = { name: userTag, points: 0, speedWins: 0, bestTime: 999999, messagesCount: 0 };
-    }
-    const userData = pointsData[guildId][userId];
-    userData.name = userTag;
-    userData.points += 10;
-    
+async function addPoints(guildId, userId, userTag, channel, timeElapsed = null) {
+    if (!pointsColl) return;
+    let doc = await getPointsUser(guildId, userId, userTag);
+    doc.name = userTag;
+    doc.points += 10;
     if (timeElapsed !== null) {
-        userData.speedWins += 1;
-        if (timeElapsed < userData.bestTime) userData.bestTime = timeElapsed;
+        doc.speedWins += 1;
+        if (timeElapsed < doc.bestTime) doc.bestTime = timeElapsed;
     }
-    savePoints(pointsData);
-    channel.send(`⭐ **${userTag}** كسب **10 نقاط**! (رصيده بالسيرفر: ${userData.points} نقطة)`);
+    await pointsColl.updateOne({ guildId, userId }, { $set: doc }, { upsert: true });
+    channel.send(`⭐ **${userTag}** كسب **10 نقاط**! (رصيده بالسيرفر: ${doc.points} نقطة)`);
 }
 
-function trackUserMessage(guildId, userId, userTag) {
-    let pointsData = loadPoints();
-    if (!pointsData[guildId]) pointsData[guildId] = {};
-    if (!pointsData[guildId][userId]) {
-        pointsData[guildId][userId] = { name: userTag, points: 0, speedWins: 0, bestTime: 999999, messagesCount: 0 };
-    }
-    pointsData[guildId][userId].name = userTag;
-    pointsData[guildId][userId].messagesCount += 1;
-    savePoints(pointsData);
+async function trackUserMessage(guildId, userId, userTag) {
+    if (!pointsColl) return;
+    let doc = await getPointsUser(guildId, userId, userTag);
+    doc.name = userTag;
+    doc.messagesCount += 1;
+    await pointsColl.updateOne({ guildId, userId }, { $set: doc }, { upsert: true });
 }
 
 client.once('clientReady', () => {
   console.log(`========================================`);
-  console.log(`[BOT STATUS] Camora Zone is Online! 🎮`);
+  console.log(`[BOT STATUS] Camora Zone is Online & Secured! 🎮`);
   console.log(`========================================`);
   client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
 });
@@ -184,19 +164,19 @@ client.on('messageCreate', async message => {
 🛒 \`!شراء [رقم]\` : لشراء عقار (مثال: !شراء 1)
 📉 \`!بيع [رقم]\` : لبيع ممتلكاتك بسعر السوق الحالي
 🏠 \`!املاكي\` : عرض ممتلكاتك الحالية
-📈 \`!ارباح\` : استلام أرباح أملاكك (كل ساعة)
+📈 \`!ارباح\` : استلام أرباح أملاكك (كل 5 دقائق)
 🤝 \`!تحويل [@الشخص] [المبلغ]\` : تحويل كاش لعضو آخر
           `;
           return message.channel.send(menu);
       }
 
       if (message.content === '!بنك') {
-          const { user } = getEconomyUser(guildId, message.author.id);
+          const user = await getEconomyUser(guildId, message.author.id);
           return message.reply(`💳 رصيدك الكاش في البنك هو: **$${user.balance.toLocaleString()}**`);
       }
 
       if (message.content === '!راتب') {
-          let { data, user } = getEconomyUser(guildId, message.author.id);
+          let user = await getEconomyUser(guildId, message.author.id);
           const now = Date.now();
           const cooldown = 5 * 60 * 1000; 
           if (now - user.lastWork < cooldown) {
@@ -206,12 +186,12 @@ client.on('messageCreate', async message => {
           const salary = Math.floor(Math.random() * 800) + 700; 
           user.balance += salary;
           user.lastWork = now;
-          saveEconomy(data);
+          await saveEconomyUser(guildId, message.author.id, user);
           return message.reply(`💵 نزل لك الراتب بنجاح: **$${salary}**! رصيدك صار: **$${user.balance.toLocaleString()}**`);
       }
 
       if (message.content === '!سوق') {
-          let shopMenu = `📈 **سوق الأسهم والعقارات المباشر** 📈\n*(مؤشر السوق يتحدث عشوائياً كل 5 دقائق)*\n\n`;
+          let shopMenu = `📈 **سوق الأسهم والعقارات المباشر** 📈\n*(مؤشر السوق والأسعار تتحدث عشوائياً كل 5 دقائق)*\n\n`;
           
           marketItems.forEach(item => {
               shopMenu += `> **[${item.id}] ${item.emoji} ${item.name}**\n`;
@@ -229,7 +209,7 @@ client.on('messageCreate', async message => {
           
           if (!item) return message.reply('❌ رقم العقار غير صحيح! شيك على الـ `!سوق`.');
           
-          let { data, user } = getEconomyUser(guildId, message.author.id);
+          let user = await getEconomyUser(guildId, message.author.id);
           
           if (user.balance < item.price) {
               return message.reply(`💸 رصيدك ما يكفي! تحتاج **$${(item.price - user.balance).toLocaleString()}** زيادة عشان تشتري **${item.name}**.`);
@@ -237,12 +217,12 @@ client.on('messageCreate', async message => {
 
           user.balance -= item.price;
           user.properties.push(item.id);
-          saveEconomy(data);
+          await saveEconomyUser(guildId, message.author.id, user);
           return message.reply(`🎉 مبروووك! وقعت عقد **${item.name}** وصار ملكك! رصيدك المتبقي: **$${user.balance.toLocaleString()}**`);
       }
 
       if (message.content === '!املاكي') {
-          const { user } = getEconomyUser(guildId, message.author.id);
+          const user = await getEconomyUser(guildId, message.author.id);
           if (user.properties.length === 0) return message.reply('مفلس! ما عندك أي عقارات أو مشاريع حالياً 😅.');
           
           let propsMsg = `🏠 **المحفظة الاستثمارية لـ ${message.author.displayName}:**\n\n`;
@@ -259,13 +239,13 @@ client.on('messageCreate', async message => {
                   totalValue += item.price;
               }
           });
-          propsMsg += `\n📈 **إجمالي الأرباح المتوقعة:** $${totalDaily.toLocaleString()}\n💰 **القيمة الإجمالية لأملاكك:** $${totalValue.toLocaleString()}`;
+          propsMsg += `\n📈 **إجمالي الأرباح المتوقعة (كل 5 دقائق):** $${totalDaily.toLocaleString()}\n💰 **القيمة الإجمالية لأملاكك:** $${totalValue.toLocaleString()}`;
           return message.channel.send(propsMsg);
       }
 
       if (message.content.startsWith('!بيع ')) {
           const itemId = parseInt(message.content.split(' ')[1]);
-          let { data, user } = getEconomyUser(guildId, message.author.id);
+          let user = await getEconomyUser(guildId, message.author.id);
           
           const propIndex = user.properties.indexOf(itemId);
           if (propIndex === -1) return message.reply('❌ أنت ما تملك هذا العقار عشان تبيعه!');
@@ -275,19 +255,19 @@ client.on('messageCreate', async message => {
           
           user.properties.splice(propIndex, 1);
           user.balance += sellPrice;
-          saveEconomy(data);
+          await saveEconomyUser(guildId, message.author.id, user);
           
           return message.reply(`🤝 تم بيع **${item.name}** بسعر السوق مقابل **$${sellPrice.toLocaleString()}**! رصيدك صار: **$${user.balance.toLocaleString()}**`);
       }
 
       if (message.content === '!ارباح') {
-          let { data, user } = getEconomyUser(guildId, message.author.id);
+          let user = await getEconomyUser(guildId, message.author.id);
           if (user.properties.length === 0) return message.reply('❌ محفظتك فاضية! روح للـ `!سوق` واستثمر فلوسك أول.');
 
           const now = Date.now();
-          const cooldown = 60 * 60 * 1000; 
-          if (now - user.lastProfit < cooldown) {
-              const minutesLeft = Math.ceil((cooldown - (now - user.lastProfit)) / (60 * 1000));
+          const profitCooldown = 5 * 60 * 1000; // الأرباح صارت كل 5 دقائق
+          if (now - user.lastProfit < profitCooldown) {
+              const minutesLeft = Math.ceil((profitCooldown - (now - user.lastProfit)) / (60 * 1000));
               return message.reply(`⏳ باقي لك **${minutesLeft} دقيقة** عشان تقدر تجمع أرباح محفظتك مرة ثانية!`);
           }
 
@@ -299,7 +279,7 @@ client.on('messageCreate', async message => {
 
           user.balance += totalProfit;
           user.lastProfit = now;
-          saveEconomy(data);
+          await saveEconomyUser(guildId, message.author.id, user);
           return message.reply(`📈 استلمت أرباح ممتلكاتك بنجاح: **$${totalProfit.toLocaleString()}**! رصيدك صار: **$${user.balance.toLocaleString()}**`);
       }
 
@@ -315,17 +295,19 @@ client.on('messageCreate', async message => {
           if (targetUser.id === message.author.id) return message.reply('😅 ما تقدر تحول لنفسك!');
           if (targetUser.bot) return message.reply('🤖 ما تقدر تحول لبوت!');
 
-          let { data, user: senderUser } = getEconomyUser(guildId, message.author.id);
+          let senderUser = await getEconomyUser(guildId, message.author.id);
 
           if (senderUser.balance < amount) {
               return message.reply(`💸 رصيدك ما يكفي! رصيدك: **$${senderUser.balance.toLocaleString()}**`);
           }
 
           senderUser.balance -= amount;
-          let { user: receiverUser } = getEconomyUser(guildId, targetUser.id);
-          receiverUser.balance += amount;
+          await saveEconomyUser(guildId, message.author.id, senderUser);
 
-          saveEconomy(data);
+          let receiverUser = await getEconomyUser(guildId, targetUser.id);
+          receiverUser.balance += amount;
+          await saveEconomyUser(guildId, targetUser.id, receiverUser);
+
           return message.channel.send(`✅ تم تحويل **$${amount.toLocaleString()}** من ${message.author} إلى ${targetUser} 💸.`);
       }
   }
@@ -333,51 +315,6 @@ client.on('messageCreate', async message => {
   // 🎮 قسم الألعاب العادية
   if (allowedChannels.includes(message.channel.id)) {
       trackUserMessage(guildId, message.author.id, message.author.displayName);
-
-      async function runJsonGame(gameTitle, type, channel, guildId) {
-          let display = ""; let answer = "";
-          if (type === 'writing') {
-              const sentence = getUniqueItem(activeWritingPool, wordsData.writing);
-              display = `عندكم **30 ثانية** لكتابة الجملة التالية:\n\n\`${sentence}\``; answer = sentence;
-          } else if (type === 'scramble') {
-              const word = getUniqueItem(activeScramblePool, wordsData.scramble);
-              const scrambled = word.split('').sort(() => 0.5 - Math.random()).join(' ');
-              display = `رتب الحروف لتكون كلمة صحيحة:\n\n\`${scrambled}\``; answer = word;
-          } else if (type === 'math') {
-              const n1 = Math.floor(Math.random() * 80) + 15; const n2 = Math.floor(Math.random() * 50) + 10;
-              display = `كم ناتج: ${n1} + ${n2} ؟`; answer = (n1 + n2).toString();
-          } else if (type === 'mul') {
-              const n1 = Math.floor(Math.random() * 12) + 3; const n2 = Math.floor(Math.random() * 12) + 3;
-              display = `كم ناتج: ${n1} × ${n2} ؟`; answer = (n1 * n2).toString();
-          } else if (type === 'capital') {
-              const chosen = getUniqueItem(activeCapitalsPool, wordsData.capitals);
-              display = `ما هي عاصمة **${chosen.c}** ؟`; answer = chosen.cap;
-          }
-
-          const loadingMsg = await channel.send(`🎮 **${gameTitle}**\n${display}`);
-          const startTime = Date.now();
-          const filter = m => !m.author.bot;
-          const collector = channel.createMessageCollector({ filter, time: 30000 });
-          activeGames.set(channel.id, collector);
-
-          let answeredCorrectly = false;
-          collector.on('collect', m => {
-              if (m.content.trim().toLowerCase() === answer.toLowerCase()) {
-                  answeredCorrectly = true;
-                  const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                  m.react('🎉');
-                  channel.send(`🎉 فاز ${m.author} بزمن: **${timeElapsed} ثانية**! الإجابة صحيحة: **${answer}**`);
-                  addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(timeElapsed));
-                  collector.stop('correct');
-              } else { m.react('❌'); }
-          });
-          collector.on('end', (collected, reason) => {
-              if (reason === 'cancelled') return;
-              activeGames.delete(channel.id);
-              if (!answeredCorrectly) channel.send(`⏰ خلص الوقت! الإجابة الصحيحة كانت: **${answer}**`);
-              sendGamesMenu(channel);
-          });
-      }
 
       if (message.content === '!القاتل' || message.content === '!لعبة القاتل') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه فعالية شغالة!');
@@ -675,30 +612,15 @@ client.on('messageCreate', async message => {
       }
 
       if (message.content.startsWith('!ت')) {
-          const pointsData = loadPoints();
-          if (!pointsData[guildId] || Object.keys(pointsData[guildId]).length === 0) return message.reply('🏆 ما فيه أي بيانات مسجلة!');
-          const subType = message.content.split(' ')[1] ? message.content.split(' ')[1].toLowerCase() : 'ن';
-          const guildUsers = pointsData[guildId];
-          let sortedUsers = []; let title = '';
-          if (subType === 'س') {
-              sortedUsers = Object.entries(guildUsers).filter(a => a[1].bestTime < 999999).sort((a, b) => a[1].bestTime - b[1].bestTime).slice(0, 5);
-              title = '⚡ **أسرع 5 أبطال** ⚡';
-          } else if (subType === 'ت') {
-              sortedUsers = Object.entries(guildUsers).sort((a, b) => b[1].messagesCount - a[1].messagesCount).slice(0, 5);
-              title = '🔥 **أكثر 5 متفاعلين** 🔥';
-          } else {
-              sortedUsers = Object.entries(guildUsers).sort((a, b) => b[1].points - a[1].points).slice(0, 5);
-              title = '🏆 **أعلى 5 نقاط** 🏆';
-          }
-          if (sortedUsers.length === 0) return message.reply('📊 لا توجد سجلات.');
-          let boardText = `${title}\n\n`;
-          sortedUsers.forEach(([id, data], index) => {
-              let medal = index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
-              if (subType === 'س') boardText += `${medal} **#${index + 1}** - ${data.name} ⟵ **${data.bestTime} ثانية**\n`;
-              else if (subType === 'ت') boardText += `${medal} **#${index + 1}** - ${data.name} ⟵ **${data.messagesCount} رسالة**\n`;
-              else boardText += `${medal} **#${index + 1}** - ${data.name} ⟵ **${data.points} نقطة**\n`;
+          if (!pointsColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
+          let u = await pointsColl.find({ guildId }).sort({ points: -1 }).limit(5).toArray();
+          if (u.length === 0) return message.reply('🏆 ما فيه أي بيانات مسجلة!');
+          let txt = `🏆 **أعلى النقاط:**\n\n`;
+          u.forEach((d, i) => {
+              let medal = i === 0 ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🏅';
+              txt += `${medal} **#${i + 1}** - ${d.name} ⟵ **${d.points} نقطة**\n`;
           });
-          return message.channel.send(boardText);
+          return message.channel.send(txt);
       }
 
       if (message.content === '!العاب') return sendGamesMenu(message.channel);
@@ -709,11 +631,6 @@ client.on('messageCreate', async message => {
           activeGames.delete(message.channel.id);
           return message.channel.send('🛑 **تم إيقاف اللعبة بنجاح!**');
       }
-      if (message.content === '!كتابة') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); runJsonGame('تحدي أسرع كاتب!', 'writing', message.channel, guildId); }
-      if (message.content.startsWith('!فكك')) { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); runJsonGame('لعبة فكك!', 'scramble', message.channel, guildId); }
-      if (message.content.startsWith('!رياضيات')) { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); runJsonGame('تحدي الحساب السريع!', 'math', message.channel, guildId); }
-      if (message.content.startsWith('!قسمة') || message.content.startsWith('!ضرب')) { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); runJsonGame('تحدي الضرب!', 'mul', message.channel, guildId); }
-      if (message.content.startsWith('!عواصم')) { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); runJsonGame('لعبة العواصم!', 'capital', message.channel, guildId); }
   }
 });
 
