@@ -56,20 +56,20 @@ setInterval(() => {
     });
 }, 5 * 60 * 1000);
 
-// دالة جلب المستخدم الاقتصادي من قاعدة البيانات بدون إعادة ضبط الرصيد
-async function getEconomyUser(guildId, userId) {
-    if (!economyColl) return { balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
-    let doc = await economyColl.findOne({ guildId, userId });
+// دالة الاقتصاد الموحدة والثابتة لمنع اختلاف الرصيد
+async function getEconomyUser(userId) {
+    if (!economyColl) return { userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
+    let doc = await economyColl.findOne({ userId });
     if (!doc) {
-        doc = { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
+        doc = { userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
         await economyColl.insertOne(doc);
     }
     return doc;
 }
 
-async function saveEconomyUser(guildId, userId, userData) {
+async function saveEconomyUser(userId, userData) {
     if (!economyColl) return;
-    await economyColl.updateOne({ guildId, userId }, { $set: userData }, { upsert: true });
+    await economyColl.updateOne({ userId }, { $set: userData }, { upsert: true });
 }
 
 async function getPointsUser(guildId, userId, userTag) {
@@ -451,6 +451,7 @@ function startWritingGame(channel, guildId) {
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
   const guildId = message.guild.id;
+  const userId = message.author.id;
 
   if (allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
@@ -462,11 +463,11 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
       if (message.content === '!بنك') {
-          const user = await getEconomyUser(guildId, message.author.id);
+          const user = await getEconomyUser(userId);
           return message.reply(`💳 رصيدك الكاش: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content === '!راتب') {
-          let user = await getEconomyUser(guildId, message.author.id);
+          let user = await getEconomyUser(userId);
           const now = Date.now();
           if (now - user.lastWork < 5 * 60 * 1000) {
               const m = Math.ceil((5 * 60 * 1000 - (now - user.lastWork)) / 60000);
@@ -474,7 +475,7 @@ client.on('messageCreate', async message => {
           }
           const salary = Math.floor(Math.random() * 800) + 700;
           user.balance += salary; user.lastWork = now;
-          await saveEconomyUser(guildId, message.author.id, user);
+          await saveEconomyUser(userId, user);
           return message.reply(`💵 نزل راتبك: **$${salary}**! رصيدك: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content === '!سوق') {
@@ -489,14 +490,14 @@ client.on('messageCreate', async message => {
           const id = parseInt(message.content.split(' ')[1]);
           const item = marketItems.find(i => i.id === id);
           if (!item) return message.reply('❌ رقم العقار خطأ!');
-          let user = await getEconomyUser(guildId, message.author.id);
+          let user = await getEconomyUser(userId);
           if (user.balance < item.price) return message.reply('💸 فلوسك ما تكفي!');
           user.balance -= item.price; user.properties.push(id);
-          await saveEconomyUser(guildId, message.author.id, user);
-          return message.reply(`🎉 شريت **${item.name}** بـ **$${item.price.toLocaleString()}**!`);
+          await saveEconomyUser(userId, user);
+          return message.reply(`🎉 شريت **${item.name}** بـ **$${item.price.toLocaleString()}**! رصيدك: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content === '!املاكي') {
-          const user = await getEconomyUser(guildId, message.author.id);
+          const user = await getEconomyUser(userId);
           if (user.properties.length === 0) return message.reply('مفلس! ما عندك عقارات.');
           const embed = new EmbedBuilder().setColor('#00FF00').setTitle(`🏠 محفظتك`);
           let totalV = 0, totalP = 0;
@@ -512,17 +513,17 @@ client.on('messageCreate', async message => {
       }
       if (message.content.startsWith('!بيع ')) {
           const id = parseInt(message.content.split(' ')[1]);
-          let user = await getEconomyUser(guildId, message.author.id);
+          let user = await getEconomyUser(userId);
           const idx = user.properties.indexOf(id);
           if (idx === -1) return message.reply('❌ ما تملك هالعقار!');
           const item = marketItems.find(i => i.id === id);
           const sellPrice = Math.floor(item.price * 0.90);
           user.properties.splice(idx, 1); user.balance += sellPrice;
-          await saveEconomyUser(guildId, message.author.id, user);
+          await saveEconomyUser(userId, user);
           return message.reply(`🤝 بعت **${item.name}** بـ **$${sellPrice.toLocaleString()}**!`);
       }
       if (message.content === '!ارباح') {
-          let user = await getEconomyUser(guildId, message.author.id);
+          let user = await getEconomyUser(userId);
           if (user.properties.length === 0) return message.reply('❌ ما عندك عقارات.');
           const now = Date.now();
           if (now - user.lastProfit < 5 * 60 * 1000) {
@@ -532,7 +533,7 @@ client.on('messageCreate', async message => {
           let total = 0; 
           user.properties.forEach(pid => { const i = marketItems.find(x => x.id === pid); if (i) total += i.profit; });
           user.balance += total; user.lastProfit = now;
-          await saveEconomyUser(guildId, message.author.id, user);
+          await saveEconomyUser(userId, user);
           return message.reply(`📈 استلمت أرباحك: **$${total.toLocaleString()}**!`);
       }
       if (message.content.startsWith('!تحويل')) {
@@ -540,18 +541,18 @@ client.on('messageCreate', async message => {
           const target = message.mentions.users.first();
           const amt = parseInt(args[2]);
           if (!target || isNaN(amt) || amt <= 0) return message.reply('❌ الاستخدام: `!تحويل @الشخص المبلغ`');
-          if (target.id === message.author.id) return message.reply('😅 ما تحول لنفسك!');
-          let s = await getEconomyUser(guildId, message.author.id);
+          if (target.id === userId) return message.reply('😅 ما تحول لنفسك!');
+          let s = await getEconomyUser(userId);
           if (s.balance < amt) return message.reply('💸 رصيدك ما يكفي!');
-          s.balance -= amt; await saveEconomyUser(guildId, message.author.id, s);
-          let r = await getEconomyUser(guildId, target.id);
-          r.balance += amt; await saveEconomyUser(guildId, target.id, r);
+          s.balance -= amt; await saveEconomyUser(userId, s);
+          let r = await getEconomyUser(target.id);
+          r.balance += amt; await saveEconomyUser(target.id, r);
           return message.channel.send(`✅ تم تحويل **$${amt.toLocaleString()}** إلى ${target}.`);
       }
   }
 
   if (allowedChannels.includes(message.channel.id)) {
-      trackUserMessage(guildId, message.author.id, message.author.displayName);
+      trackUserMessage(guildId, userId, message.author.displayName);
 
       if (message.content === '!فعالية' || message.content === '!لعبة') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة!');
@@ -573,8 +574,8 @@ client.on('messageCreate', async message => {
       if (message.content.startsWith('!xo')) {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
           const opponent = message.mentions.users.first();
-          let playerX = message.author.id;
-          let playerO = opponent && !opponent.bot && opponent.id !== message.author.id ? opponent.id : client.user.id;
+          let playerX = userId;
+          let playerO = opponent && !opponent.bot && opponent.id !== userId ? opponent.id : client.user.id;
           
           activeGames.set(message.channel.id, 'xo');
           let board = Array(9).fill(null);
@@ -635,7 +636,7 @@ client.on('messageCreate', async message => {
               if (Math.floor(Math.random() * 6) + 1 === 1) message.channel.send(`💥 **بووووم!** ${message.author} خسر 💀.`);
               else { 
                   message.channel.send(`😅 المسدس فاضي! كسبت **10 نقاط** يا ${message.author}.`); 
-                  addPoints(guildId, message.author.id, message.author.displayName, message.channel); 
+                  addPoints(guildId, userId, message.author.displayName, message.channel); 
               }
               sendGamesMenu(message.channel);
           }, 3000);
