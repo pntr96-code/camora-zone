@@ -38,7 +38,7 @@ const client = new Client({
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 const activeGames = new Map(); 
 const processingUsers = new Set(); 
-const allowedChannels = ['1547728033580847236', '1547728346081927262']; 
+const allowedChannels = ['1547728033580847236', '1547728346081927262', '1548010683692748821']; 
 const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821']; 
 
 let marketItems = [
@@ -62,21 +62,21 @@ setInterval(() => {
     });
 }, 5 * 60 * 1000);
 
-async function getEconomyUser(userId) {
-    if (!economyColl) return { userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
-    let doc = await economyColl.findOne({ userId });
+async function getEconomyUser(guildId, userId) {
+    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
+    let doc = await economyColl.findOne({ guildId, userId });
     if (!doc) {
-        doc = { userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
+        doc = { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
         await economyColl.insertOne(doc);
     }
     return doc;
 }
 
-async function saveEconomyUser(userId, userData) {
+async function saveEconomyUser(guildId, userId, userData) {
     if (!economyColl) return;
     try {
         await economyColl.updateOne(
-            { userId: userId }, 
+            { guildId: guildId, userId: userId }, 
             { $set: userData }, 
             { upsert: true }
         );
@@ -310,7 +310,7 @@ function startTriviaGame(channel, guildId) {
     });
 }
 
-function startBombGame(channel) {
+function startBombGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     activeGames.set(channel.id, 'bomb');
     const wires = [
@@ -328,7 +328,7 @@ function startBombGame(channel) {
             activeGames.delete(channel.id);
             if (i.customId === safe) {
                 await i.update({ content: `🎉 **كفو ${i.user}!** فكيت القنبلة وكسبت **10 نقاط**! 💣✨`, components: [] });
-                addPoints(i.guild.id, i.user.id, i.user.displayName, channel);
+                addPoints(guildId, i.user.id, i.user.displayName, channel);
             } else {
                 await i.update({ content: `💥 **بوووم!** قطعت السلك الخطأ يا ${i.user} وانفجرت 💀`, components: [] });
             }
@@ -483,15 +483,15 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
       if (message.content === '!بنك' || message.content === '!ابنك') {
-          const user = await getEconomyUser(userId);
-          return message.reply(`💳 رصيدك الكاش: **$${user.balance.toLocaleString()}**`);
+          const user = await getEconomyUser(guildId, userId);
+          return message.reply(`💳 رصيدك الكاش بالسيرفر: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content === '!راتب') {
           if (processingUsers.has(userId)) return;
           processingUsers.add(userId);
 
           try {
-              let user = await getEconomyUser(userId);
+              let user = await getEconomyUser(guildId, userId);
               const now = Date.now();
               const cooldown = 5 * 60 * 1000; // 5 دقائق
 
@@ -507,7 +507,7 @@ client.on('messageCreate', async message => {
               user.balance += salary; 
               user.lastWork = now;
               
-              await saveEconomyUser(userId, user);
+              await saveEconomyUser(guildId, userId, user);
               processingUsers.delete(userId);
               return message.reply(`💵 نزل راتبك: **$${salary}**! رصيدك الحالي: **$${user.balance.toLocaleString()}**`);
           } catch (err) {
@@ -527,16 +527,16 @@ client.on('messageCreate', async message => {
           const id = parseInt(message.content.split(' ')[1]);
           const item = marketItems.find(i => i.id === id);
           if (!item) return message.reply('❌ رقم العقار خطأ!');
-          let user = await getEconomyUser(userId);
+          let user = await getEconomyUser(guildId, userId);
           if (user.balance < item.price) return message.reply('💸 فلوسك ما تكفي!');
           user.balance -= item.price; 
           user.properties.push(id);
-          await saveEconomyUser(userId, user);
+          await saveEconomyUser(guildId, userId, user);
           return message.reply(`🎉 شريت **${item.name}** بـ **$${item.price.toLocaleString()}**! رصيدك: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content === '!املاكي') {
-          const user = await getEconomyUser(userId);
-          if (user.properties.length === 0) return message.reply('مفلس! ما عندك عقارات.');
+          const user = await getEconomyUser(guildId, userId);
+          if (user.properties.length === 0) return message.reply('مفلس! ما عندك عقارات بهذا السيرفر.');
           const embed = new EmbedBuilder().setColor('#00FF00').setTitle(`🏠 محفظتك`);
           let totalV = 0, totalP = 0;
           user.properties.forEach((pid, idx) => {
@@ -551,18 +551,18 @@ client.on('messageCreate', async message => {
       }
       if (message.content.startsWith('!بيع ')) {
           const id = parseInt(message.content.split(' ')[1]);
-          let user = await getEconomyUser(userId);
+          let user = await getEconomyUser(guildId, userId);
           const idx = user.properties.indexOf(id);
           if (idx === -1) return message.reply('❌ ما تملك هالعقار!');
           const item = marketItems.find(i => i.id === id);
           const sellPrice = Math.floor(item.price * 0.90);
           user.properties.splice(idx, 1); 
           user.balance += sellPrice;
-          await saveEconomyUser(userId, user);
+          await saveEconomyUser(guildId, userId, user);
           return message.reply(`🤝 بعت **${item.name}** بـ **$${sellPrice.toLocaleString()}**!`);
       }
       if (message.content === '!ارباح') {
-          let user = await getEconomyUser(userId);
+          let user = await getEconomyUser(guildId, userId);
           if (user.properties.length === 0) return message.reply('❌ ما عندك عقارات.');
           const now = Date.now();
           if (now - user.lastProfit < 5 * 60 * 1000) {
@@ -573,7 +573,7 @@ client.on('messageCreate', async message => {
           user.properties.forEach(pid => { const i = marketItems.find(x => x.id === pid); if (i) total += i.profit; });
           user.balance += total; 
           user.lastProfit = now;
-          await saveEconomyUser(userId, user);
+          await saveEconomyUser(guildId, userId, user);
           return message.reply(`📈 استلمت أرباحك: **$${total.toLocaleString()}**!`);
       }
       if (message.content.startsWith('!تحويل')) {
@@ -582,13 +582,13 @@ client.on('messageCreate', async message => {
           const amt = parseInt(args[2]);
           if (!target || isNaN(amt) || amt <= 0) return message.reply('❌ الاستخدام: `!تحويل @الشخص المبلغ`');
           if (target.id === userId) return message.reply('😅 ما تحول لنفسك!');
-          let s = await getEconomyUser(userId);
+          let s = await getEconomyUser(guildId, userId);
           if (s.balance < amt) return message.reply('💸 رصيدك ما يكفي!');
           s.balance -= amt; 
-          await saveEconomyUser(userId, s);
-          let r = await getEconomyUser(target.id);
+          await saveEconomyUser(guildId, userId, s);
+          let r = await getEconomyUser(guildId, target.id);
           r.balance += amt; 
-          await saveEconomyUser(target.id, r);
+          await saveEconomyUser(guildId, target.id, r);
           return message.channel.send(`✅ تم تحويل **$${amt.toLocaleString()}** إلى ${target}.`);
       }
   }
@@ -600,7 +600,7 @@ client.on('messageCreate', async message => {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة!');
           const gameChoicer = Math.floor(Math.random() * 11);
           if (gameChoicer === 0) startRouletteGame(message.channel, guildId);
-          else if (gameChoicer === 1) startBombGame(message.channel);
+          else if (gameChoicer === 1) startBombGame(message.channel, guildId);
           else if (gameChoicer === 2) startScrambleGame(message.channel, guildId);
           else if (gameChoicer === 3) startButtonGame(message.channel, guildId);
           else if (gameChoicer === 4) startMathGame(message.channel, guildId);
@@ -684,7 +684,7 @@ client.on('messageCreate', async message => {
           }, 3000);
       }
 
-      if (message.content === '!قنبلة') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startBombGame(message.channel); }
+      if (message.content === '!قنبلة') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startBombGame(message.channel, guildId); }
       if (message.content === '!زر') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startButtonGame(message.channel, guildId); }
       if (message.content === '!كتابة') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startWritingGame(message.channel, guildId); }
       if (message.content === '!فكك') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startScrambleGame(message.channel, guildId); }
