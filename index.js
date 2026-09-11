@@ -56,7 +56,7 @@ setInterval(() => {
     });
 }, 5 * 60 * 1000);
 
-// دالة الاقتصاد الموحدة والثابتة لمنع اختلاف الرصيد
+// دالة موحدة وثابتة للبنك تعتمد على معرّف المستخدم فقط لضمان تطابق الرصيد تماماً
 async function getEconomyUser(userId) {
     if (!economyColl) return { userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
     let doc = await economyColl.findOne({ userId });
@@ -474,7 +474,8 @@ client.on('messageCreate', async message => {
               return message.reply(`⏳ باقي **${m} دقيقة** على الراتب!`);
           }
           const salary = Math.floor(Math.random() * 800) + 700;
-          user.balance += salary; user.lastWork = now;
+          user.balance += salary; 
+          user.lastWork = now;
           await saveEconomyUser(userId, user);
           return message.reply(`💵 نزل راتبك: **$${salary}**! رصيدك: **$${user.balance.toLocaleString()}**`);
       }
@@ -492,7 +493,8 @@ client.on('messageCreate', async message => {
           if (!item) return message.reply('❌ رقم العقار خطأ!');
           let user = await getEconomyUser(userId);
           if (user.balance < item.price) return message.reply('💸 فلوسك ما تكفي!');
-          user.balance -= item.price; user.properties.push(id);
+          user.balance -= item.price; 
+          user.properties.push(id);
           await saveEconomyUser(userId, user);
           return message.reply(`🎉 شريت **${item.name}** بـ **$${item.price.toLocaleString()}**! رصيدك: **$${user.balance.toLocaleString()}**`);
       }
@@ -518,7 +520,8 @@ client.on('messageCreate', async message => {
           if (idx === -1) return message.reply('❌ ما تملك هالعقار!');
           const item = marketItems.find(i => i.id === id);
           const sellPrice = Math.floor(item.price * 0.90);
-          user.properties.splice(idx, 1); user.balance += sellPrice;
+          user.properties.splice(idx, 1); 
+          user.balance += sellPrice;
           await saveEconomyUser(userId, user);
           return message.reply(`🤝 بعت **${item.name}** بـ **$${sellPrice.toLocaleString()}**!`);
       }
@@ -532,7 +535,8 @@ client.on('messageCreate', async message => {
           }
           let total = 0; 
           user.properties.forEach(pid => { const i = marketItems.find(x => x.id === pid); if (i) total += i.profit; });
-          user.balance += total; user.lastProfit = now;
+          user.balance += total; 
+          user.lastProfit = now;
           await saveEconomyUser(userId, user);
           return message.reply(`📈 استلمت أرباحك: **$${total.toLocaleString()}**!`);
       }
@@ -544,9 +548,11 @@ client.on('messageCreate', async message => {
           if (target.id === userId) return message.reply('😅 ما تحول لنفسك!');
           let s = await getEconomyUser(userId);
           if (s.balance < amt) return message.reply('💸 رصيدك ما يكفي!');
-          s.balance -= amt; await saveEconomyUser(userId, s);
+          s.balance -= amt; 
+          await saveEconomyUser(userId, s);
           let r = await getEconomyUser(target.id);
-          r.balance += amt; await saveEconomyUser(target.id, r);
+          r.balance += amt; 
+          await saveEconomyUser(target.id, r);
           return message.channel.send(`✅ تم تحويل **$${amt.toLocaleString()}** إلى ${target}.`);
       }
   }
