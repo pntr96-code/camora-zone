@@ -96,7 +96,7 @@ setInterval(async () => {
                         .addFields(
                             { name: '🎲 الألعاب السريعة والتحديات', value: 'استخدم أمر `!فعالية` لاختيار لعبة عشوائية فوراً، أو اختر لعبتك المفضلة:\n• **`!فكك` / `!عكس`**: ترتيب الحروف أو عكسها.\n• **`!إيموجي` / `!معنى`**: تخمين الرمز أو معاني الكلمات العربية.\n• **`!تخمين` / `!رياضيات`**: تخمين الأرقام وحل العمليات الحسابية.\n• **`!قنبلة` / `!روليت` / `!زر`**: ألعاب الحظ والسرعة الفائقة.', inline: false },
                             { name: '🏦 النظام الاقتصادي والمزايا الجديدة', value: 'في رومات الاقتصاد، يمكنك بناء إمبراطوريتك المالية:\n• **`!راتب`**: استلم راتبك الدوري كل 5 دقائق.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات والمشاريع لترفع أرباحك.\n• **`!سرقة [@الشخص]`**: حاول سرقة خويك (بحذر لتنصاد!).\n• **`!حظ [المبلغ]`**: العب بكازينو الحظ وضاعف فلوسك.\n• **`!صندوق`**: اشتري صندوقاً سرياً بغنائم عشوائية.\n• **`!مهامي`**: أنجز مهامك اليومية واكسب جوائز ضخمة.', inline: false },
-                            { name: '🏆 لوحة الصدارة والتفاعل', value: '• **`!ت ن`**: لعرض أعلى النقاط في السيرفر.\n• **`!ت س`**: لعرض أسرع الأبطال بالسرعة والزمن.\n• **`!ت ت`**: لعرض أكثر الأعضاء تفاعلاً بالرسائل.', inline: false }
+                            { name: '🏆 لوحة الصدارة العامة', value: '• **`!ت`**: لعرض لوحة الصدارة الشاملة (النقاط، السرعة، التفاعل، والثروة).', inline: false }
                         )
                         .setFooter({ text: '💡 اكتب أحد الأوامر أعلاه وابدأ الحماس الآن!' })
                         .setTimestamp();
@@ -227,7 +227,7 @@ function sendGamesMenu(channel) {
         .addFields(
             { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
             { name: '🎲 الفعاليات العشوائية', value: '`!فعالية` (يختار لعبة عشوائية من القائمة)', inline: false },
-            { name: '🏆 لوحة الصدارة', value: '`!ت ن` (نقاط) | `!ت س` (سرعة) | `!ت ت` (تفاعل)', inline: false }
+            { name: '🏆 لوحة الصدارة الشاملة', value: '`!ت` (لعرض جميع الإحصائيات والصدارة)', inline: false }
         )
         .setFooter({ text: '🛑 لإلغاء أي لعبة جارية اكتب: !ايقاف' });
     channel.send({ embeds: [embed] });
@@ -531,7 +531,8 @@ client.on('messageCreate', async message => {
               { name: '📈 السوق والأملاك', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي` | `!ارباح`', inline: false },
               { name: '🦹‍♂️ الجريمة والسرقة', value: '`!سرقة [@الشخص]`', inline: false },
               { name: '🎰 الحظ والكازينو', value: '`!حظ [المبلغ]` | `!صندوق`', inline: false },
-              { name: '🎯 المهام والتحويل', value: '`!مهامي` | `!تحويل [@الشخص] [المبلغ]`', inline: false }
+              { name: '🎯 المهام والتحويل', value: '`!مهامي` | `!تحويل [@الشخص] [المبلغ]`', inline: false },
+              { name: '🏆 لوحة الصدارة', value: '`!ت` (لعرض لوحة الشرف والصدارة الشاملة)', inline: false }
           );
           return message.channel.send({ embeds: [embed] });
       }
@@ -642,7 +643,6 @@ client.on('messageCreate', async message => {
           return;
       }
 
-      // --- نظام 1: السرقات والمطاردات (Crime & Heist) ---
       if (message.content.startsWith('!سرقة')) {
           const target = message.mentions.users.first();
           if (!target) return message.reply('❌ الاستخدام الصحيح: `!سرقة [@الشخص]`');
@@ -650,7 +650,7 @@ client.on('messageCreate', async message => {
 
           let user = await getEconomyUser(guildId, userId);
           const now = Date.now();
-          const cooldown = 10 * 60 * 1000; // 10 دقائق كولداون
+          const cooldown = 10 * 60 * 1000;
           if (user.lastCrime && (now - user.lastCrime < cooldown)) {
               const m = Math.ceil((cooldown - (now - user.lastCrime)) / 60000);
               return message.reply(`🚓 الشرطة تراقبك! انتظر **${m} دقيقة** قبل أن تحاول السرقة مجدداً.`);
@@ -660,7 +660,7 @@ client.on('messageCreate', async message => {
           if (targetUser.balance < 500) return message.reply('💸 الضحية مفلس تماماً، ما عنده فلوس تستاهل المخاطرة!');
 
           user.lastCrime = now;
-          const success = Math.random() < 0.45; // نسبة نجاح 45%
+          const success = Math.random() < 0.45;
 
           if (success) {
               const stolenAmt = Math.floor(Math.random() * (targetUser.balance * 0.3)) + 200;
@@ -677,7 +677,6 @@ client.on('messageCreate', async message => {
           }
       }
 
-      // --- نظام 2: اليانصيب والحظ اليومي (Casino / Gamble) ---
       if (message.content.startsWith('!حظ')) {
           const args = message.content.split(' ');
           const amt = parseInt(args[1]);
@@ -687,15 +686,15 @@ client.on('messageCreate', async message => {
           if (user.balance < amt) return message.reply('💸 رصيدك الكاش ما يكفي للمبلغ اللي تبيه!');
 
           const roll = Math.random();
-          if (roll < 0.40) { // خسارة
+          if (roll < 0.40) {
               user.balance -= amt;
               await saveEconomyUser(guildId, userId, user);
               return message.reply(`😢 للأسف خسرت رهنتك وراحت عليك **$${amt.toLocaleString()}**! رصيدك: **$${user.balance.toLocaleString()}**`);
-          } else if (roll < 0.85) { // ربح دبل
+          } else if (roll < 0.85) {
               user.balance += amt;
               await saveEconomyUser(guildId, userId, user);
               return message.reply(`🎰 **كفووو!** فزت وضاعفت فلوسك وكسبت **$${amt.toLocaleString()}**! رصيدك: **$${user.balance.toLocaleString()}** 🎉`);
-          } else { // جاب البوت جوكر (أرباح ضخمة x3)
+          } else {
               const megaWin = amt * 3;
               user.balance += megaWin;
               await saveEconomyUser(guildId, userId, user);
@@ -703,7 +702,6 @@ client.on('messageCreate', async message => {
           }
       }
 
-      // --- نظام 4: المتجر السري والصناديق الغامضة (Mystery Box) ---
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
           const boxPrice = 3000;
@@ -728,7 +726,6 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [boxEmbed] });
       }
 
-      // --- نظام 3: المهام اليومية (Daily Quests) ---
       if (message.content === '!مهامي') {
           let user = await getEconomyUser(guildId, userId);
           const now = Date.now();
@@ -768,8 +765,11 @@ client.on('messageCreate', async message => {
       }
   }
 
-  if (allowedChannels.includes(message.channel.id)) {
-      trackUserMessage(guildId, userId, message.author.displayName);
+  // --- لوحة الصدارة الشاملة (الأمر !ت في جميع الرومات المدارة) ---
+  if (allowedChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
+      if (allowedChannels.includes(message.channel.id)) {
+          trackUserMessage(guildId, userId, message.author.displayName);
+      }
 
       if (message.content === '!فعالية' || message.content === '!لعبة') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة!');
@@ -871,22 +871,42 @@ client.on('messageCreate', async message => {
       if (message.content === '!إيموجي') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startEmojiGame(message.channel, guildId); }
       if (message.content === '!معنى') { if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!'); startMeaningGame(message.channel, guildId); }
 
-      if (message.content.startsWith('!ت')) {
-          if (!pointsColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
-          const subType = message.content.split(' ')[1] ? message.content.split(' ')[1].toLowerCase() : 'ن';
-          let u = await pointsColl.find({ guildId }).sort(subType === 'س' ? { bestTime: 1 } : subType === 'ت' ? { messagesCount: -1 } : { points: -1 }).limit(5).toArray();
-          
-          if (u.length === 0) return message.reply('🏆 ما فيه بيانات مسجلة.');
-          
+      // --- لوحة الصدارة الشاملة بأمر واحد (!ت) ---
+      if (message.content === '!ت') {
+          if (!pointsColl || !economyColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
+
+          // جلب أعلى 3 في النقاط
+          const topPoints = await pointsColl.find({ guildId }).sort({ points: -1 }).limit(3).toArray();
+          // جلب أعلى 3 في السرعة
+          const topSpeed = await pointsColl.find({ guildId }).sort({ bestTime: 1 }).limit(3).toArray();
+          // جلب أعلى 3 في الرسائل والتفاعل
+          const topMsgs = await pointsColl.find({ guildId }).sort({ messagesCount: -1 }).limit(3).toArray();
+          // جلب أعلى 3 في الثروة المالية
+          const topRich = await economyColl.find({ guildId }).sort({ balance: -1 }).limit(3).toArray();
+
           const embed = new EmbedBuilder()
               .setColor('#FFD700')
-              .setTitle(subType === 'س' ? '⚡ أسرع 5 أبطال' : subType === 'ت' ? '🔥 أكثر 5 متفاعلين' : '🏆 أعلى 5 نقاط في السيرفر');
+              .setTitle('🏆 لوحة الشرف والصدارة الشاملة لـ 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
+              .setDescription('✨ إليك صدارة الأبطال، الأسرع، المتفاعلين، وأغنى أثرياء السيرفر:')
+              .setTimestamp();
 
-          u.forEach((d, i) => {
-              let medal = i === 0 ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🏅';
-              let val = subType === 'س' ? `${d.bestTime} ثانية` : subType === 'ت' ? `${d.messagesCount} رسالة` : `${d.points} نقطة`;
-              embed.addFields({ name: `${medal} المركز #${i + 1} - ${d.name}`, value: `⭐ النتيجة: **${val}**`, inline: false });
-          });
+          // 1. قسم النقاط
+          let pointsText = topPoints.length > 0 ? topPoints.map((d, i) => `${i === 0 ? '👑' : i === 1 ? '🥈' : '🥉'} **${d.name}**: \`${d.points} نقطة\``).join('\n') : 'لا توجد بيانات بعد.';
+          embed.addFields({ name: '⭐ أعلى النقاط', value: pointsText, inline: false });
+
+          // 2. قسم السرعة
+          let speedText = topSpeed.length > 0 && topSpeed.some(d => d.bestTime < 999999) 
+              ? topSpeed.filter(d => d.bestTime < 999999).map((d, i) => `${i === 0 ? '⚡' : '🥈' ?? '🥉'} **${d.name}**: \`${d.bestTime} ثانية\``).join('\n') 
+              : 'لا توجد أرقام مسجلة.';
+          embed.addFields({ name: '⚡ أسرع الأبطال', value: speedText, inline: false });
+
+          // 3. قسم التفاعل
+          let msgText = topMsgs.length > 0 ? topMsgs.map((d, i) => `${i === 0 ? '🔥' : i === 1 ? '🥈' : '🥉'} **${d.name}**: \`${d.messagesCount} رسالة\``).join('\n') : 'لا توجد تفاعلات مسجلة.';
+          embed.addFields({ name: '🔥 أكثر المتفاعلين', value: msgText, inline: false });
+
+          // 4. قسم الثروة والاقتصاد
+          let richText = topRich.length > 0 ? topRich.map((d, i) => `${i === 0 ? '💰' : i === 1 ? '🥈' : '🥉'} <@${d.userId}>: \`$${d.balance.toLocaleString()}\``).join('\n') : 'لا توجد حسابات بنكية.';
+          embed.addFields({ name: '💎 أثرياء السيرفر (الكاش)', value: richText, inline: false });
 
           return message.channel.send({ embeds: [embed] });
       }
