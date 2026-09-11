@@ -1,0 +1,32 @@
+{
+  "640142306707505182": {
+    "name": "Abu Saleh",
+    "points": 150
+  },
+  "1299019648074780712": {
+    "name": "S",
+    "points": 20
+  },
+  "763416408453152768": {
+    "640142306707505182": {
+      "name": "Abu Saleh",
+      "points": 20,
+      "speedWins": 2,
+      "messagesCount": 30
+    },
+    "1011392187025604709": {
+      "name": "3nze.9",
+      "points": 10,
+      "speedWins": 1,
+      "messagesCount": 6
+    }
+  },
+  "780157005360791602": {
+    "640142306707505182": {
+      "name": "Abu Saleh",
+      "points": 10,
+      "speedWins": 1,
+      "messagesCount": 5
+    }
+  }
+}
