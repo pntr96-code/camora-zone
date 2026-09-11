@@ -565,7 +565,7 @@ client.on('messageCreate', async message => {
       }
 
       // --- أمر البروفايل الشامل (لك ولغيرك) ---
-      if (message.content === '!بروفايل' || message.content.startsWith('!بروفايل ')) {
+      if (message.content === '!هوية' || message.content.startsWith('!هوية ')) {
           const targetUser = message.mentions.users.first() || message.author;
           const targetId = targetUser.id;
           const targetName = targetUser.displayName || targetUser.username;
@@ -577,7 +577,7 @@ client.on('messageCreate', async message => {
 
           const profileEmbed = new EmbedBuilder()
               .setColor('#9B59B6')
-              .setTitle(`👤 بروفايل البطل: ${targetName}`)
+              .setTitle(`👤 الهوية: ${targetName}`)
               .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
               .addFields(
                   { name: '💳 الرصيد المالي', value: `\`$${ecoData.balance.toLocaleString()}\``, inline: true },
