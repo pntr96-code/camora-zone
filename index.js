@@ -256,6 +256,8 @@ function sendGamesMenu(channel) {
 🔪 \`!القاتل\` : فعالية تحقيق ونقاش
 ❌ \`!xo\` : تحدي إكس أو (مع خويك أو ضد البوت)
 🎲 \`!روليت\` : لعبة الحظ الروسية
+💣 \`!قنبلة\` : تحدي فك القنبلة
+⚡ \`!زر\` : تحدي أسرع ضغطة
 ⌨️ \`!كتابة\` : تحدي أسرع كاتب
 🧩 \`!فكك\` : ترتيب الحروف المبعثرة
 🔢 \`!رياضيات\` : تحدي الحساب السريع
@@ -629,6 +631,94 @@ client.on('messageCreate', async message => {
           }
           sendGamesMenu(message.channel);
       }, 3000); 
+  }
+
+  // --- لعبة فك القنبلة ---
+  if (message.content === '!قنبلة') {
+      if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر الفعالية الحالية تخلص!');
+      activeGames.set(message.channel.id, 'bomb');
+
+      const wires = [
+          { id: 'wire_red', label: 'أحمر 🔴', style: ButtonStyle.Danger },
+          { id: 'wire_blue', label: 'أزرق 🔵', style: ButtonStyle.Primary },
+          { id: 'wire_green', label: 'أخضر 🟢', style: ButtonStyle.Success }
+      ];
+
+      wires.sort(() => Math.random() - 0.5);
+      const safeWire = wires[0].id; 
+
+      const row = new ActionRowBuilder();
+      wires.forEach(w => {
+          row.addComponents(new ButtonBuilder().setCustomId(w.id).setLabel(w.label).setStyle(w.style));
+      });
+
+      const msg = await message.channel.send({
+          content: `💣 **القنبلة بتنفجر بعد 15 ثانية!**\n${message.author} اختار السلك الصح عشان تفكها!`,
+          components: [row]
+      });
+
+      const filter = i => i.user.id === message.author.id;
+      const collector = msg.createMessageComponentCollector({ filter, time: 15000, max: 1 });
+
+      collector.on('collect', async i => {
+          activeGames.delete(message.channel.id);
+          if (i.customId === safeWire) {
+              await i.update({ content: `🎉 **كفوو!** فكيت القنبلة بسلام وكسبت نقاط!`, components: [] });
+              addPoints(guildId, message.author.id, message.author.displayName, message.channel);
+          } else {
+              await i.update({ content: `💥 **بوووووووم!** قطعت السلك الغلط وانفجرت القنبلة 💀`, components: [] });
+          }
+          sendGamesMenu(message.channel);
+      });
+
+      collector.on('end', (collected, reason) => {
+          if (reason === 'time') {
+              activeGames.delete(message.channel.id);
+              msg.edit({ content: `💥 **بوووووووم!** خلص الوقت وانفجرت القنبلة 💀`, components: [] });
+              sendGamesMenu(message.channel);
+          }
+      });
+  }
+
+  // --- لعبة أسرع زر ---
+  if (message.content === '!زر') {
+      if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر الفعالية الحالية تخلص!');
+      activeGames.set(message.channel.id, 'button');
+
+      const msg = await message.channel.send(`⏳ **استعد... الزر بيظهر فجأة، خليك جاهز!**`);
+      
+      const delay = Math.floor(Math.random() * 4000) + 2000; 
+
+      setTimeout(async () => {
+          if (!activeGames.has(message.channel.id)) return;
+
+          const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('fast_click').setLabel('⚡ اضغطنييي!').setStyle(ButtonStyle.Success)
+          );
+
+          await msg.edit({ content: `🔥 **ميين يضغط الزررررر بسرعة!**`, components: [row] });
+          const startTime = Date.now();
+
+          const collector = msg.createMessageComponentCollector({ time: 10000, max: 1 });
+
+          collector.on('collect', async i => {
+              activeGames.delete(message.channel.id);
+              const endTime = Date.now();
+              const timeElapsed = ((endTime - startTime) / 1000).toFixed(2);
+              
+              await i.update({ content: `🏆 كفو ${i.user}! كنت الأسرع وضغطت الزر في **${timeElapsed} ثانية**!`, components: [] });
+              addPoints(guildId, i.user.id, i.user.displayName, message.channel, parseFloat(timeElapsed));
+              sendGamesMenu(message.channel);
+          });
+
+          collector.on('end', (collected, reason) => {
+              if (reason === 'time') {
+                  activeGames.delete(message.channel.id);
+                  msg.edit({ content: `😴 محد ضغط الزر! خلص الوقت.`, components: [] });
+                  sendGamesMenu(message.channel);
+              }
+          });
+      }, delay);
   }
 
   if (message.content.startsWith('!ت') || message.content.startsWith('!ترتيب') || message.content.startsWith('!لوحة')) {
