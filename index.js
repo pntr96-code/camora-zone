@@ -41,6 +41,9 @@ const processingUsers = new Set();
 const allowedChannels = ['1547728033580847236', '1547728346081927262', '1548010683692748821']; 
 const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821']; 
 
+// خريطة لتتبع آخر وقت نشاط لكل روم
+const lastActivityTime = new Map();
+
 let marketItems = [
     { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
     { id: 2, name: 'ورشة سيارات', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1500, emoji: '🔧' },
@@ -77,6 +80,40 @@ setInterval(async () => {
         }
     }
 }, 5 * 60 * 1000);
+
+// مراقبة الخمول (كل دقيقة يفحص إذا مر 10 دقائق بدون تفاعل في رومات الألعاب أو السوق)
+setInterval(async () => {
+    const now = Date.now();
+    const allManagedChannels = [...new Set([...allowedChannels, ...allowedEconomyChannels])];
+
+    for (const channelId of allManagedChannels) {
+        const lastTime = lastActivityTime.get(channelId) || now;
+        if (now - lastTime >= 10 * 60 * 1000) { // 10 دقائق
+            try {
+                const channel = await client.channels.fetch(channelId);
+                if (channel) {
+                    const embed = new EmbedBuilder()
+                        .setColor('#9B59B6')
+                        .setTitle('⚡ استعراض فعاليات وألعاب 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
+                        .setDescription('✨ **الروم هادئ جداً! هل أنت مستعد للتحدي وجمع النقاط والأموال؟**\nإليك نبذة عن الألعاب والأنظمة المتاحة وكيفية لعبها:')
+                        .addFields(
+                            { name: '🎲 الألعاب السريعة والتحديات', value: 'استخدم أمر `!فعالية` لاختيار لعبة عشوائية فوراً، أو اختر لعبتك المفضلة:\n• **`!فكك` / `!عكس`**: ترتيب الحروف أو عكسها.\n• **`!إيموجي` / `!معنى`**: تخمين الرمز أو معاني الكلمات العربية.\n• **`!تخمين` / `!رياضيات`**: تخمين الأرقام وحل العمليات الحسابية.\n• **`!قنبلة` / `!روليت` / `!زر`**: ألعاب الحظ والسرعة الفائقة.', inline: false },
+                            { name: '🏦 نظام الاقتصاد والأعمال', value: 'في روم الاقتصاد، يمكنك بناء إمبراطوريتك المالية:\n• **`!راتب`**: استلم راتبك الدوري كل 5 دقائق.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات والمشاريع لترفع أرباحك.\n• **`!ارباح` & `!املاكي`**: اجمع أرباح أملاكك واستعرض محفظتك.', inline: false },
+                            { name: '🏆 لوحة الصدارة والتفاعل', value: '• **`!ت ن`**: لعرض أعلى النقاط في السيرفر.\n• **`!ت س`**: لعرض أسرع الأبطال بالسرعة والزمن.\n• **`!ت ت`**: لعرض أكثر الأعضاء تفاعلاً بالرسائل.', inline: false }
+                        )
+                        .setFooter({ text: '💡 اكتب أحد الأوامر أعلاه وابدأ الحماس الآن!' })
+                        .setTimestamp();
+
+                    channel.send({ embeds: [embed] });
+                    // تحديث الوقت عشان ما يسبح بالإرسال كل دقيقة ويصير سبام
+                    lastActivityTime.set(channelId, now);
+                }
+            } catch (err) {
+                console.error('Failed to send inactivity message:', err);
+            }
+        }
+    }
+}, 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
     if (!economyColl) return { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
@@ -489,6 +526,9 @@ client.on('messageCreate', async message => {
   const guildId = message.guild.id;
   const userId = message.author.id;
 
+  // تحديث وقت النشاط للروم الحالي
+  lastActivityTime.set(message.channel.id, Date.now());
+
   if (allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي').addFields(
@@ -526,7 +566,6 @@ client.on('messageCreate', async message => {
               await saveEconomyUser(guildId, userId, user);
               processingUsers.delete(userId);
               
-              // إرسال إشعار بنزول الراتب في روم السوق/الاقتصاد
               const salaryEmbed = new EmbedBuilder()
                   .setColor('#2ECC71')
                   .setTitle('💵 صرف الراتب')
@@ -598,7 +637,6 @@ client.on('messageCreate', async message => {
           user.lastProfit = now;
           await saveEconomyUser(guildId, userId, user);
           
-          // إرسال إشعار بنزول أرباح العقارات في الروم
           const profitEmbed = new EmbedBuilder()
               .setColor('#3498DB')
               .setTitle('📈 صرف أرباح العقارات والأملاك')
