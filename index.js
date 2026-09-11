@@ -56,6 +56,7 @@ setInterval(() => {
     });
 }, 5 * 60 * 1000);
 
+// دالة جلب المستخدم الاقتصادي من قاعدة البيانات بدون إعادة ضبط الرصيد
 async function getEconomyUser(guildId, userId) {
     if (!economyColl) return { balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
     let doc = await economyColl.findOne({ guildId, userId });
