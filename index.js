@@ -30,12 +30,15 @@ const economyFilePath = path.join(__dirname, 'economy.json');
 // ==========================================
 let marketItems = [
     { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
-    { id: 2, name: 'ورشة سيارات صناعية', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1200, emoji: '🔧' },
+    { id: 2, name: 'ورشة سيارات', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1200, emoji: '🔧' },
     { id: 3, name: 'شقة مفروشة بالرياض', type: 'عقار', basePrice: 45000, price: 45000, profit: 4500, emoji: '🏢' },
-    { id: 4, name: 'فرع مطعم وجبات سريعة', type: 'مطعم', basePrice: 85000, price: 85000, profit: 8000, emoji: '🍔' },
-    { id: 5, name: 'استراحة شباب بالمجمعة', type: 'عقار', basePrice: 120000, price: 120000, profit: 12000, emoji: '🏡' },
+    { id: 4, name: 'تسالي', type: 'مطعم', basePrice: 85000, price: 85000, profit: 8000, emoji: '🍔' },
+    { id: 5, name: 'استراحة بالمجمعة', type: 'عقار', basePrice: 120000, price: 120000, profit: 12000, emoji: '🏡' },
     { id: 6, name: 'معرض سيارات فخمة', type: 'معرض', basePrice: 350000, price: 350000, profit: 35000, emoji: '🏎️' },
-    { id: 7, name: 'برج تجاري ضخم', type: 'عقار', basePrice: 1000000, price: 1000000, profit: 100000, emoji: '🏙️' }
+    { id: 7, name: 'برج تجاري ضخم', type: 'عقار', basePrice: 1000000, price: 1000000, profit: 100000, emoji: '🏙️' },
+    { id: 8, name: 'بوفية ليالي الشرقية', type: 'مشروع صغير', basePrice: 5000, price: 2000, profit: 550, emoji: '☕' },
+     { id: 9, name: 'بوفية السعادة', type: 'مشروع صغير', basePrice: 3500, price: 2000, profit: 450, emoji: '☕' },
+    { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2000, profit: 200, emoji: '🏡' }
 ];
 
 setInterval(() => {
