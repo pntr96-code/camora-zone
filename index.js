@@ -238,7 +238,55 @@ function sendGamesMenu(channel) {
 -----------------------------------------
 🛑 \`!ايقاف\` : لإلغاء أي لعبة شغالة
     `;
-    channel.send(menu); // تم إزالة setTimeout لتجنب أي تداخل أو تأخير غير ضروري
+    channel.send(menu);
+}
+
+// دالة توليد أسئلة فريدة عبر الذكاء الاصطناعي لمنع التكرار نهائياً
+async function generateAIQuestion(type) {
+    try {
+        let prompt = "";
+        if (type === 'writing') {
+            prompt = "أعطني جملة عربية قصيرة وحماسية ومحفزة للقيمرز لتحدي السرعة. أرجع الجملة فقط بدون أي مقدمات أو علامات تنصيص.";
+        } else if (type === 'scramble') {
+            prompt = "أعطني كلمة عربية صحيحة واحدة من 4 إلى 6 أحرف. أرجع الكلمة فقط بدون أي شرح أو إضافات.";
+        } else if (type === 'math') {
+            const n1 = Math.floor(Math.random() * 70) + 15;
+            const n2 = Math.floor(Math.random() * 40) + 5;
+            return { display: `كم ناتج: ${n1} + ${n2} ؟`, answer: (n1 + n2).toString() };
+        } else if (type === 'mul') {
+            const n1 = Math.floor(Math.random() * 12) + 2;
+            const n2 = Math.floor(Math.random() * 12) + 2;
+            return { display: `كم ناتج: ${n1} × ${n2} ؟`, answer: (n1 * n2).toString() };
+        } else if (type === 'capital') {
+            prompt = "اعطني دولة وعاصمتها بشكل عشوائي وغير متكرر، ونسق الإجابة بهذا الشكل تماماً: اسم الدولة|اسم العاصمة. مثال: السعودية|الرياض. لا تكتب أي شي غيرها.";
+        }
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+
+        const text = response.text ? response.text.trim() : "";
+
+        if (type === 'writing') {
+            return { display: `عندكم **30 ثانية** لاكتاتبة الجملة التالية بدقة:\n\n\`${text}\``, answer: text };
+        } else if (type === 'scramble') {
+            const cleanWord = text.replace(/[^أ-ي]/g, '');
+            const scrambled = cleanWord.split('').sort(() => 0.5 - Math.random()).join(' ');
+            return { display: `رتب الحروف التالية لتكون كلمة صحيحة:\n\n\`${scrambled}\``, answer: cleanWord };
+        } else if (type === 'capital') {
+            const parts = text.split('|');
+            if (parts.length === 2) {
+                return { display: `ما هي عاصمة **${parts[0].trim()}** ؟`, answer: parts[1].trim() };
+            }
+            return { display: `ما هي عاصمة **فرنسا** ؟`, answer: 'باريس' };
+        }
+    } catch (e) {
+        // بدائل احتياطية في حال حدث أي ضغط على الـ API
+        if (type === 'writing') return { display: `عندكم **30 ثانية** لكتابة:\n\n\`قيمرز سعوديين ما نعرف الهزيمة\``, answer: 'قيمرز سعوديين ما نعرف الهزيمة' };
+        if (type === 'scramble') return { display: `رتب الحروف: \`ق ل م\``, answer: 'قلم' };
+        if (type === 'capital') return { display: `ما هي عاصمة **السعودية** ؟`, answer: 'الرياض' };
+    }
 }
 
 client.on('messageCreate', async message => {
@@ -603,13 +651,16 @@ client.on('messageCreate', async message => {
       return message.channel.send('🛑 **تم إيقاف اللعبة بنجاح!**');
   }
 
-  async function runQuickGame(questionTitle, targetAnswer, channel) {
-      const loadingMsg = await channel.send(`⏳ جاري تجهيز السؤال...`);
-      let chosenText = typeof targetAnswer === 'function' ? targetAnswer() : targetAnswer;
-      const promptText = typeof chosenText === 'object' ? chosenText.questionDisplay : `عندكم **30 ثانية** لـ:\n\n\`${chosenText}\``;
-      const actualAnswer = typeof chosenText === 'object' ? chosenText.realAnswer : chosenText;
+  async function runQuickGameByAI(gameTitle, aiType, channel) {
+      const loadingMsg = await channel.send(`⏳ جاري توليد سؤال جديد بالذكاء الاصطناعي...`);
+      const gameData = await generateAIQuestion(aiType);
+      
+      if (!gameData) {
+          await loadingMsg.edit(`❌ حدث خطأ أثناء جلب السؤال، حاول مرة أخرى.`);
+          return;
+      }
 
-      await loadingMsg.edit(`🎮 **${questionTitle}**\n${promptText}`);
+      await loadingMsg.edit(`🎮 **${gameTitle}**\n${gameData.display}`);
       const startTime = Date.now();
 
       const filter = m => !m.author.bot;
@@ -618,13 +669,13 @@ client.on('messageCreate', async message => {
 
       let answeredCorrectly = false;
       collector.on('collect', m => {
-          if (m.content.trim() === actualAnswer) {
+          if (m.content.trim().toLowerCase() === gameData.answer.toLowerCase()) {
               answeredCorrectly = true;
               const endTime = Date.now();
               const timeElapsed = ((endTime - startTime) / 1000).toFixed(2);
 
               m.react('🎉');
-              channel.send(`🎉 فاز ${m.author} بزمن خيالي: **${timeElapsed} ثانية**! الإجابة صحيحة: **${actualAnswer}**`);
+              channel.send(`🎉 فاز ${m.author} بزمن خيالي: **${timeElapsed} ثانية**! الإجابة صحيحة: **${gameData.answer}**`);
               addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(timeElapsed));
               collector.stop('correct');
           } else {
@@ -635,45 +686,34 @@ client.on('messageCreate', async message => {
       collector.on('end', (collected, reason) => {
           if (reason === 'cancelled') return;
           activeGames.delete(channel.id);
-          if (!answeredCorrectly) channel.send(`⏰ خلص الوقت! الإجابة كانت: **${actualAnswer}**`);
+          if (!answeredCorrectly) channel.send(`⏰ خلص الوقت! الإجابة الصحيحة كانت: **${gameData.answer}**`);
           sendGamesMenu(channel);
       });
   }
 
   if (message.content === '!كتابة') {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      const pool = ['الحماس والتركيز أساس الفوز', 'قيمرز سعوديين ما نعرف الهزيمة', 'اضغط زر السرعة وحقق الفوز'];
-      const sentence = pool[Math.floor(Math.random() * pool.length)];
-      runQuickGame('تحدي أسرع كاتب!', sentence, message.channel);
+      runQuickGameByAI('تحدي أسرع كاتب!', 'writing', message.channel);
   }
 
   if (message.content.startsWith('!فكك')) {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      const pool = ['قلم', 'تفاح', 'حاسب', 'شمس', 'برمجة', 'تصميم'];
-      const word = pool[Math.floor(Math.random() * pool.length)];
-      const scrambled = word.split('').sort(() => 0.5 - Math.random()).join(' ');
-      runQuickGame('لعبة فكك!', { questionDisplay: `رتب الحروف: \`${scrambled}\``, realAnswer: word }, message.channel);
+      runQuickGameByAI('لعبة فكك!', 'scramble', message.channel);
   }
 
   if (message.content.startsWith('!رياضيات')) {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      const n1 = Math.floor(Math.random() * 50) + 10;
-      const n2 = Math.floor(Math.random() * 30) + 5;
-      runQuickGame('تحدي الحساب!', { questionDisplay: `كم ناتج: ${n1} + ${n2} ؟`, realAnswer: (n1 + n2).toString() }, message.channel);
+      runQuickGameByAI('تحدي الحساب السريع!', 'math', message.channel);
   }
 
   if (message.content.startsWith('!قسمة') || message.content.startsWith('!ضرب')) {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      const n1 = Math.floor(Math.random() * 10) + 2;
-      const n2 = Math.floor(Math.random() * 10) + 2;
-      runQuickGame('تحدي الضرب!', { questionDisplay: `كم ناتج: ${n1} × ${n2} ؟`, realAnswer: (n1 * n2).toString() }, message.channel);
+      runQuickGameByAI('تحدي الضرب!', 'mul', message.channel);
   }
 
   if (message.content.startsWith('!عواصم')) {
       if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
-      const pool = [{ c: 'السعودية', cap: 'الرياض' }, { c: 'الإمارات', cap: 'أبوظبي' }, { c: 'الكويت', cap: 'الكويت' }, { c: 'مصر', cap: 'القاهرة' }];
-      const chosen = pool[Math.floor(Math.random() * pool.length)];
-      runQuickGame('لعبة العواصم!', { questionDisplay: `عاصمة **${chosen.c}** ؟`, realAnswer: chosen.cap }, message.channel);
+      runQuickGameByAI('لعبة العواصم!', 'capital', message.channel);
   }
 
 });
