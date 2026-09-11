@@ -39,7 +39,7 @@ const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 const activeGames = new Map(); 
 const processingUsers = new Set(); 
 const allowedChannels = ['1547728033580847236', '1547728346081927262']; 
-const allowedEconomyChannels = ['1547951432186077296']; 
+const allowedEconomyChannels = ['1547951432186077296',1548010683692748821']; 
 
 let marketItems = [
     { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
