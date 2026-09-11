@@ -241,24 +241,26 @@ function sendGamesMenu(channel) {
     channel.send(menu);
 }
 
-// دالة توليد أسئلة فريدة عبر الذكاء الاصطناعي لمنع التكرار نهائياً
+// دالة متطورة لإجبار الذكاء الاصطناعي على التنويع العشوائي الشامل وعدم التكرار
 async function generateAIQuestion(type) {
     try {
+        const randomSeed = Math.floor(Math.random() * 100000);
         let prompt = "";
+        
         if (type === 'writing') {
-            prompt = "أعطني جملة عربية قصيرة وحماسية ومحفزة للقيمرز لتحدي السرعة. أرجع الجملة فقط بدون أي مقدمات أو علامات تنصيص.";
+            prompt = `بناءً على الرقم العشوائي ${randomSeed}، أعطني جملة عربية جديدة كلياً، حماسية ومختلفة تماماً عن الجمل المعتادة للقيمرز. أرجع الجملة فقط بدون مقدمات أو تنصيص.`;
         } else if (type === 'scramble') {
-            prompt = "أعطني كلمة عربية صحيحة واحدة من 4 إلى 6 أحرف. أرجع الكلمة فقط بدون أي شرح أو إضافات.";
+            prompt = `بناءً على الرقم العشوائي ${randomSeed}, اختر كلمة عربية فريدة ومختلفة تماماً من 4 إلى 6 أحرف. أرجع الكلمة فقط بدون شرح.`;
         } else if (type === 'math') {
-            const n1 = Math.floor(Math.random() * 70) + 15;
-            const n2 = Math.floor(Math.random() * 40) + 5;
+            const n1 = Math.floor(Math.random() * 80) + 20;
+            const n2 = Math.floor(Math.random() * 50) + 10;
             return { display: `كم ناتج: ${n1} + ${n2} ؟`, answer: (n1 + n2).toString() };
         } else if (type === 'mul') {
-            const n1 = Math.floor(Math.random() * 12) + 2;
-            const n2 = Math.floor(Math.random() * 12) + 2;
+            const n1 = Math.floor(Math.random() * 12) + 3;
+            const n2 = Math.floor(Math.random() * 12) + 3;
             return { display: `كم ناتج: ${n1} × ${n2} ؟`, answer: (n1 * n2).toString() };
         } else if (type === 'capital') {
-            prompt = "اعطني دولة وعاصمتها بشكل عشوائي وغير متكرر، ونسق الإجابة بهذا الشكل تماماً: اسم الدولة|اسم العاصمة. مثال: السعودية|الرياض. لا تكتب أي شي غيرها.";
+            prompt = `بناءً على المعرف العشوائي ${randomSeed}, اختر دولة وعاصمتها غير مكررة ومن أي قارة بالعالم، ونسق الإجابة هكذا تماماً: الدولة|العاصمة. مثال: اليابان|طوكيو. لا تكتب أي شي غيرها.`;
         }
 
         const response = await ai.models.generateContent({
@@ -269,23 +271,22 @@ async function generateAIQuestion(type) {
         const text = response.text ? response.text.trim() : "";
 
         if (type === 'writing') {
-            return { display: `عندكم **30 ثانية** لاكتاتبة الجملة التالية بدقة:\n\n\`${text}\``, answer: text };
+            return { display: `عندكم **30 ثانية** لكتابة الجملة التالية:\n\n\`${text}\``, answer: text };
         } else if (type === 'scramble') {
             const cleanWord = text.replace(/[^أ-ي]/g, '');
             const scrambled = cleanWord.split('').sort(() => 0.5 - Math.random()).join(' ');
-            return { display: `رتب الحروف التالية لتكون كلمة صحيحة:\n\n\`${scrambled}\``, answer: cleanWord };
+            return { display: `رتب الحروف لتكون كلمة صحيحة:\n\n\`${scrambled}\``, answer: cleanWord };
         } else if (type === 'capital') {
             const parts = text.split('|');
             if (parts.length === 2) {
                 return { display: `ما هي عاصمة **${parts[0].trim()}** ؟`, answer: parts[1].trim() };
             }
-            return { display: `ما هي عاصمة **فرنسا** ؟`, answer: 'باريس' };
+            return { display: `ما هي عاصمة **البرازيل** ؟`, answer: 'برازيليا' };
         }
     } catch (e) {
-        // بدائل احتياطية في حال حدث أي ضغط على الـ API
-        if (type === 'writing') return { display: `عندكم **30 ثانية** لكتابة:\n\n\`قيمرز سعوديين ما نعرف الهزيمة\``, answer: 'قيمرز سعوديين ما نعرف الهزيمة' };
-        if (type === 'scramble') return { display: `رتب الحروف: \`ق ل م\``, answer: 'قلم' };
-        if (type === 'capital') return { display: `ما هي عاصمة **السعودية** ؟`, answer: 'الرياض' };
+        if (type === 'writing') return { display: `عندكم **30 ثانية** لكتابة:\n\n\`التحدي الحقيقي يبدأ الآن\``, answer: 'التحدي الحقيقي يبدأ الآن' };
+        if (type === 'scramble') return { display: `رتب الحروف: \`ك ت ب\``, answer: 'كتب' };
+        if (type === 'capital') return { display: `ما هي عاصمة **المغرب** ؟`, answer: 'الرباط' };
     }
 }
 
