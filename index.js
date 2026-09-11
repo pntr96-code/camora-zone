@@ -41,7 +41,6 @@ const processingUsers = new Set();
 const allowedChannels = ['1547728033580847236', '1547728346081927262', '1548010683692748821']; 
 const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821']; 
 
-// خريطة لتتبع آخر وقت نشاط لكل روم
 const lastActivityTime = new Map();
 
 let marketItems = [
@@ -57,7 +56,6 @@ let marketItems = [
     { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2500, profit: 250, emoji: '🏡' }
 ];
 
-// تحديث البورصة تلقائياً كل 5 دقائق مع إرسال إشعار في رومات الاقتصاد
 setInterval(async () => {
     marketItems.forEach(item => {
         const multiplier = (Math.random() * 0.95) + 0.55;
@@ -81,14 +79,13 @@ setInterval(async () => {
     }
 }, 5 * 60 * 1000);
 
-// مراقبة الخمول (كل دقيقة يفحص إذا مر 10 دقائق بدون تفاعل في رومات الألعاب أو السوق)
 setInterval(async () => {
     const now = Date.now();
     const allManagedChannels = [...new Set([...allowedChannels, ...allowedEconomyChannels])];
 
     for (const channelId of allManagedChannels) {
         const lastTime = lastActivityTime.get(channelId) || now;
-        if (now - lastTime >= 10 * 60 * 1000) { // 10 دقائق
+        if (now - lastTime >= 10 * 60 * 1000) {
             try {
                 const channel = await client.channels.fetch(channelId);
                 if (channel) {
@@ -98,14 +95,13 @@ setInterval(async () => {
                         .setDescription('✨ **الروم هادئ جداً! هل أنت مستعد للتحدي وجمع النقاط والأموال؟**\nإليك نبذة عن الألعاب والأنظمة المتاحة وكيفية لعبها:')
                         .addFields(
                             { name: '🎲 الألعاب السريعة والتحديات', value: 'استخدم أمر `!فعالية` لاختيار لعبة عشوائية فوراً، أو اختر لعبتك المفضلة:\n• **`!فكك` / `!عكس`**: ترتيب الحروف أو عكسها.\n• **`!إيموجي` / `!معنى`**: تخمين الرمز أو معاني الكلمات العربية.\n• **`!تخمين` / `!رياضيات`**: تخمين الأرقام وحل العمليات الحسابية.\n• **`!قنبلة` / `!روليت` / `!زر`**: ألعاب الحظ والسرعة الفائقة.', inline: false },
-                            { name: '🏦 نظام الاقتصاد والأعمال', value: 'في روم الاقتصاد، يمكنك بناء إمبراطوريتك المالية:\n• **`!راتب`**: استلم راتبك الدوري كل 5 دقائق.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات والمشاريع لترفع أرباحك.\n• **`!ارباح` & `!املاكي`**: اجمع أرباح أملاكك واستعرض محفظتك.', inline: false },
+                            { name: '🏦 النظام الاقتصادي والمزايا الجديدة', value: 'في رومات الاقتصاد، يمكنك بناء إمبراطوريتك المالية:\n• **`!راتب`**: استلم راتبك الدوري كل 5 دقائق.\n• **`!سوق` & `!شراء [رقم]`**: استثمر في العقارات والمشاريع لترفع أرباحك.\n• **`!سرقة [@الشخص]`**: حاول سرقة خويك (بحذر لتنصاد!).\n• **`!حظ [المبلغ]`**: العب بكازينو الحظ وضاعف فلوسك.\n• **`!صندوق`**: اشتري صندوقاً سرياً بغنائم عشوائية.\n• **`!مهامي`**: أنجز مهامك اليومية واكسب جوائز ضخمة.', inline: false },
                             { name: '🏆 لوحة الصدارة والتفاعل', value: '• **`!ت ن`**: لعرض أعلى النقاط في السيرفر.\n• **`!ت س`**: لعرض أسرع الأبطال بالسرعة والزمن.\n• **`!ت ت`**: لعرض أكثر الأعضاء تفاعلاً بالرسائل.', inline: false }
                         )
                         .setFooter({ text: '💡 اكتب أحد الأوامر أعلاه وابدأ الحماس الآن!' })
                         .setTimestamp();
 
                     channel.send({ embeds: [embed] });
-                    // تحديث الوقت عشان ما يسبح بالإرسال كل دقيقة ويصير سبام
                     lastActivityTime.set(channelId, now);
                 }
             } catch (err) {
@@ -116,10 +112,10 @@ setInterval(async () => {
 }, 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
-    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
+    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
     let doc = await economyColl.findOne({ guildId, userId });
     if (!doc) {
-        doc = { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
+        doc = { guildId, userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
         await economyColl.insertOne(doc);
     }
     return doc;
@@ -526,15 +522,16 @@ client.on('messageCreate', async message => {
   const guildId = message.guild.id;
   const userId = message.author.id;
 
-  // تحديث وقت النشاط للروم الحالي
   lastActivityTime.set(message.channel.id, Date.now());
 
   if (allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
-          const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي').addFields(
+          const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
               { name: '💵 الأساسيات', value: '`!راتب` | `!بنك`', inline: false },
-              { name: '📈 السوق', value: '`!سوق` | `!املاكي` | `!ارباح`', inline: false },
-              { name: '🛒 التداول والتحويل', value: '`!شراء [رقم]` | `!بيع [رقم]` | `!تحويل [@الشخص] [المبلغ]`', inline: false }
+              { name: '📈 السوق والأملاك', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي` | `!ارباح`', inline: false },
+              { name: '🦹‍♂️ الجريمة والسرقة', value: '`!سرقة [@الشخص]`', inline: false },
+              { name: '🎰 الحظ والكازينو', value: '`!حظ [المبلغ]` | `!صندوق`', inline: false },
+              { name: '🎯 المهام والتحويل', value: '`!مهامي` | `!تحويل [@الشخص] [المبلغ]`', inline: false }
           );
           return message.channel.send({ embeds: [embed] });
       }
@@ -549,7 +546,7 @@ client.on('messageCreate', async message => {
           try {
               let user = await getEconomyUser(guildId, userId);
               const now = Date.now();
-              const cooldown = 5 * 60 * 1000; // 5 دقائق
+              const cooldown = 5 * 60 * 1000;
 
               if (user.lastWork && (now - user.lastWork < cooldown)) {
                   const remainingMs = cooldown - (now - user.lastWork);
@@ -644,6 +641,116 @@ client.on('messageCreate', async message => {
           message.channel.send({ embeds: [profitEmbed] });
           return;
       }
+
+      // --- نظام 1: السرقات والمطاردات (Crime & Heist) ---
+      if (message.content.startsWith('!سرقة')) {
+          const target = message.mentions.users.first();
+          if (!target) return message.reply('❌ الاستخدام الصحيح: `!سرقة [@الشخص]`');
+          if (target.bot || target.id === userId) return message.reply('😅 ما تقدر تسرق بوت أو تسرق نفسك!');
+
+          let user = await getEconomyUser(guildId, userId);
+          const now = Date.now();
+          const cooldown = 10 * 60 * 1000; // 10 دقائق كولداون
+          if (user.lastCrime && (now - user.lastCrime < cooldown)) {
+              const m = Math.ceil((cooldown - (now - user.lastCrime)) / 60000);
+              return message.reply(`🚓 الشرطة تراقبك! انتظر **${m} دقيقة** قبل أن تحاول السرقة مجدداً.`);
+          }
+
+          let targetUser = await getEconomyUser(guildId, target.id);
+          if (targetUser.balance < 500) return message.reply('💸 الضحية مفلس تماماً، ما عنده فلوس تستاهل المخاطرة!');
+
+          user.lastCrime = now;
+          const success = Math.random() < 0.45; // نسبة نجاح 45%
+
+          if (success) {
+              const stolenAmt = Math.floor(Math.random() * (targetUser.balance * 0.3)) + 200;
+              targetUser.balance -= stolenAmt;
+              user.balance += stolenAmt;
+              await saveEconomyUser(guildId, target.id, targetUser);
+              await saveEconomyUser(guildId, userId, user);
+              return message.channel.send(`🦹‍♂️ **عملية ناجحة!** تمكن ${message.author} من سرقة **$${stolenAmt.toLocaleString()}** من المبيوق ${target} بخفاء تام! 💰🔥`);
+          } else {
+              const fine = Math.floor(Math.random() * 400) + 300;
+              user.balance = Math.max(0, user.balance - fine);
+              await saveEconomyUser(guildId, userId, user);
+              return message.channel.send(`🚨 **فشلت العملية!** صادَت الشرطة ${message.author} أثناء محاولة السرقة وغرمته مبلغ **$${fine.toLocaleString()}**! 🚔💀`);
+          }
+      }
+
+      // --- نظام 2: اليانصيب والحظ اليومي (Casino / Gamble) ---
+      if (message.content.startsWith('!حظ')) {
+          const args = message.content.split(' ');
+          const amt = parseInt(args[1]);
+          if (isNaN(amt) || amt <= 50) return message.reply('❌ يرجى إدخال مبلغ صحيح للمراهنة (أقل مبلغ 50): `!حظ [المبلغ]`');
+
+          let user = await getEconomyUser(guildId, userId);
+          if (user.balance < amt) return message.reply('💸 رصيدك الكاش ما يكفي للمبلغ اللي تبيه!');
+
+          const roll = Math.random();
+          if (roll < 0.40) { // خسارة
+              user.balance -= amt;
+              await saveEconomyUser(guildId, userId, user);
+              return message.reply(`😢 للأسف خسرت رهنتك وراحت عليك **$${amt.toLocaleString()}**! رصيدك: **$${user.balance.toLocaleString()}**`);
+          } else if (roll < 0.85) { // ربح دبل
+              user.balance += amt;
+              await saveEconomyUser(guildId, userId, user);
+              return message.reply(`🎰 **كفووو!** فزت وضاعفت فلوسك وكسبت **$${amt.toLocaleString()}**! رصيدك: **$${user.balance.toLocaleString()}** 🎉`);
+          } else { // جاب البوت جوكر (أرباح ضخمة x3)
+              const megaWin = amt * 3;
+              user.balance += megaWin;
+              await saveEconomyUser(guildId, userId, user);
+              return message.channel.send(`👑 **ضربت الحظ الكبرى يا بطل!** كسبت أضعاف مضاعفة بقيمة **$${megaWin.toLocaleString()}** يا ${message.author}! 🔥🚀`);
+          }
+      }
+
+      // --- نظام 4: المتجر السري والصناديق الغامضة (Mystery Box) ---
+      if (message.content === '!صندوق') {
+          let user = await getEconomyUser(guildId, userId);
+          const boxPrice = 3000;
+          if (user.balance < boxPrice) return message.reply(`📦 سعر الصندوق السري **$${boxPrice.toLocaleString()}** ورصيدك ما يكفي!`);
+
+          user.balance -= boxPrice;
+          const prizes = [
+              { type: 'cash', val: 1500, msg: '📦 فتحت الصندوق وطلع فيه مبلغ تعويض **$1,500**.' },
+              { type: 'cash', val: 5000, msg: '🎉 وااو! فتحت الصندوق وطلع فيه كنز نقدي بقيمة **$5,000**!' },
+              { type: 'cash', val: 12000, msg: '💎 يا ساتر! صندوق أسطوري يحتوي على كاش فخم بقيمة **$12,000**!' },
+              { type: 'empty', val: 0, msg: '💨 للأسف فتحت الصندوق وطلع فاضي، راحت عليك الفلوس!' }
+          ];
+
+          const won = prizes[Math.floor(Math.random() * prizes.length)];
+          if (won.val > 0) user.balance += won.val;
+          await saveEconomyUser(guildId, userId, user);
+
+          const boxEmbed = new EmbedBuilder()
+              .setColor('#E67E22')
+              .setTitle('📦 فتح الصندوق السري الغامض')
+              .setDescription(`👤 ${message.author}\n${won.msg}\n\n💳 رصيدك الحالي: **$${user.balance.toLocaleString()}**`);
+          return message.channel.send({ embeds: [boxEmbed] });
+      }
+
+      // --- نظام 3: المهام اليومية (Daily Quests) ---
+      if (message.content === '!مهامي') {
+          let user = await getEconomyUser(guildId, userId);
+          const now = Date.now();
+          const oneDay = 24 * 60 * 60 * 1000;
+
+          if (user.lastQuest && (now - user.lastQuest < oneDay)) {
+              return message.reply('⏳ لقد أتممت مهامك اليومية بالفعل! عُد غداً لمهام وجوائز جديدة.');
+          }
+
+          user.lastQuest = now;
+          user.questsCompleted += 1;
+          const questReward = 5000;
+          user.balance += questReward;
+          await saveEconomyUser(guildId, userId, user);
+
+          const questEmbed = new EmbedBuilder()
+              .setColor('#2ECC71')
+              .setTitle('🎯 إنجاز المهام اليومية')
+              .setDescription(`✅ ممتاز يا ${message.author}!\nأتممت مهام اليوم بنجاح وحصلت على مكافأة إنجاز بقيمة **$${questReward.toLocaleString()}**!\n\n📈 رصيدك الكاش الحالي: **$${user.balance.toLocaleString()}**`);
+          return message.channel.send({ embeds: [questEmbed] });
+      }
+
       if (message.content.startsWith('!تحويل')) {
           const args = message.content.split(' ');
           const target = message.mentions.users.first();
