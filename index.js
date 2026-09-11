@@ -56,7 +56,7 @@ setInterval(() => {
     });
 }, 5 * 60 * 1000);
 
-// الدالة الموحدة برقم المستخدم (userId) فقط بدون أي تضارب
+// دالة الاقتصاد الموحدة والثابتة برقم المستخدم فقط (userId)
 async function getEconomyUser(userId) {
     if (!economyColl) return { userId, balance: 1500, properties: [], lastWork: 0, lastProfit: 0 };
     let doc = await economyColl.findOne({ userId });
@@ -462,22 +462,27 @@ client.on('messageCreate', async message => {
           );
           return message.channel.send({ embeds: [embed] });
       }
-      if (message.content === '!بنك') {
+      if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(userId);
           return message.reply(`💳 رصيدك الكاش: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content === '!راتب') {
           let user = await getEconomyUser(userId);
           const now = Date.now();
-          if (now - user.lastWork < 5 * 60 * 1000) {
-              const m = Math.ceil((5 * 60 * 1000 - (now - user.lastWork)) / 60000);
-              return message.reply(`⏳ باقي **${m} دقيقة** على الراتب!`);
+          const cooldown = 5 * 60 * 1000; // 5 دقائق
+
+          if (user.lastWork && (now - user.lastWork < cooldown)) {
+              const remainingMs = cooldown - (now - user.lastWork);
+              const m = Math.floor(remainingMs / 60000);
+              const s = Math.floor((remainingMs % 60000) / 1000);
+              return message.reply(`⏳ يابن الحلال! باقي **${m} دقيقة و ${s} ثانية** على راتبك القادم.`);
           }
+
           const salary = Math.floor(Math.random() * 800) + 700;
           user.balance += salary; 
           user.lastWork = now;
           await saveEconomyUser(userId, user);
-          return message.reply(`💵 نزل راتبك: **$${salary}**! رصيدك: **$${user.balance.toLocaleString()}**`);
+          return message.reply(`💵 نزل راتبك: **$${salary}**! رصيدك الحالي: **$${user.balance.toLocaleString()}**`);
       }
       if (message.content === '!سوق') {
           const embed = new EmbedBuilder().setColor('#0099ff').setTitle('📈 بورصة العقارات');
@@ -663,7 +668,7 @@ client.on('messageCreate', async message => {
       if (message.content.startsWith('!ت')) {
           if (!pointsColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
           const subType = message.content.split(' ')[1] ? message.content.split(' ')[1].toLowerCase() : 'ن';
-          let u = await pointsColl.find({ guildId }).sort(subType === 'س' ? { bestTime: 1 } : subType === 'ت' ? { messagesCount: -1 } : { points: -1 }).limit(5).toArray();
+          let u = pointsColl.find({ guildId }).sort(subType === 'س' ? { bestTime: 1 } : subType === 'ت' ? { messagesCount: -1 } : { points: -1 }).limit(5).toArray();
           
           if (u.length === 0) return message.reply('🏆 ما فيه بيانات مسجلة.');
           
