@@ -557,6 +557,33 @@ client.on('messageCreate', async message => {
 
   lastActivityTime.set(message.channel.id, Date.now());
 
+  // --- أمر مسح رسائل الروم (خاص بالأدمن أو إدارة الرسائل فقط) ---
+  if (message.content.startsWith('!مسح') || message.content.startsWith('!حذف')) {
+      if (!message.member.permissions.has('ManageMessages')) {
+          return message.reply('❌ عذراً، هذا الأمر مخصص لإدارة السيرفر فقط!');
+      }
+
+      const args = message.content.split(' ');
+      const count = parseInt(args[1]);
+
+      if (isNaN(count) || count <= 0 || count > 100) {
+          return message.reply('❌ يرجى تحديد عدد صحيح للمسح بين 1 و 100 (مثال: `!مسح 50`)');
+      }
+
+      try {
+          await message.delete().catch(() => {});
+          const fetched = await message.channel.messages.fetch({ limit: count });
+          const deleted = await message.channel.bulkDelete(fetched, true);
+
+          const confirmMsg = await message.channel.send(`🧹 تم حذف **${deleted.size}** رسالة بنجاح بواسطة ${message.author}!`);
+          setTimeout(() => confirmMsg.delete().catch(() => {}), 4000);
+      } catch (err) {
+          console.error('Error clearing messages:', err);
+          return message.channel.send('❌ حدث خطأ أثناء محاولة مسح الرسائل (تأكد أن الرسائل أقدم من 14 يوماً).');
+      }
+      return;
+  }
+
   if (allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
