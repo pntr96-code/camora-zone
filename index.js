@@ -272,7 +272,13 @@ function sendGamesMenu(channel) {
 function startMemoryGame(message, guildId) {
     const channel = message.channel;
     const args = message.content.split(' ');
-    let difficulty = (args[1] || 'سهل').toLowerCase();
+    let difficulty = 'سهل';
+    
+    // تحديد مستوى الدقة بناءً على الكلمة المدخلة
+    const contentLower = message.content.toLowerCase();
+    if (contentLower.includes('متوسط')) difficulty = 'متوسط';
+    else if (contentLower.includes('صعب')) difficulty = 'صعب';
+
     const opponent = message.mentions.users.first();
     const challenger = message.author;
 
@@ -288,7 +294,7 @@ function startMemoryGame(message, guildId) {
     const availableEmojis = ['🍎', '🍌', '🍇', '⭐', '💎', '🔥', '🚀', '🍕', '⚽', '🎸', '🎮', '💡', '👑', '🍀', '🎯', '⚡', '🧸', '🎨'];
     let selectedEmojis = availableEmojis.slice(0, pairsCount);
     let deck = [...selectedEmojis, ...selectedEmojis];
-    if (size === 3) deck = deck.slice(0, 8); // 3x3 = 9 cells, 4 pairs + 1 empty or special
+    if (size === 3) deck = deck.slice(0, 8); // 3x3 = 9 cells
 
     deck = deck.sort(() => Math.random() - 0.5);
 
@@ -357,7 +363,6 @@ function startMemoryGame(message, guildId) {
                 firstSelection = null;
 
                 if (deck[firstIdx] === deck[idx]) {
-                    // مطابقة صحيحة
                     matched[firstIdx] = true;
                     matched[idx] = true;
                     scores[currentPlayer] += 1;
@@ -379,7 +384,6 @@ function startMemoryGame(message, guildId) {
 
                     await i.update({ content: `${modeTitle}\n✨ تطابق صحيح! لك دور إضافي يا <@${currentPlayer}>`, components: getBoardComponents() });
                 } else {
-                    // خطأ، إخفاء البطاقات بعد لحظات
                     await i.update({ content: `${modeTitle}\n❌ خطأ! ليست متطابقة.`, components: getBoardComponents() });
                     setTimeout(async () => {
                         revealed[firstIdx] = false;
@@ -1094,11 +1098,11 @@ client.on('messageCreate', async message => {
           trackUserMessage(guildId, userId, message.author.displayName, message.channel, message.member);
       }
 
-      // تشغيل الألعاب التفاعلية والأوامر الجديدة
-      if (message.content.startsWith('!حجر')) return startRPSGame(message, guildId);
-      if (message.content.startsWith('!xo')) return startXOGame(message, guildId);
-      if (message.content.startsWith('!ذاكرة')) return startMemoryGame(message, guildId);
-      if (message.content === '!صناديق') return startBoxesGame(message.channel, guildId, userId);
+      // تشغيل الألعاب التفاعلية والأوامر الجديدة (تدعم الأمر سواء كتبته بعلامة التعجب أو بدونها)
+      if (message.content.startsWith('!حجر') || message.content.startsWith('حجر')) return startRPSGame(message, guildId);
+      if (message.content.startsWith('!xo') || message.content.startsWith('xo')) return startXOGame(message, guildId);
+      if (message.content.startsWith('!ذاكرة') || message.content.startsWith('ذاكرة') || message.content.startsWith('إذاكرة')) return startMemoryGame(message, guildId);
+      if (message.content === '!صناديق' || message.content === 'صناديق') return startBoxesGame(message.channel, guildId, userId);
 
       if (message.content === '!فعالية' || message.content === '!لعبة') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة!');
