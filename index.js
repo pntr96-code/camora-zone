@@ -260,15 +260,15 @@ function sendGamesMenu(channel) {
         .addFields(
             { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo` | `!حجر` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
             { name: '🧠 لعبة الذاكرة (مستويات)', value: '`!ذاكرة سهل` | `!ذاكرة متوسط` | `!ذاكرة صعب`', inline: false },
-            { name: '⚡ الألعاب التفاعلية الجديدة', value: '`!بلنتي` (ركلات الترجيح) | `!ألغام` (حقل الألغام) | `!سباق` (السرعة) | `!خزنة` (كسر الخزنة) | `!صناديق`', inline: false },
-            { name: '🎲 الفعاليات والعشوائي', value: '`!فعالية` | `!العاب`', inline: false },
+            { name: '⚡ الألعاب التفاعلية والفخمة', value: '`!بلنتي` | `!ألغام` | `!سباق` | `!خزنة` | `!صناديق`', inline: false },
+            { name: '🎲 الفعاليات العشوائية', value: '`!فعالية` | `!العاب`', inline: false },
             { name: '🏆 لوحة الصدارة', value: '`!ت`', inline: false }
         )
         .setFooter({ text: '🛑 لإلغاء أي لعبة جارية اكتب: !ايقاف' });
     channel.send({ embeds: [embed] });
 }
 
-// دوال الألعاب اليدوية القديمة
+// دوال الألعاب اليدوية الكلاسيكية
 function startEmojiGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     const chosen = getUniqueRandomItem(emojiMasterPool, 'emoji', 'ans');
@@ -487,7 +487,7 @@ function startWritingGame(channel, guildId) {
     });
 }
 
-// الألعاب الجديدة بالكامل
+// الألعاب التفاعلية الجديدة بالأزرار
 function startPenaltyGame(message, guildId) {
     const channel = message.channel;
     const challenger = message.author;
@@ -588,7 +588,7 @@ function startVaultGame(channel, guildId, userId) {
     });
 }
 
-// لعبة الذاكرة بالمستويات
+// لعبة الذاكرة الدقيقة بالمستويات
 function startMemoryGame(message, guildId) {
     const channel = message.channel;
     const contentLower = message.content.toLowerCase();
@@ -881,15 +881,16 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!العاب') return sendGamesMenu(message.channel);
 
-      // تشغيل الألعاب بكافة صيغها
-      if (message.content.startsWith('!حجر') || message.content.startsWith('حجر')) return startRPSGame(message, guildId);
-      if (message.content.startsWith('!xo') || message.content.startsWith('xo')) return startXOGame(message, guildId);
-      if (message.content.startsWith('!ذاكرة') || message.content.startsWith('ذاكرة') || message.content.startsWith('إذاكرة')) return startMemoryGame(message, guildId);
-      if (message.content.startsWith('!بلنتي') || message.content.startsWith('بلنتي')) return startPenaltyGame(message, guildId);
-      if (message.content === '!ألغام' || message.content === 'ألغام') return startMinesGame(message.channel, guildId, userId);
-      if (message.content === '!سباق' || message.content === 'سباق') return startRaceGame(message.channel, guildId, userId);
-      if (message.content === '!خزنة' || message.content === 'خزنة') return startVaultGame(message.channel, guildId, userId);
-      if (message.content === '!صناديق' || message.content === 'صناديق') return startBoxesGame(message.channel, guildId, userId);
+      // تفقد أوامر الألعاب بالبادئة المباشرة أو بدونها
+      const text = message.content.toLowerCase();
+      if (text.startsWith('!حجر') || text.startsWith('حجر')) return startRPSGame(message, guildId);
+      if (text.startsWith('!xo') || text.startsWith('xo')) return startXOGame(message, guildId);
+      if (text.startsWith('!ذاكرة') || text.startsWith('ذاكرة') || text.startsWith('إذاكرة')) return startMemoryGame(message, guildId);
+      if (text.startsWith('!بلنتي') || text.startsWith('بلنتي')) return startPenaltyGame(message, guildId);
+      if (text === '!ألغام' || text === 'ألغام') return startMinesGame(message.channel, guildId, userId);
+      if (text === '!سباق' || text === 'سباق') return startRaceGame(message.channel, guildId, userId);
+      if (text === '!خزنة' || text === 'خزنة') return startVaultGame(message.channel, guildId, userId);
+      if (text === '!صناديق' || text === 'صناديق') return startBoxesGame(message.channel, guildId, userId);
 
       if (message.content === '!قنبلة') startBombGame(message.channel, guildId);
       if (message.content === '!زر') startButtonGame(message.channel, guildId);
