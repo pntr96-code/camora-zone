@@ -258,10 +258,10 @@ function sendGamesMenu(channel) {
         .setColor('#5865F2')
         .setTitle('🎮 قائمة ألعاب وقوائم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
         .addFields(
-            { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo` | `!حجر` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
+            { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo [@شخص]` | `!حجر [@شخص]` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
             { name: '🧠 لعبة الذاكرة (مستويات)', value: '`!ذاكرة سهل` | `!ذاكرة متوسط` | `!ذاكرة صعب`', inline: false },
             { name: '⚡ الألعاب التفاعلية والفخمة', value: '`!بلنتي` | `!ألغام` | `!سباق` | `!خزنة` | `!صناديق`', inline: false },
-            { name: '🎲 الفعاليات العشوائية', value: '`!فعالية` | `!العاب`', inline: false },
+            { name: '🎲 الفعاليات والعشوائي', value: '`!فعالية` | `!العاب`', inline: false },
             { name: '🏆 لوحة الصدارة', value: '`!ت`', inline: false }
         )
         .setFooter({ text: '🛑 لإلغاء أي لعبة جارية اكتب: !ايقاف' });
@@ -379,12 +379,13 @@ function startBombGame(channel, guildId) {
     channel.send({ content: `🚨 **[قنبلة]** اختر السلك الصحيح خلال 15 ثانية:`, components: [row] }).then(msg => {
         const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
         coll.on('collect', async i => {
+            await i.deferUpdate().catch(()=>{});
             activeGames.delete(channel.id);
             if (i.customId === safe) {
-                await i.update({ content: `🎉 **كفو ${i.user}!** فكيت القنبلة وكسبت **10 نقاط**! 💣✨`, components: [] });
+                await msg.edit({ content: `🎉 **كفو ${i.user}!** فكيت القنبلة وكسبت **10 نقاط**! 💣✨`, components: [] }).catch(()=>{});
                 addPoints(guildId, i.user.id, i.user.displayName, channel);
             } else {
-                await i.update({ content: `💥 **بوووم!** قطعت السلك الخطأ يا ${i.user} وانفجرت 💀`, components: [] });
+                await msg.edit({ content: `💥 **بوووم!** قطعت السلك الخطأ يا ${i.user} وانفجرت 💀`, components: [] }).catch(()=>{});
             }
         });
         coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); msg.edit({ content: `⏰ انتهى الوقت وانفجرت القنبلة!`, components: [] }).catch(()=>{}); } });
@@ -459,9 +460,10 @@ function startButtonGame(channel, guildId) {
         const start = Date.now();
         const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
         coll.on('collect', async i => {
+            await i.deferUpdate().catch(()=>{});
             activeGames.delete(channel.id);
             const t = ((Date.now() - start) / 1000).toFixed(2);
-            await i.update({ content: `🏆 كفو ${i.user}! في **${t} ثانية** وكسبت **10 نقاط**!`, components: [] });
+            await msg.edit({ content: `🏆 كفو ${i.user}! في **${t} ثانية** وكسبت **10 نقاط**!`, components: [] }).catch(()=>{});
             addPoints(guildId, i.user.id, i.user.displayName, channel, parseFloat(t));
         });
         coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); msg.edit({ content: `😴 محد ضغط الزر وانتهى الوقت!`, components: [] }).catch(()=>{}); } });
@@ -487,7 +489,7 @@ function startWritingGame(channel, guildId) {
     });
 }
 
-// الألعاب التفاعلية الجديدة بالأزرار
+// الألعاب التفاعلية الجديدة بالأزرار (مع إصلاح الخزنة ومنع خطأ الوقت)
 function startPenaltyGame(message, guildId) {
     const channel = message.channel;
     const challenger = message.author;
@@ -500,11 +502,12 @@ function startPenaltyGame(message, guildId) {
         const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
         coll.on('collect', async i => {
             if (i.user.id !== challenger.id) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            await i.deferUpdate().catch(()=>{});
             const botGoalie = ['left', 'center', 'right'][Math.floor(Math.random() * 3)];
             const userChoice = i.customId.replace('pen_', '');
             let res = userChoice === botGoalie ? `🥅 **تصدى لها الحارس!**` : `⚽💥 **قووووول!** كسبت **10 نقاط**!`;
             if (userChoice !== botGoalie) addPoints(guildId, challenger.id, challenger.displayName, channel);
-            await i.update({ content: res, components: [] });
+            await msg.edit({ content: res, components: [] }).catch(()=>{});
         });
     });
 }
@@ -526,12 +529,13 @@ function startMinesGame(channel, guildId, userId) {
         const coll = msg.createMessageComponentCollector({ time: 30000 });
         coll.on('collect', async i => {
             if (i.user.id !== userId) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            await i.deferUpdate().catch(()=>{});
             if (i.customId.includes('boom')) {
                 activeGames.delete(channel.id);
                 coll.stop();
-                return i.update({ content: `💥 **انفجر اللغم!** راحت عليك الأرباح 💀`, components: [] });
+                return msg.edit({ content: `💥 **انفجر اللغم!** راحت عليك الأرباح 💀`, components: [] }).catch(()=>{});
             } else {
-                await i.reply({ content: `✨ مربع آمن! استمر بالتقدم.`, ephemeral: true });
+                i.followUp({ content: `✨ مربع آمن! استمر بالتقدم.`, ephemeral: true }).catch(()=>{});
             }
         });
     });
@@ -545,6 +549,7 @@ function startRaceGame(channel, guildId, userId) {
         let progress = new Map();
         const coll = msg.createMessageComponentCollector({ time: 15000 });
         coll.on('collect', async i => {
+            await i.deferUpdate().catch(()=>{});
             let count = (progress.get(i.user.id) || 0) + 1;
             progress.set(i.user.id, count);
             if (count >= 5) {
@@ -554,13 +559,14 @@ function startRaceGame(channel, guildId, userId) {
                 eco.balance += 5000;
                 await saveEconomyUser(guildId, i.user.id, eco);
                 addPoints(guildId, i.user.id, i.user.displayName, channel);
-                return i.update({ content: `🏎️🏆 **فاز بالسباق ${i.user}!** وكسب **$5,000 كاش** و **10 نقاط**! 🔥`, components: [] });
+                return msg.edit({ content: `🏎️🏆 **فاز بالسباق ${i.user}!** وكسب **$5,000 كاش** و **10 نقاط**! 🔥`, components: [] }).catch(()=>{});
             }
-            await i.reply({ content: `⚡ تقدمت في السباق (${count}/5)`, ephemeral: true });
+            i.followUp({ content: `⚡ تقدمت في السباق (${count}/5)`, ephemeral: true }).catch(()=>{});
         });
     });
 }
 
+// إصلاح لعبة الخزنة نهائياً
 function startVaultGame(channel, guildId, userId) {
     if (activeGames.has(channel.id)) return;
     activeGames.set(channel.id, 'vault');
@@ -573,6 +579,7 @@ function startVaultGame(channel, guildId, userId) {
         const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
         coll.on('collect', async i => {
             if (i.user.id !== userId) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            await i.deferUpdate().catch(()=>{});
             activeGames.delete(channel.id);
             const chosenNum = parseInt(i.customId.replace('vault_', ''));
             if (chosenNum === correctCode) {
@@ -580,15 +587,15 @@ function startVaultGame(channel, guildId, userId) {
                 eco.balance += 15000;
                 await saveEconomyUser(guildId, userId, eco);
                 addPoints(guildId, userId, i.user.displayName, channel);
-                await i.update({ content: `🔓👑 **تم فتح الخزنة بنجاح يا ${i.user}!** فزت بـ **$15,000 كاش** و **10 نقاط**! 🔥`, components: [] });
+                await msg.edit({ content: `🔓👑 **تم فتح الخزنة بنجاح يا ${i.user}!** فزت بـ **$15,000 كاش** و **10 نقاط**! 🔥`, components: [] }).catch(()=>{});
             } else {
-                await i.update({ content: `🔒 **إنذار البنك!** الرقم الصحيح كان (${correctCode}). هاردلك! 🚨💀`, components: [] });
+                await msg.edit({ content: `🔒 **إنذار البنك!** الرقم الصحيح كان (${correctCode}). هاردلك! 🚨💀`, components: [] }).catch(()=>{});
             }
         });
     });
 }
 
-// لعبة الذاكرة الدقيقة بالمستويات
+// لعبة الذاكرة بالمستويات
 function startMemoryGame(message, guildId) {
     const channel = message.channel;
     const contentLower = message.content.toLowerCase();
@@ -629,12 +636,13 @@ function startMemoryGame(message, guildId) {
         const coll = msg.createMessageComponentCollector({ time: 45000 });
         coll.on('collect', async i => {
             if (i.user.id !== challenger.id) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            await i.deferUpdate().catch(()=>{});
             const idx = parseInt(i.customId.replace('mem_', ''));
-            if (revealed[idx] || matched[idx]) return i.reply({ content: '⚠️ مكشوفة!', ephemeral: true });
+            if (revealed[idx] || matched[idx]) return;
             revealed[idx] = true;
             if (firstSelection === null) {
                 firstSelection = idx;
-                await i.update({ content: `🧠 **[لعبة الذاكرة - مستوى ${difficulty}]**`, components: getBoardComponents() });
+                await msg.edit({ content: `🧠 **[لعبة الذاكرة - مستوى ${difficulty}]**`, components: getBoardComponents() }).catch(()=>{});
             } else {
                 const fIdx = firstSelection; firstSelection = null;
                 if (deck[fIdx] === deck[idx]) {
@@ -642,12 +650,15 @@ function startMemoryGame(message, guildId) {
                     if (matched.every((m, index) => m || index >= deck.length)) {
                         coll.stop();
                         addPoints(guildId, challenger.id, challenger.displayName, channel);
-                        return i.update({ content: `🏆 **انتهت اللعبة! كفو ${challenger}** كسبت **10 نقاط**! 🌟`, components: getBoardComponents(true) });
+                        return msg.edit({ content: `🏆 **انتهت اللعبة! كفو ${challenger}** كسبت **10 نقاط**! 🌟`, components: getBoardComponents(true) }).catch(()=>{});
                     }
-                    await i.update({ content: `✨ تطابق صحيح!`, components: getBoardComponents() });
+                    await msg.edit({ content: `🧠 **[لعبة الذاكرة - مستوى ${difficulty}]**\n✨ تطابق صحيح!`, components: getBoardComponents() }).catch(()=>{});
                 } else {
-                    await i.update({ content: `❌ خطأ!`, components: getBoardComponents() });
-                    setTimeout(async () => { revealed[fIdx] = false; revealed[idx] = false; await msg.edit({ components: getBoardComponents() }).catch(()=>{}); }, 1500);
+                    await msg.edit({ content: `🧠 **[لعبة الذاكرة - مستوى ${difficulty}]**\n❌ خطأ!`, components: getBoardComponents() }).catch(()=>{});
+                    setTimeout(async () => { 
+                        revealed[fIdx] = false; revealed[idx] = false; 
+                        await msg.edit({ content: `🧠 **[لعبة الذاكرة - مستوى ${difficulty}]**`, components: getBoardComponents() }).catch(()=>{}); 
+                    }, 1500);
                 }
             }
         });
@@ -666,21 +677,30 @@ function startRPSGame(message, guildId) {
         const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
         coll.on('collect', async i => {
             if (i.user.id !== challenger.id) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            await i.deferUpdate().catch(()=>{});
             const userChoice = i.customId.replace('rps_', '');
             const smartMoves = { rock: 'paper', paper: 'scissors', scissors: 'rock' };
             const botChoice = Math.random() < 0.65 ? smartMoves[userChoice] : ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
             const emojis = { rock: '🪨 حجر', paper: '📄 ورقة', scissors: '✂️ مقص' };
             let res = userChoice === botChoice ? `🤝 **تعادل ذكي!**` : (((userChoice === 'rock' && botChoice === 'scissors') || (userChoice === 'paper' && botChoice === 'rock') || (userChoice === 'scissors' && botChoice === 'paper')) ? `🎉 **كفو فزت على البوت!** كسبت **10 نقاط**!` : `🧠 **هزمك البوت الذكي!**`);
             if (res.includes('فزت')) addPoints(guildId, challenger.id, challenger.displayName, channel);
-            await i.update({ content: res, components: [] });
+            await msg.edit({ content: res, components: [] }).catch(()=>{});
         });
     });
 }
 
+// إصلاح مشكلة منشن XO ليدعم التحدي الثنائي أو ضد البوت بذكاء
 function startXOGame(message, guildId) {
     const channel = message.channel;
     const challenger = message.author;
+    const opponent = message.mentions.users.first();
+
+    if (opponent && (opponent.bot || opponent.id === challenger.id)) {
+        return message.reply('❌ لا يمكنك تحدي بوت أو نفسك!');
+    }
+
     let board = Array(9).fill(null);
+    let currentPlayer = challenger.id;
 
     const checkWin = (b) => {
         const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
@@ -711,28 +731,61 @@ function startXOGame(message, guildId) {
         return rows;
     };
 
-    channel.send({ content: `🎮 **[تحدي XO ضد البوت الذكي]**`, components: getBoardComponents() }).then(msg => {
+    const titleText = opponent ? `🎮 **[تحدي XO الثنائي]** بين ${challenger} و ${opponent}\nدور اللاعب: <@${currentPlayer}> (❌)` : `🎮 **[تحدي XO ضد البوت الذكي]**\nدورك (❌):`;
+
+    channel.send({ content: titleText, components: getBoardComponents() }).then(msg => {
         const coll = msg.createMessageComponentCollector({ time: 60000 });
         coll.on('collect', async i => {
-            if (i.user.id !== challenger.id) return i.reply({ content: '⏳ ليس دورك!', ephemeral: true });
+            const p1 = challenger.id;
+            const p2 = opponent ? opponent.id : client.user.id;
+
+            if (i.user.id !== currentPlayer && i.user.id !== p1 && i.user.id !== p2) {
+                return i.reply({ content: '❌ هذه اللعبة ليست لك!', ephemeral: true });
+            }
+            if (i.user.id !== currentPlayer) {
+                return i.reply({ content: '⏳ ليس دورك!', ephemeral: true });
+            }
+
+            await i.deferUpdate().catch(()=>{});
             const idx = parseInt(i.customId.replace('xo_', ''));
-            board[idx] = 'X';
+            if (board[idx] !== null) return;
+
+            const symbol = currentPlayer === p1 ? 'X' : 'O';
+            board[idx] = symbol;
+
             let winner = checkWin(board);
             if (winner) {
                 coll.stop();
-                if (winner === 'X') addPoints(guildId, challenger.id, challenger.displayName, channel);
-                return i.update({ content: winner === 'X' ? `🎉 **كفو فزت في XO** وكسبت **10 نقاط**!` : `🤝 **تعادل!**`, components: getBoardComponents(true) });
+                let txt = '';
+                if (winner === 'tie') txt = `🤝 **تعادل في XO!**`;
+                else if (winner === 'X') {
+                    txt = `🎉 **كفو فزت يا ${challenger} في XO** وكسبت **10 نقاط**! 🌟`;
+                    addPoints(guildId, challenger.id, challenger.displayName, channel);
+                } else {
+                    txt = opponent ? `🎉 **كفو فزت يا ${opponent} في XO** وكسبت **10 نقاط**! 🌟` : `🤖 **هزمك البوت الذكي في XO!** 💀`;
+                    if (opponent) addPoints(guildId, opponent.id, opponent.displayName, channel);
+                }
+                return msg.edit({ content: txt, components: getBoardComponents(true) }).catch(()=>{});
             }
-            const botIdx = getBotMove(board);
-            if (botIdx !== undefined) {
-                board[botIdx] = 'O';
-                winner = checkWin(board);
-                if (winner) {
-                    coll.stop();
-                    return i.update({ content: winner === 'O' ? `🤖 **هزمك البوت الذكي في XO!**` : `🤝 **تعادل!**`, components: getBoardComponents(true) });
+
+            currentPlayer = currentPlayer === p1 ? p2 : p1;
+
+            if (!opponent && currentPlayer === client.user.id) {
+                const botIdx = getBotMove(board);
+                if (botIdx !== undefined) {
+                    board[botIdx] = 'O';
+                    winner = checkWin(board);
+                    if (winner) {
+                        coll.stop();
+                        let txt = winner === 'O' ? `🤖 **هزمك البوت الذكي في XO!** 💀` : `🤝 **تعادل!**`;
+                        return msg.edit({ content: txt, components: getBoardComponents(true) }).catch(()=>{});
+                    }
+                    currentPlayer = p1;
                 }
             }
-            await i.update({ content: `🎮 **[تحدي XO ضد البوت الذكي]**`, components: getBoardComponents() });
+
+            const nextTitle = opponent ? `🎮 **[تحدي XO الثنائي]** بين ${challenger} و ${opponent}\nدور اللاعب: <@${currentPlayer}> (${currentPlayer === p1 ? '❌' : '⭕'})` : `🎮 **[تحدي XO ضد البوت الذكي]**\nدورك (❌):`;
+            await msg.edit({ content: nextTitle, components: getBoardComponents() }).catch(()=>{});
         });
     });
 }
@@ -753,6 +806,7 @@ function startBoxesGame(channel, guildId, userId) {
     channel.send({ content: `📦 **[تخمين الصندوق السري]**\nاختر صندوقاً:`, components: rows }).then(msg => {
         const coll = msg.createMessageComponentCollector({ time: 20000, max: 1 });
         coll.on('collect', async i => {
+            await i.deferUpdate().catch(()=>{});
             activeGames.delete(channel.id);
             const chosen = parseInt(i.customId.replace('box_', ''));
             if (chosen === winningBox) {
@@ -760,9 +814,9 @@ function startBoxesGame(channel, guildId, userId) {
                 eco.balance += 10000;
                 await saveEconomyUser(guildId, i.user.id, eco);
                 addPoints(guildId, i.user.id, i.user.displayName, channel);
-                await i.update({ content: `👑 **مبروك كسبت $10,000 كاش** و **10 نقاط**! 🎉`, components: [] });
+                await msg.edit({ content: `👑 **مبروك كسبت $10,000 كاش** و **10 نقاط**! 🎉`, components: [] }).catch(()=>{});
             } else {
-                await i.update({ content: `💨 صندوق فاضي، هاردلك! 💀`, components: [] });
+                await msg.edit({ content: `💨 صندوق فاضي، هاردلك! 💀`, components: [] }).catch(()=>{});
             }
         });
     });
@@ -873,7 +927,7 @@ client.on('messageCreate', async message => {
           else if (r === 10) startRPSGame(message, guildId);
           else if (r === 11) startPenaltyGame(message, guildId);
           else if (r === 12) startMinesGame(message.channel, guildId, userId);
-          else if (r === 13) startRaceGame(message.channel, guildId, userId);
+          else if (r === 13) startRaceGame(message, guildId, userId);
           else if (r === 14) startVaultGame(message.channel, guildId, userId);
           else startBoxesGame(message.channel, guildId, userId);
           return;
@@ -881,7 +935,6 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!العاب') return sendGamesMenu(message.channel);
 
-      // تفقد أوامر الألعاب بالبادئة المباشرة أو بدونها
       const text = message.content.toLowerCase();
       if (text.startsWith('!حجر') || text.startsWith('حجر')) return startRPSGame(message, guildId);
       if (text.startsWith('!xo') || text.startsWith('xo')) return startXOGame(message, guildId);
