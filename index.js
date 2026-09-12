@@ -259,6 +259,7 @@ function sendGamesMenu(channel) {
         .setTitle('🎮 قائمة ألعاب وقوائم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
         .addFields(
             { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
+            { name: '🕹️ ألعاب الشبكة والأزرار التفاعلية الجديده', value: '`!ذاكرة` (مطابقة الرموز) | `!حجر` (حجر ورقة مقص) | `!صناديق` (تخمين الصندوق السري)', inline: false },
             { name: '🎲 الفعاليات العشوائية', value: '`!فعالية` (يختار لعبة عشوائية من القائمة)', inline: false },
             { name: '🏆 لوحة الصدارة التفاعلية', value: '`!ت` (لعرض لوحة الشرف بالأزرار)', inline: false }
         )
@@ -266,285 +267,211 @@ function sendGamesMenu(channel) {
     channel.send({ embeds: [embed] });
 }
 
-function startEmojiGame(channel, guildId) {
+// --- دالة لعبة مطابقة الرموز (الذاكرة 3x3) ---
+function startMemoryGame(channel, guildId, userId) {
     if (activeGames.has(channel.id)) return;
-    const chosen = getUniqueRandomItem(emojiMasterPool, 'emoji', 'ans');
-    channel.send(`😀 **[إيموجي]** ما هو الشيء الذي يعبر عنه الرمز التالي:\n\n${chosen.e}`).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(chosen.ans.toLowerCase());
-        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
-        activeGames.set(channel.id, coll);
+    activeGames.set(channel.id, 'memory');
 
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! خمنت الرمز الصحيح في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => {
-            if (r === 'time') {
-                activeGames.delete(channel.id);
-                channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${chosen.ans}**`);
-            }
-        });
-    });
-}
-
-function startMeaningGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const chosen = getUniqueRandomItem(meaningMasterPool, 'meaning', 'word');
-    channel.send(`📖 **[معاني الكلمات]** ما معنى كلمة **"${chosen.word}"**؟`).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(chosen.desc.toLowerCase());
-        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
-        activeGames.set(channel.id, coll);
-
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! عرفت المعنى في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => {
-            if (r === 'time') {
-                activeGames.delete(channel.id);
-                channel.send(`⏰ انتهى الوقت! المعنى الصحيح هو: **${chosen.desc}**`);
-            }
-        });
-    });
-}
-
-function startGuessGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const target = Math.floor(Math.random() * 100) + 1;
-    channel.send(`🎯 **[تخمين الأرقام]** خمن الرقم الصحيح بين **1 و 100** (معك 25 ثانية):`).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && parseInt(m.content.trim()) === target;
-        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
-        activeGames.set(channel.id, coll);
-
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎯');
-            m.reply(`🎯 كفو ${m.author}! خمنت الرقم الصحيح **${target}** في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => {
-            if (r === 'time') {
-                activeGames.delete(channel.id);
-                channel.send(`⏰ انتهى الوقت! الرقم الصحيح كان: **${target}**`);
-            }
-        });
-    });
-}
-
-function startReverseGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const word = getUniqueRandomItem(scrambleMasterPool, 'reverse');
-    const reversed = word.split('').reverse().join('');
-    channel.send(`🔄 **[عكس الكلمة]** اكتب الكلمة التالية بالشكل الصحيح:\n\n\`${reversed}\``).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase() === word.toLowerCase();
-        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
-        activeGames.set(channel.id, coll);
-
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! عدلت الكلمة في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => {
-            if (r === 'time') {
-                activeGames.delete(channel.id);
-                channel.send(`⏰ انتهى الوقت! الكلمة كانت: **${word}**`);
-            }
-        });
-    });
-}
-
-function startTriviaGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const qObj = getUniqueRandomItem(triviaMasterPool, 'trivia', 'q');
-    channel.send(`🧠 **[سؤال ذكاء]**\n\n${qObj.q}`).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(qObj.ans.toLowerCase());
-        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
-        activeGames.set(channel.id, coll);
-
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! الإجابة صحيحة في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => {
-            if (r === 'time') {
-                activeGames.delete(channel.id);
-                channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${qObj.ans}**`);
-            }
-        });
-    });
-}
-
-function startBombGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    activeGames.set(channel.id, 'bomb');
-    const wires = [
-        { id: 'r', label: 'أحمر 🔴', style: ButtonStyle.Danger },
-        { id: 'b', label: 'أزرق 🔵', style: ButtonStyle.Primary },
-        { id: 'g', label: 'أخضر 🟢', style: ButtonStyle.Success }
-    ].sort(() => Math.random() - 0.5);
-    const safe = wires[0].id;
-    const row = new ActionRowBuilder();
-    wires.forEach(w => row.addComponents(new ButtonBuilder().setCustomId(w.id).setLabel(w.label).setStyle(w.style)));
+    const symbols = ['🍎', '🍌', '🍇', '⭐', '💎', '🔥'];
+    const targetSymbol = symbols[Math.floor(Math.random() * symbols.length)];
     
-    channel.send({ content: `🚨 **[قنبلة]** اختر السلك الصحيح خلال 15 ثانية:`, components: [row] }).then(msg => {
-        const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
+    // إنشاء 9 أزرار شبكية 3x3
+    const gridButtons = [];
+    const winningIndex = Math.floor(Math.random() * 9);
+
+    for (let i = 0; i < 9; i++) {
+        gridButtons.push(
+            new ButtonBuilder()
+                .setCustomId(`mem_${i}_${i === winningIndex ? 'win' : 'lose'}`)
+                .setLabel('❓')
+                .setStyle(ButtonStyle.Secondary)
+        );
+    }
+
+    const rows = [];
+    for (let i = 0; i < 3; i++) {
+        rows.push(new ActionRowBuilder().addComponents(gridButtons.slice(i * 3, i * 3 + 3)));
+    }
+
+    channel.send({ 
+        content: `🧠 **[تحدي الذاكرة ومطابقة الرموز]**\nابحث عن الرمز الصحيح المختبئ خلف أحد الأزرار: **${targetSymbol}** (معك 15 ثانية)`, 
+        components: rows 
+    }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 15000 });
+
         coll.on('collect', async i => {
+            if (i.user.id !== userId && !allowedEconomyChannels.includes(i.channel.id)) {
+                return i.reply({ content: '❌ هذه اللعبة ليست لك!', ephemeral: true });
+            }
+
+            const isWin = i.customId.includes('win');
+            const clickedIndex = parseInt(i.customId.split('_')[1]);
+
+            // تحديث الأزرار لكشف النتائج
+            const updatedRows = [];
+            for (let r = 0; r < 3; r++) {
+                const rowComps = [];
+                for (let c = 0; c < 3; c++) {
+                    const idx = r * 3 + c;
+                    const btn = new ButtonBuilder()
+                        .setCustomId(`disabled_${idx}`)
+                        .setDisabled(true);
+
+                    if (idx === clickedIndex) {
+                        btn.setLabel(isWin ? targetSymbol : '❌').setStyle(isWin ? ButtonStyle.Success : ButtonStyle.Danger);
+                    } else if (idx === winningIndex && !isWin) {
+                        btn.setLabel(targetSymbol).setStyle(ButtonStyle.Success);
+                    } else {
+                        btn.setLabel('•').setStyle(ButtonStyle.Secondary);
+                    }
+                    rowComps.push(btn);
+                }
+                updatedRows.push(new ActionRowBuilder().addComponents(rowComps));
+            }
+
             activeGames.delete(channel.id);
-            if (i.customId === safe) {
-                await i.update({ content: `🎉 **كفو ${i.user}!** فكيت القنبلة وكسبت **10 نقاط**! 💣✨`, components: [] });
+            coll.stop();
+
+            if (isWin) {
+                await i.update({ content: `🎉 **كفو ${i.user}!** كشفت الرمز الصحيح **${targetSymbol}** وكسبت **10 نقاط**! 🌟`, components: updatedRows });
                 addPoints(guildId, i.user.id, i.user.displayName, channel);
             } else {
-                await i.update({ content: `💥 **بوووم!** قطعت السلك الخطأ يا ${i.user} وانفجرت 💀`, components: [] });
+                await i.update({ content: `❌ **خطأ يا ${i.user}!** الرمز الصحيح كان خلف زر آخر 💀`, components: updatedRows });
             }
         });
+
         coll.on('end', (_, r) => {
             if (r === 'time') {
                 activeGames.delete(channel.id);
-                msg.edit({ content: `⏰ انتهى الوقت وانفجرت القنبلة!`, components: [] }).catch(()=>{});
+                msg.edit({ content: `⏰ انتهى الوقت ولم تختار المربع الصحيح!`, components: [] }).catch(()=>{});
             }
         });
     });
 }
 
-function startScrambleGame(channel, guildId) {
+// --- دالة لعبة حجر ورقة مقص التفاعلية ---
+function startRPSGame(channel, guildId, userId) {
     if (activeGames.has(channel.id)) return;
-    const word = getUniqueRandomItem(scrambleMasterPool, 'scramble');
-    const scrambled = word.split('').sort(() => 0.5 - Math.random()).join(' ');
-    channel.send(`🧩 **[فكك]** رتب الحروف التالية:\n\n\`${scrambled}\``).then(() => {
-        const startTime = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase() === word.toLowerCase();
-        const collector = channel.createMessageCollector({ filter, time: 25000, max: 1 });
-        activeGames.set(channel.id, collector);
+    activeGames.set(channel.id, 'rps');
 
-        collector.on('collect', m => {
-            activeGames.delete(channel.id);
-            const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! رتبت الكلمة في **${timeElapsed} ثانية** وكسبت **10 نقاط**! 🌟`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(timeElapsed));
-        });
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('rps_rock').setLabel('🪨 حجر').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('rps_paper').setLabel('📄 ورقة').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('rps_scissors').setLabel('✂️ مقص').setStyle(ButtonStyle.Danger)
+    );
 
-        collector.on('end', (_, r) => {
-            if (r === 'time') {
-                activeGames.delete(channel.id);
-                channel.send(`⏰ انتهى الوقت! الكلمة كانت: **${word}**`);
-            }
-        });
-    });
-}
+    channel.send({ content: `🎮 **[تحدي حجر ورقة مقص]**\nاختر وسيلتك واضغط الزر (معك 15 ثانية):`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
 
-function startMathGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const n1 = Math.floor(Math.random() * 50) + 10;
-    const n2 = Math.floor(Math.random() * 50) + 10;
-    const ans = (n1 + n2).toString();
-    channel.send(`🔢 **[رياضيات]** كم ناتج الحساب التالي:\n\n\`${n1} + ${n2}\``).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim() === ans;
-        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
-        activeGames.set(channel.id, coll);
-
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! جاوبت في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => {
-            if (r === 'time') {
-                activeGames.delete(channel.id);
-                channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${ans}**`);
-            }
-        });
-    });
-}
-
-function startCapitalGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const chosen = getUniqueRandomItem(capitalMasterPool, 'capital', 'c');
-    channel.send(`🌍 **[عواصم]** ما هي عاصمة **${chosen.c}**؟`).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase() === chosen.cap.toLowerCase();
-        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
-        activeGames.set(channel.id, coll);
-
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! العاصمة صحيحة في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => {
-            if (r === 'time') {
-                activeGames.delete(channel.id);
-                channel.send(`⏰ انتهى الوقت! العاصمة كانت: **${chosen.cap}**`);
-            }
-        });
-    });
-}
-
-function startButtonGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    activeGames.set(channel.id, 'button');
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('fc').setLabel('⚡ اضغطني!').setStyle(ButtonStyle.Success));
-    channel.send({ content: `🔥 **[أسرع ضغطة]** أسرع شخص يضغط الزر!`, components: [row] }).then(msg => {
-        const start = Date.now();
-        const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
         coll.on('collect', async i => {
             activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            await i.update({ content: `🏆 كفو ${i.user}! في **${t} ثانية** وكسبت **10 نقاط**!`, components: [] });
-            addPoints(guildId, i.user.id, i.user.displayName, channel, parseFloat(t));
+            const userChoice = i.customId.replace('rps_', '');
+            const choices = ['rock', 'paper', 'scissors'];
+            const botChoice = choices[Math.floor(Math.random() * choices.length)];
+
+            const emojis = { rock: '🪨 حجر', paper: '📄 ورقة', scissors: '✂️ مقص' };
+
+            let resultMsg = '';
+            let style = ButtonStyle.Secondary;
+
+            if (userChoice === botChoice) {
+                resultMsg = `🤝 **تعادل!** كلكما اخترتم ${emojis[userChoice]}`;
+                style = ButtonStyle.Secondary;
+            } else if (
+                (userChoice === 'rock' && botChoice === 'scissors') ||
+                (userChoice === 'paper' && botChoice === 'rock') ||
+                (userChoice === 'scissors' && botChoice === 'paper')
+            ) {
+                resultMsg = `🎉 **كفو ${i.user}! فزت في الجولة!**\nاخترت (${emojis[userChoice]}) والبوت اختار (${emojis[botChoice]}). كسبت **10 نقاط**! 🌟`;
+                style = ButtonStyle.Success;
+                addPoints(guildId, i.user.id, i.user.displayName, channel);
+            } else {
+                resultMsg = `😢 **خسرت الجولة!**\nاخترت (${emojis[userChoice]}) والبوت اختار (${emojis[botChoice]}). هاردلك! 💀`;
+                style = ButtonStyle.Danger;
+            }
+
+            await i.update({ content: resultMsg, components: [] });
         });
+
         coll.on('end', (_, r) => {
             if (r === 'time') {
                 activeGames.delete(channel.id);
-                msg.edit({ content: `😴 محد ضغط الزر وانتهى الوقت!`, components: [] }).catch(()=>{});
+                msg.edit({ content: `⏰ انتهى الوقت ولم تقم بالاختيار!`, components: [] }).catch(()=>{});
             }
         });
     });
 }
 
-function startWritingGame(channel, guildId) {
+// --- دالة لعبة تخمين الصندوق السري (شبكة 3x3) ---
+function startBoxesGame(channel, guildId, userId) {
     if (activeGames.has(channel.id)) return;
-    const sentence = getUniqueRandomItem(['تحدي السرعة في كتابة الجملة', 'برمجة البوتات تتطلب صبرا وتركيزا', 'المحترف لا ييأس أبدا مهما كانت الصعاب', 'الذكاء الاصطناعي يغير مستقبل العالم التقني', 'تطوير الألعاب والبرمجيات فن ممتع', 'إمبراطورية كامورا زون ترحب بالجميع'], 'writing');
-    channel.send(`⌨️ **[أسرع كاتب]** اكتب الجملة التالية:\n\n\`${sentence}\``).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim() === sentence;
-        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
-        activeGames.set(channel.id, coll);
+    activeGames.set(channel.id, 'boxes');
 
-        coll.on('collect', m => {
+    const winningBox = Math.floor(Math.random() * 9);
+    const rows = [];
+
+    for (let r = 0; r < 3; r++) {
+        const rowComps = [];
+        for (let c = 0; c < 3; c++) {
+            const idx = r * 3 + c;
+            rowComps.append(
+                new ButtonBuilder()
+                    .setCustomId(`box_${idx}_${idx === winningBox ? 'win' : 'empty'}`)
+                    .setLabel(`صندوق ${idx + 1}`)
+                    .setStyle(ButtonStyle.Primary)
+            );
+        }
+        rows.push(new ActionRowBuilder().addComponents(rowComps));
+    }
+
+    channel.send({ content: `📦 **[تخمين الصندوق السري الفخم]**\nأمامك 9 صناديق مغلقة، واحد منها فقط يحتوي على الجائزة الكبرى! اختر صندوقاً:`, components: rows }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 20000 });
+
+        coll.on('collect', async i => {
+            if (i.user.id !== userId && !allowedEconomyChannels.includes(i.channel.id)) {
+                return i.reply({ content: '❌ هذه اللعبة ليست لك!', ephemeral: true });
+            }
+
+            const isWin = i.customId.includes('win');
+            const clickedIdx = parseInt(i.customId.split('_')[1]);
+
+            const updatedRows = [];
+            for (let r = 0; r < 3; r++) {
+                const rowComps = [];
+                for (let c = 0; c < 3; c++) {
+                    const idx = r * 3 + c;
+                    const btn = new ButtonBuilder().setCustomId(`d_${idx}`).setDisabled(true);
+
+                    if (idx === clickedIdx) {
+                        btn.setLabel(isWin ? '💎 كنز!' : '💨 فاضي').setStyle(isWin ? ButtonStyle.Success : ButtonStyle.Danger);
+                    } else if (idx === winningBox && !isWin) {
+                        btn.setLabel('💎 الكنز').setStyle(ButtonStyle.Success);
+                    } else {
+                        btn.setLabel('•').setStyle(ButtonStyle.Secondary);
+                    }
+                    rowComps.push(btn);
+                }
+                updatedRows.push(new ActionRowBuilder().addComponents(rowComps));
+            }
+
             activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! كتبت بـ **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+            coll.stop();
+
+            if (isWin) {
+                await i.update({ content: `👑 **مبروك يا أسطورة ${i.user}!** فتحت الصندوق الصحيح وكسبت جائزة كبرى بقيمة **$10,000 كاش** و **10 نقاط**! 🎉🔥`, components: updatedRows });
+                let eco = await getEconomyUser(guildId, i.user.id);
+                eco.balance += 10000;
+                await saveEconomyUser(guildId, i.user.id, eco);
+                addPoints(guildId, i.user.id, i.user.displayName, channel);
+            } else {
+                await i.update({ content: `💨 **حظاً أوفر يا ${i.user}!** اخترت صندوق فاضي، راح عليك الكنز! 💀`, components: updatedRows });
+            }
         });
+
         coll.on('end', (_, r) => {
             if (r === 'time') {
                 activeGames.delete(channel.id);
-                channel.send(`⏰ انتهى الوقت!`);
+                msg.edit({ content: `⏰ انتهى الوقت ولم تختار أي صندوق!`, components: [] }).catch(()=>{});
             }
         });
     });
@@ -761,7 +688,6 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
       
-      // --- تعديل رسالة وبيانات البيع لتصبح بنظام الـ Embed ---
       if (message.content.startsWith('!بيع ')) {
           const indexToSell = parseInt(message.content.split(' ')[1]) - 1;
           let user = await getEconomyUser(guildId, userId);
@@ -941,9 +867,14 @@ client.on('messageCreate', async message => {
           trackUserMessage(guildId, userId, message.author.displayName, message.channel, message.member);
       }
 
+      // تشغيل ألعاب الشبكة والأزرار الجديدة
+      if (message.content === '!ذاكرة' || message.content === '!مطابقة') return startMemoryGame(message.channel, guildId, userId);
+      if (message.content === '!حجر') return startRPSGame(message.channel, guildId, userId);
+      if (message.content === '!صناديق') return startBoxesGame(message.channel, guildId, userId);
+
       if (message.content === '!فعالية' || message.content === '!لعبة') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة!');
-          const gameChoicer = Math.floor(Math.random() * 11);
+          const gameChoicer = Math.floor(Math.random() * 14);
           if (gameChoicer === 0) startRouletteGame(message.channel, guildId);
           else if (gameChoicer === 1) startBombGame(message.channel, guildId);
           else if (gameChoicer === 2) startScrambleGame(message.channel, guildId);
@@ -954,7 +885,10 @@ client.on('messageCreate', async message => {
           else if (gameChoicer === 7) startTriviaGame(message.channel, guildId);
           else if (gameChoicer === 8) startGuessGame(message.channel, guildId);
           else if (gameChoicer === 9) startEmojiGame(message.channel, guildId);
-          else startMeaningGame(message.channel, guildId);
+          else if (gameChoicer === 10) startMeaningGame(message.channel, guildId);
+          else if (gameChoicer === 11) startMemoryGame(message.channel, guildId, userId);
+          else if (gameChoicer === 12) startRPSGame(message.channel, guildId, userId);
+          else startBoxesGame(message.channel, guildId, userId);
           return;
       }
 
