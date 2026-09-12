@@ -42,6 +42,7 @@ const allowedChannels = ['1547728033580847236', '1547728346081927262', '15480106
 const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821']; 
 
 const lastActivityTime = new Map();
+const lastMarketMessages = new Map();
 
 const jobsList = {
     'مواطن': { name: 'مواطن 🇸🇦', salary: 500, level: 1, emoji: '🇸🇦' },
@@ -95,9 +96,19 @@ setInterval(async () => {
     for (const channelId of allowedEconomyChannels) {
         try {
             const channel = await client.channels.fetch(channelId);
-            if (channel) channel.send({ embeds: [embed] });
+            if (channel) {
+                const oldMsgId = lastMarketMessages.get(channelId);
+                if (oldMsgId) {
+                    try {
+                        const oldMsg = await channel.messages.fetch(oldMsgId);
+                        if (oldMsg) await oldMsg.delete();
+                    } catch (e) {}
+                }
+                const newMsg = await channel.send({ embeds: [embed] });
+                lastMarketMessages.set(channelId, newMsg.id);
+            }
         } catch (err) {
-            console.error('Failed to send market update notification:', err);
+            console.error('Failed to update market notification:', err);
         }
     }
 }, 5 * 60 * 1000);
@@ -564,7 +575,6 @@ client.on('messageCreate', async message => {
           return message.reply(`💳 رصيدك الكاش بالسيرفر: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
       }
 
-      // --- أمر الهوية الشخصية الشامل (!هوية أو !هوية @الشخص) ---
       if (message.content === '!هوية' || message.content.startsWith('!هوية ')) {
           const targetUser = message.mentions.users.first() || message.author;
           const targetId = targetUser.id;
@@ -577,7 +587,7 @@ client.on('messageCreate', async message => {
 
           const profileEmbed = new EmbedBuilder()
               .setColor('#9B59B6')
-              .setTitle(`👤 هوية البطل: ${targetName}`)
+              .setTitle(`👤 الهوية: ${targetName}`)
               .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
               .addFields(
                   { name: '💳 الرصيد المالي', value: `\`$${ecoData.balance.toLocaleString()}\``, inline: true },
