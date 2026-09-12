@@ -760,18 +760,28 @@ client.on('messageCreate', async message => {
           embed.setDescription(`📈 الأرباح: **$${totalP.toLocaleString()}** | القيمة: **$${totalV.toLocaleString()}**`);
           return message.channel.send({ embeds: [embed] });
       }
+      
+      // --- تعديل أمر البيع ليعتمد على رقم العقار في محفظتك مباشرة ---
       if (message.content.startsWith('!بيع ')) {
-          const id = parseInt(message.content.split(' ')[1]);
+          const indexToSell = parseInt(message.content.split(' ')[1]) - 1;
           let user = await getEconomyUser(guildId, userId);
-          const idx = user.properties.indexOf(id);
-          if (idx === -1) return message.reply('❌ ما تملك هالعقار!');
-          const item = marketItems.find(i => i.id === id);
+          
+          if (isNaN(indexToSell) || indexToSell < 0 || indexToSell >= user.properties.length) {
+              return message.reply('❌ رقم العقار في محفظتك غير صحيح! تأكد باستخدام أمر `!املاكي`');
+          }
+
+          const propId = user.properties[indexToSell];
+          const item = marketItems.find(i => i.id === propId);
+          
+          if (!item) return message.reply('❌ حدث خطأ في بيانات العقار!');
+
           const sellPrice = Math.floor(item.price * 0.90);
-          user.properties.splice(idx, 1); 
+          user.properties.splice(indexToSell, 1); 
           user.balance += sellPrice;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🤝 بعت **${item.name}** بـ **$${sellPrice.toLocaleString()}**!`);
+          return message.reply(`🤝 بعت **${item.name}** بـ **$${sellPrice.toLocaleString()}**! وانضافت الفلوس لرصيدك.`);
       }
+
       if (message.content === '!ارباح') {
           let user = await getEconomyUser(guildId, userId);
           if (user.properties.length === 0) return message.reply('❌ ما عندك عقارات.');
