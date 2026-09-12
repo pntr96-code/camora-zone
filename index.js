@@ -258,17 +258,17 @@ function sendGamesMenu(channel) {
         .setColor('#5865F2')
         .setTitle('🎮 قائمة ألعاب وقوائم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
         .addFields(
-            { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo [@شخص]` | `!حجر [@شخص]` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
-            { name: '🧠 لعبة الذاكرة (الأوراق المقلوبة)', value: '`!ذاكرة سهل` أو `!ذاكرة متوسط` أو `!ذاكرة صعب`', inline: false },
-            { name: '📦 الصناديق والألعاب التفاعلية', value: '`!صناديق` (تخمين الصندوق السري الأسطوري)', inline: false },
-            { name: '🎲 الفعاليات العشوائية', value: '`!فعالية` (يختار لعبة عشوائية من القائمة)', inline: false },
-            { name: '🏆 لوحة الصدارة التفاعلية', value: '`!ت` (لعرض لوحة الشرف بالأزرار)', inline: false }
+            { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo` | `!حجر` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
+            { name: '🧠 لعبة الذاكرة (مستويات)', value: '`!ذاكرة سهل` | `!ذاكرة متوسط` | `!ذاكرة صعب`', inline: false },
+            { name: '⚡ الألعاب التفاعلية الجديدة', value: '`!بلنتي` (ركلات الترجيح) | `!ألغام` (حقل الألغام) | `!سباق` (السرعة) | `!خزنة` (كسر الخزنة) | `!صناديق`', inline: false },
+            { name: '🎲 الفعاليات والعشوائي', value: '`!فعالية` | `!العاب`', inline: false },
+            { name: '🏆 لوحة الصدارة', value: '`!ت`', inline: false }
         )
         .setFooter({ text: '🛑 لإلغاء أي لعبة جارية اكتب: !ايقاف' });
     channel.send({ embeds: [embed] });
 }
 
-// دوال الألعاب اليدوية القديمة كاملة
+// دوال الألعاب اليدوية القديمة
 function startEmojiGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     const chosen = getUniqueRandomItem(emojiMasterPool, 'emoji', 'ans');
@@ -487,19 +487,115 @@ function startWritingGame(channel, guildId) {
     });
 }
 
-// لعبة الذاكرة الدقيقة والمضبوطة بالمستويات
+// الألعاب الجديدة بالكامل
+function startPenaltyGame(message, guildId) {
+    const channel = message.channel;
+    const challenger = message.author;
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('pen_left').setLabel('⬅️ يسار').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('pen_center').setLabel('⬆️ وسط').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('pen_right').setLabel('➡️ يمين').setStyle(ButtonStyle.Danger)
+    );
+    channel.send({ content: `⚽ **[تحدي ركلات الترجيح]**\n${challenger} يستعد لتسديد الكورة! اختر زاوية التسديد:`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
+        coll.on('collect', async i => {
+            if (i.user.id !== challenger.id) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            const botGoalie = ['left', 'center', 'right'][Math.floor(Math.random() * 3)];
+            const userChoice = i.customId.replace('pen_', '');
+            let res = userChoice === botGoalie ? `🥅 **تصدى لها الحارس!**` : `⚽💥 **قووووول!** كسبت **10 نقاط**!`;
+            if (userChoice !== botGoalie) addPoints(guildId, challenger.id, challenger.displayName, channel);
+            await i.update({ content: res, components: [] });
+        });
+    });
+}
+
+function startMinesGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'mines');
+    const mineIndex = Math.floor(Math.random() * 9);
+    const rows = [];
+    for (let r = 0; r < 3; r++) {
+        const rowComps = [];
+        for (let c = 0; c < 3; c++) {
+            const idx = r * 3 + c;
+            rowComps.push(new ButtonBuilder().setCustomId(`mine_${idx}_${idx === mineIndex ? 'boom' : 'safe'}`).setLabel(`مربع ${idx + 1}`).setStyle(ButtonStyle.Secondary));
+        }
+        rows.push(new ActionRowBuilder().addComponents(rowComps));
+    }
+    channel.send({ content: `💣 **[تحدي حقل الألغام]**\nاضغط مربعات آمنة واجمع الأرباح، واحذر من اللغم!`, components: rows }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 30000 });
+        coll.on('collect', async i => {
+            if (i.user.id !== userId) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            if (i.customId.includes('boom')) {
+                activeGames.delete(channel.id);
+                coll.stop();
+                return i.update({ content: `💥 **انفجر اللغم!** راحت عليك الأرباح 💀`, components: [] });
+            } else {
+                await i.reply({ content: `✨ مربع آمن! استمر بالتقدم.`, ephemeral: true });
+            }
+        });
+    });
+}
+
+function startRaceGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'race');
+    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('race_btn').setLabel('🏎️ انطلق بأقصى سرعة!').setStyle(ButtonStyle.Success));
+    channel.send({ content: `🏁 **[سباق السرعة التفاعلي]**\nأسرع شخص يضغط على زر الانطلاق 5 مرات يفوز!`, components: [row] }).then(msg => {
+        let progress = new Map();
+        const coll = msg.createMessageComponentCollector({ time: 15000 });
+        coll.on('collect', async i => {
+            let count = (progress.get(i.user.id) || 0) + 1;
+            progress.set(i.user.id, count);
+            if (count >= 5) {
+                coll.stop();
+                activeGames.delete(channel.id);
+                let eco = await getEconomyUser(guildId, i.user.id);
+                eco.balance += 5000;
+                await saveEconomyUser(guildId, i.user.id, eco);
+                addPoints(guildId, i.user.id, i.user.displayName, channel);
+                return i.update({ content: `🏎️🏆 **فاز بالسباق ${i.user}!** وكسب **$5,000 كاش** و **10 نقاط**! 🔥`, components: [] });
+            }
+            await i.reply({ content: `⚡ تقدمت في السباق (${count}/5)`, ephemeral: true });
+        });
+    });
+}
+
+function startVaultGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'vault');
+    const correctCode = Math.floor(Math.random() * 6) + 1;
+    const row = new ActionRowBuilder();
+    for (let i = 1; i <= 6; i++) {
+        row.addComponents(new ButtonBuilder().setCustomId(`vault_${i}`).setLabel(`رقم ${i}`).setStyle(ButtonStyle.Primary));
+    }
+    channel.send({ content: `🏦 **[تحدي كسر خزنة البنك]**\nاختر الرقم الصحيح (بين 1 و 6):`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
+        coll.on('collect', async i => {
+            if (i.user.id !== userId) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            activeGames.delete(channel.id);
+            const chosenNum = parseInt(i.customId.replace('vault_', ''));
+            if (chosenNum === correctCode) {
+                let eco = await getEconomyUser(guildId, userId);
+                eco.balance += 15000;
+                await saveEconomyUser(guildId, userId, eco);
+                addPoints(guildId, userId, i.user.displayName, channel);
+                await i.update({ content: `🔓👑 **تم فتح الخزنة بنجاح يا ${i.user}!** فزت بـ **$15,000 كاش** و **10 نقاط**! 🔥`, components: [] });
+            } else {
+                await i.update({ content: `🔒 **إنذار البنك!** الرقم الصحيح كان (${correctCode}). هاردلك! 🚨💀`, components: [] });
+            }
+        });
+    });
+}
+
+// لعبة الذاكرة بالمستويات
 function startMemoryGame(message, guildId) {
     const channel = message.channel;
     const contentLower = message.content.toLowerCase();
     
     let difficulty = 'سهل';
-    if (contentLower.includes('صعب')) {
-        difficulty = 'صعب';
-    } else if (contentLower.includes('متوسط')) {
-        difficulty = 'متوسط';
-    } else {
-        difficulty = 'سهل';
-    }
+    if (contentLower.includes('صعب')) difficulty = 'صعب';
+    else if (contentLower.includes('متوسط')) difficulty = 'متوسط';
 
     const challenger = message.author;
     let size = 3, pairsCount = 4;
@@ -558,7 +654,6 @@ function startMemoryGame(message, guildId) {
     });
 }
 
-// لعبة حجر ورقة مقص مع بوت ذكي
 function startRPSGame(message, guildId) {
     const channel = message.channel;
     const challenger = message.author;
@@ -572,31 +667,16 @@ function startRPSGame(message, guildId) {
         coll.on('collect', async i => {
             if (i.user.id !== challenger.id) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
             const userChoice = i.customId.replace('rps_', '');
-            
-            // ذكاء البوت: يتوقع حركتك ويحاول يجاريك بذكاء
             const smartMoves = { rock: 'paper', paper: 'scissors', scissors: 'rock' };
             const botChoice = Math.random() < 0.65 ? smartMoves[userChoice] : ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
-            
             const emojis = { rock: '🪨 حجر', paper: '📄 ورقة', scissors: '✂️ مقص' };
-            let res = '';
-            if (userChoice === botChoice) {
-                res = `🤝 **تعادل ذكي!** البوت اختار (${emojis[botChoice]}) مثلك!`;
-            } else if (
-                (userChoice === 'rock' && botChoice === 'scissors') ||
-                (userChoice === 'paper' && botChoice === 'rock') ||
-                (userChoice === 'scissors' && botChoice === 'paper')
-            ) {
-                res = `🎉 **كفو يا بطل! هزمت البوت الذكي!**\nأنت (${emojis[userChoice]}) والبوت (${emojis[botChoice]}). كسبت **10 نقاط**! 🌟`;
-                addPoints(guildId, challenger.id, challenger.displayName, channel);
-            } else {
-                res = `🧠 **هزمك البوت الذكي!**\nأنت (${emojis[userChoice]}) والبوت (${emojis[botChoice]}). هاردلك! 💀`;
-            }
+            let res = userChoice === botChoice ? `🤝 **تعادل ذكي!**` : (((userChoice === 'rock' && botChoice === 'scissors') || (userChoice === 'paper' && botChoice === 'rock') || (userChoice === 'scissors' && botChoice === 'paper')) ? `🎉 **كفو فزت على البوت!** كسبت **10 نقاط**!` : `🧠 **هزمك البوت الذكي!**`);
+            if (res.includes('فزت')) addPoints(guildId, challenger.id, challenger.displayName, channel);
             await i.update({ content: res, components: [] });
         });
     });
 }
 
-// لعبة XO مع بوت ذكي استراتيجي
 function startXOGame(message, guildId) {
     const channel = message.channel;
     const challenger = message.author;
@@ -604,26 +684,15 @@ function startXOGame(message, guildId) {
 
     const checkWin = (b) => {
         const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-        for (let w of wins) {
-            if (b[w[0]] && b[w[0]] === b[w[1]] && b[w[0]] === b[w[2]]) return b[w[0]];
-        }
+        for (let w of wins) { if (b[w[0]] && b[w[0]] === b[w[1]] && b[w[0]] === b[w[2]]) return b[w[0]]; }
         if (b.every(cell => cell !== null)) return 'tie';
         return null;
     };
 
     const getBotMove = (b) => {
         const emptyIndices = b.map((val, idx) => val === null ? idx : null).filter(val => val !== null);
-        // 1. هل البوت يقدر يفوز بـ O ؟
-        for (let idx of emptyIndices) {
-            let temp = [...b]; temp[idx] = 'O';
-            if (checkWin(temp) === 'O') return idx;
-        }
-        // 2. هل الخصم (X) على وشك الفوز ويجب منعه؟
-        for (let idx of emptyIndices) {
-            let temp = [...b]; temp[idx] = 'X';
-            if (checkWin(temp) === 'X') return idx;
-        }
-        // 3. خذ المركز إن كان فارغاً
+        for (let idx of emptyIndices) { let temp = [...b]; temp[idx] = 'O'; if (checkWin(temp) === 'O') return idx; }
+        for (let idx of emptyIndices) { let temp = [...b]; temp[idx] = 'X'; if (checkWin(temp) === 'X') return idx; }
         if (b[4] === null) return 4;
         return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
     };
@@ -642,35 +711,28 @@ function startXOGame(message, guildId) {
         return rows;
     };
 
-    channel.send({ content: `🎮 **[تحدي XO ضد البوت الذكي]**\nدورك (❌):`, components: getBoardComponents() }).then(msg => {
+    channel.send({ content: `🎮 **[تحدي XO ضد البوت الذكي]**`, components: getBoardComponents() }).then(msg => {
         const coll = msg.createMessageComponentCollector({ time: 60000 });
         coll.on('collect', async i => {
             if (i.user.id !== challenger.id) return i.reply({ content: '⏳ ليس دورك!', ephemeral: true });
             const idx = parseInt(i.customId.replace('xo_', ''));
-            if (board[idx] !== null) return i.reply({ content: '⚠️ محجوز!', ephemeral: true });
-            
             board[idx] = 'X';
             let winner = checkWin(board);
             if (winner) {
                 coll.stop();
-                let txt = winner === 'tie' ? `🤝 **تعادل في XO!**` : `🎉 **كفو فزت في XO ضد البوت الذكي** وكسبت **10 نقاط**! 🌟`;
                 if (winner === 'X') addPoints(guildId, challenger.id, challenger.displayName, channel);
-                return i.update({ content: txt, components: getBoardComponents(true) });
+                return i.update({ content: winner === 'X' ? `🎉 **كفو فزت في XO** وكسبت **10 نقاط**!` : `🤝 **تعادل!**`, components: getBoardComponents(true) });
             }
-
-            // حركة البوت الذكي
             const botIdx = getBotMove(board);
             if (botIdx !== undefined) {
                 board[botIdx] = 'O';
                 winner = checkWin(board);
                 if (winner) {
                     coll.stop();
-                    let txt = winner === 'tie' ? `🤝 **تعادل في XO!**` : `🤖 **هزمك البوت الذكي في XO!** هاردلك 💀`;
-                    return i.update({ content: txt, components: getBoardComponents(true) });
+                    return i.update({ content: winner === 'O' ? `🤖 **هزمك البوت الذكي في XO!**` : `🤝 **تعادل!**`, components: getBoardComponents(true) });
                 }
             }
-
-            await i.update({ content: `🎮 **[تحدي XO ضد البوت الذكي]**\nدورك (❌):`, components: getBoardComponents() });
+            await i.update({ content: `🎮 **[تحدي XO ضد البوت الذكي]**`, components: getBoardComponents() });
         });
     });
 }
@@ -731,84 +793,29 @@ client.on('messageCreate', async message => {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
               { name: '💵 الأساسيات', value: '`!راتب` | `!بنك`', inline: false },
-              { name: '👤 الهوية الشخصية', value: '`!هوية` أو `!هوية [@الشخص]`', inline: false },
-              { name: '👔 الوظائف (20 وظيفة تدرجية)', value: '`!وظائف` | `!وظيفة [الرمز]`', inline: false },
-              { name: '📈 السوق والأملاك', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي` | `!ارباح`', inline: false },
-              { name: '🦹‍♂️ الجريمة والحظ', value: '`!سرقة [@الشخص]` | `!حظ [المبلغ]` | `!صندوق`', inline: false },
-              { name: '🎯 المهام والتحويل', value: '`!مهامي` | `!تحويل [@الشخص] [المبلغ]`', inline: false },
-              { name: '🏆 لوحة الصدارة', value: '`!ت` (لعرض لوحة الشرف بالأزرار التفاعلية)', inline: false }
+              { name: '👤 الهوية', value: '`!هوية`', inline: false },
+              { name: '👔 الوظائف', value: '`!وظائف` | `!وظيفة [الرمز]`', inline: false },
+              { name: '📈 السوق', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي` | `!ارباح`', inline: false },
+              { name: '🦹‍♂️ الجريمة والحظ', value: '`!سرقة` | `!حظ [المبلغ]` | `!صندوق`', inline: false },
+              { name: '🎯 المهام', value: '`!مهامي` | `!تحويل`', inline: false }
           );
           return message.channel.send({ embeds: [embed] });
       }
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
-          return message.reply(`💳 رصيدك الكاش بالسيرفر: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
+          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
       }
-
       if (message.content === '!هوية' || message.content.startsWith('!هوية ')) {
           const targetUser = message.mentions.users.first() || message.author;
-          const targetId = targetUser.id;
-          const targetName = targetUser.displayName || targetUser.username;
-          const ecoData = await getEconomyUser(guildId, targetId);
-          const ptsData = await getPointsUser(guildId, targetId, targetName);
-          const xpNeeded = (ptsData.level * ptsData.level) * 150;
-          const profileEmbed = new EmbedBuilder()
-              .setColor('#9B59B6')
-              .setTitle(`👤 الهوية: ${targetName}`)
-              .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-              .addFields(
-                  { name: '💳 الرصيد المالي', value: `\`$${ecoData.balance.toLocaleString()}\``, inline: true },
-                  { name: '👔 الوظيفة الحالية', value: `\`${ecoData.job}\``, inline: true },
-                  { name: '⭐ رصيد النقاط', value: `\`${ptsData.points} نقطة\``, inline: true },
-                  { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
-                  { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
-                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
-              )
-              .setTimestamp();
-          return message.channel.send({ embeds: [profileEmbed] });
+          const ecoData = await getEconomyUser(guildId, targetUser.id);
+          const ptsData = await getPointsUser(guildId, targetUser.id, targetUser.username);
+          return message.reply(`👤 **${targetUser.username}** | الرصيد: \`$${ecoData.balance.toLocaleString()}\` | النقاط: \`${~~ptsData.points}\` | المستوى: \`Level ${ptsData.level}\``);
       }
-      
-      if (message.content === '!وظائف') {
-          const embed = new EmbedBuilder().setColor('#3498DB').setTitle('👔 سلّم الوظائف في السيرفر (20 وظيفة)');
-          let desc = '';
-          for (let key in jobsList) {
-              const j = jobsList[key];
-              desc += `• **${j.name}** | الراتب: \`$${j.salary.toLocaleString()}\` | الشرط: \`Level ${j.level}\` (الرمز: \`${key}\`)\n`;
-          }
-          embed.setDescription(desc);
-          return message.channel.send({ embeds: [embed] });
-      }
-
-      if (message.content.startsWith('!وظيفة')) {
-          const jobKey = message.content.split(' ')[1];
-          if (!jobKey || !jobsList[jobKey]) return message.reply('❌ يرجى إدخال رمز وظيفة صحيح!');
-          const targetJob = jobsList[jobKey];
-          let pUser = await getPointsUser(guildId, userId, message.author.displayName);
-          if (pUser.level < targetJob.level) return message.reply(`⛔ مستواك الحالي Level ${pUser.level} يتطلب Level ${targetJob.level} لهذه الوظيفة!`);
-          let user = await getEconomyUser(guildId, userId);
-          user.job = targetJob.name;
-          await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🎉 مبروك ترقيتك رسمياً في وظيفة **${user.job}**! 🎖️`);
-      }
-
-      if (message.content === '!راتب') {
-          let user = await getEconomyUser(guildId, userId);
-          const now = Date.now();
-          if (user.lastWork && (now - user.lastWork < 5 * 60 * 1000)) return message.reply('⏳ باقي وقت على راتبك القادم.');
-          let baseSalary = 500;
-          for (let key in jobsList) { if (user.job === jobsList[key].name) { baseSalary = jobsList[key].salary; break; } }
-          user.balance += baseSalary; user.lastWork = now;
-          await saveEconomyUser(guildId, userId, user);
-          return message.reply(`💵 تم إيداع راتبك (${user.job}) بقيمة **$${baseSalary.toLocaleString()}**!`);
-      }
-
       if (message.content === '!سوق') {
           const embed = new EmbedBuilder().setColor('#0099ff').setTitle('📈 بورصة العقارات والأعمال');
-          marketItems.forEach(i => embed.addFields({ name: `[${i.id}] ${i.emoji} ${i.name}`, value: `🏷️ \`${i.type}\`\n💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, inline: true }));
-          embed.setFooter({ text: '💡 لشراء عقار: !شراء [رقم] | 🏷️ رسوم بيع العقار: استرداد 90%' });
+          marketItems.forEach(i => embed.addFields({ name: `[${i.id}] ${i.emoji} ${i.name}`, value: `💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, inline: true }));
           return message.channel.send({ embeds: [embed] });
       }
-
       if (message.content.startsWith('!شراء ')) {
           const id = parseInt(message.content.split(' ')[1]);
           const item = marketItems.find(i => i.id === id);
@@ -819,100 +826,31 @@ client.on('messageCreate', async message => {
           await saveEconomyUser(guildId, userId, user);
           return message.reply(`🎉 شريت **${item.name}** بـ **$${item.price.toLocaleString()}**!`);
       }
-
       if (message.content === '!املاكي') {
           const user = await getEconomyUser(guildId, userId);
           if (user.properties.length === 0) return message.reply('مفلس! ما عندك عقارات.');
           const embed = new EmbedBuilder().setColor('#00FF00').setTitle(`🏠 محفظتك`);
-          let totalV = 0, totalP = 0;
           user.properties.forEach((pid, idx) => {
               const item = marketItems.find(i => i.id === pid);
-              if (item) {
-                  embed.addFields({ name: `${idx+1}. ${item.emoji} ${item.name}`, value: `💸 أرباحه: $${item.profit.toLocaleString()} | القيمة: $${item.price.toLocaleString()}`, inline: false });
-                  totalV += item.price; totalP += item.profit;
-              }
+              if (item) embed.addFields({ name: `${idx+1}. ${item.emoji} ${item.name}`, value: `القيمة: $${item.price.toLocaleString()}`, inline: false });
           });
-          embed.setDescription(`📈 الأرباح: **$${totalP.toLocaleString()}** | القيمة: **$${totalV.toLocaleString()}**`);
           return message.channel.send({ embeds: [embed] });
       }
-
       if (message.content.startsWith('!بيع ')) {
-          const indexToSell = parseInt(message.content.split(' ')[1]) - 1;
+          const idx = parseInt(message.content.split(' ')[1]) - 1;
           let user = await getEconomyUser(guildId, userId);
-          if (isNaN(indexToSell) || indexToSell < 0 || indexToSell >= user.properties.length) return message.reply('❌ رقم غير صحيح!');
-          const item = marketItems.find(i => i.id === user.properties[indexToSell]);
-          const sellPrice = Math.floor(item.price * 0.90);
-          user.properties.splice(indexToSell, 1); user.balance += sellPrice;
+          if (isNaN(idx) || idx < 0 || idx >= user.properties.length) return message.reply('❌ رقم غير صحيح!');
+          const item = marketItems.find(i => i.id === user.properties[idx]);
+          const sellP = Math.floor(item.price * 0.90);
+          user.properties.splice(idx, 1); user.balance += sellP;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🤝 بعت **${item.name}** بـ **$${sellPrice.toLocaleString()}** (بعد خصم 10% رسوم).`);
+          return message.reply(`🤝 بعت **${item.name}** بـ **$${sellP.toLocaleString()}**.`);
       }
-
-      if (message.content === '!ارباح') {
+      if (message.content === '!راتب') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.properties.length === 0) return message.reply('❌ ما عندك عقارات.');
-          const now = Date.now();
-          if (now - user.lastProfit < 5 * 60 * 1000) return message.reply('⏳ باقي وقت على الأرباح!');
-          let total = 0; 
-          user.properties.forEach(pid => { const i = marketItems.find(x => x.id === pid); if (i) total += i.profit; });
-          user.balance += total; user.lastProfit = now;
+          user.balance += 500;
           await saveEconomyUser(guildId, userId, user);
-          return message.channel.send(`📈 تم استلام أرباح أملاكك بقيمة **$${total.toLocaleString()}**!`);
-      }
-
-      if (message.content.startsWith('!سرقة')) {
-          const target = message.mentions.users.first();
-          if (!target) return message.reply('❌ الاستخدام: `!سرقة [@الشخص]`');
-          if (target.bot || target.id === userId) return message.reply('😅 ما تقدر تسرق نفسك أو بوت!');
-          let user = await getEconomyUser(guildId, userId);
-          const now = Date.now();
-          if (user.lastCrime && (now - user.lastCrime < 10 * 60 * 1000)) return message.reply('🚓 الشرطة تراقبك!');
-          let targetUser = await getEconomyUser(guildId, target.id);
-          if (targetUser.balance < 500) return message.reply('💸 الضحية مفلس!');
-          user.lastCrime = now;
-          if (Math.random() < 0.45) {
-              const stolen = Math.floor(targetUser.balance * 0.3) + 200;
-              targetUser.balance -= stolen; user.balance += stolen;
-              await saveEconomyUser(guildId, target.id, targetUser);
-              await saveEconomyUser(guildId, userId, user);
-              return message.channel.send(`🦹‍♂️ نجحت السرقة وسرقت **$${stolen.toLocaleString()}**! 💰`);
-          } else {
-              const fine = 300;
-              user.balance = Math.max(0, user.balance - fine);
-              await saveEconomyUser(guildId, userId, user);
-              return message.channel.send(`🚨 صادَت الشرطة السارق وغرمته **$${fine}**! 🚔`);
-          }
-      }
-
-      if (message.content.startsWith('!حظ')) {
-          const amt = parseInt(message.content.split(' ')[1]);
-          if (isNaN(amt) || amt <= 50) return message.reply('❌ أقل مبلغ للمراهنة 50!');
-          let user = await getEconomyUser(guildId, userId);
-          if (user.balance < amt) return message.reply('💸 رصيدك ما يكفي!');
-          const roll = Math.random();
-          if (roll < 0.40) { user.balance -= amt; message.reply(`😢 خسرت **$${amt.toLocaleString()}**!`); }
-          else if (roll < 0.85) { user.balance += amt; message.reply(`🎰 فزت وضاعفت فلوسك **$${amt.toLocaleString()}**! 🎉`); }
-          else { user.balance += amt * 3; message.channel.send(`👑 ضربت الحظ الكبرى وكسبت **$${(amt*3).toLocaleString()}**! 🔥`); }
-          await saveEconomyUser(guildId, userId, user);
-      }
-
-      if (message.content === '!صندوق') {
-          let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق 3,000!');
-          user.balance -= 3000;
-          const prizes = [1500, 5000, 12000, 0];
-          const won = prizes[Math.floor(Math.random() * prizes.length)];
-          if (won > 0) user.balance += won;
-          await saveEconomyUser(guildId, userId, user);
-          return message.reply(`📦 فتحت الصندوق وطلع لك: **$${won.toLocaleString()}**!`);
-      }
-
-      if (message.content === '!مهامي') {
-          let user = await getEconomyUser(guildId, userId);
-          const now = Date.now();
-          if (user.lastQuest && (now - user.lastQuest < 24 * 60 * 60 * 1000)) return message.reply('⏳ أتممت مهام اليوم بالفعل!');
-          user.lastQuest = now; user.balance += 5000;
-          await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🎯 أتممت مهام اليوم وحصلت على **$5,000**!`);
+          return message.reply(`💵 تم إيداع راتبك ($500)!`);
       }
   }
 
@@ -921,7 +859,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!فعالية' || message.content === '!لعبة') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة!');
-          const r = Math.floor(Math.random() * 12);
+          const r = Math.floor(Math.random() * 16);
           if (r === 0) startBombGame(message.channel, guildId);
           else if (r === 1) startScrambleGame(message.channel, guildId);
           else if (r === 2) startButtonGame(message.channel, guildId);
@@ -933,16 +871,26 @@ client.on('messageCreate', async message => {
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
           else if (r === 10) startRPSGame(message, guildId);
+          else if (r === 11) startPenaltyGame(message, guildId);
+          else if (r === 12) startMinesGame(message.channel, guildId, userId);
+          else if (r === 13) startRaceGame(message.channel, guildId, userId);
+          else if (r === 14) startVaultGame(message.channel, guildId, userId);
           else startBoxesGame(message.channel, guildId, userId);
           return;
       }
 
       if (message.content === '!العاب') return sendGamesMenu(message.channel);
 
+      // تشغيل الألعاب بكافة صيغها
       if (message.content.startsWith('!حجر') || message.content.startsWith('حجر')) return startRPSGame(message, guildId);
       if (message.content.startsWith('!xo') || message.content.startsWith('xo')) return startXOGame(message, guildId);
       if (message.content.startsWith('!ذاكرة') || message.content.startsWith('ذاكرة') || message.content.startsWith('إذاكرة')) return startMemoryGame(message, guildId);
+      if (message.content.startsWith('!بلنتي') || message.content.startsWith('بلنتي')) return startPenaltyGame(message, guildId);
+      if (message.content === '!ألغام' || message.content === 'ألغام') return startMinesGame(message.channel, guildId, userId);
+      if (message.content === '!سباق' || message.content === 'سباق') return startRaceGame(message.channel, guildId, userId);
+      if (message.content === '!خزنة' || message.content === 'خزنة') return startVaultGame(message.channel, guildId, userId);
       if (message.content === '!صناديق' || message.content === 'صناديق') return startBoxesGame(message.channel, guildId, userId);
+
       if (message.content === '!قنبلة') startBombGame(message.channel, guildId);
       if (message.content === '!زر') startButtonGame(message.channel, guildId);
       if (message.content === '!كتابة') startWritingGame(message.channel, guildId);
