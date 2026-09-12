@@ -80,6 +80,7 @@ let marketItems = [
     { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2500, profit: 250, emoji: '🏡' }
 ];
 
+// تحديث التنبيه كل 5 دقائق مع حذف الرسالة القديمة وتجديدها تلقائياً
 setInterval(async () => {
     marketItems.forEach(item => {
         const multiplier = (Math.random() * 0.95) + 0.55;
@@ -258,7 +259,7 @@ function sendGamesMenu(channel) {
         .setColor('#5865F2')
         .setTitle('🎮 قائمة ألعاب وقوائم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
         .addFields(
-            { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo [@شخص]` | `!حجر [@شخص]` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
+            { name: '🔪 الألعاب اليدوية والفعاليات', value: '`!القاتل` | `!xo` | `!حجر` | `!روليت` | `!قنبلة` | `!فكك` | `!عكس` | `!إيموجي` | `!معنى` | `!تخمين` | `!ذكاء` | `!رياضيات` | `!عواصم` | `!زر` | `!كتابة`', inline: false },
             { name: '🧠 لعبة الذاكرة (مستويات)', value: '`!ذاكرة سهل` | `!ذاكرة متوسط` | `!ذاكرة صعب`', inline: false },
             { name: '⚡ الألعاب التفاعلية والفخمة', value: '`!بلنتي` | `!ألغام` | `!سباق` | `!خزنة` | `!صناديق`', inline: false },
             { name: '🎲 الفعاليات والعشوائي', value: '`!فعالية` | `!العاب`', inline: false },
@@ -489,7 +490,7 @@ function startWritingGame(channel, guildId) {
     });
 }
 
-// الألعاب التفاعلية الجديدة بالأزرار (مع إصلاح الخزنة ومنع خطأ الوقت)
+// الألعاب التفاعلية الجديدة بالأزرار
 function startPenaltyGame(message, guildId) {
     const channel = message.channel;
     const challenger = message.author;
@@ -566,7 +567,6 @@ function startRaceGame(channel, guildId, userId) {
     });
 }
 
-// إصلاح لعبة الخزنة نهائياً
 function startVaultGame(channel, guildId, userId) {
     if (activeGames.has(channel.id)) return;
     activeGames.set(channel.id, 'vault');
@@ -689,7 +689,6 @@ function startRPSGame(message, guildId) {
     });
 }
 
-// إصلاح مشكلة منشن XO ليدعم التحدي الثنائي أو ضد البوت بذكاء
 function startXOGame(message, guildId) {
     const channel = message.channel;
     const challenger = message.author;
@@ -859,12 +858,34 @@ client.on('messageCreate', async message => {
           const user = await getEconomyUser(guildId, userId);
           return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
       }
+      
       if (message.content === '!هوية' || message.content.startsWith('!هوية ')) {
           const targetUser = message.mentions.users.first() || message.author;
-          const ecoData = await getEconomyUser(guildId, targetUser.id);
-          const ptsData = await getPointsUser(guildId, targetUser.id, targetUser.username);
-          return message.reply(`👤 **${targetUser.username}** | الرصيد: \`$${ecoData.balance.toLocaleString()}\` | النقاط: \`${~~ptsData.points}\` | المستوى: \`Level ${ptsData.level}\``);
+          const targetId = targetUser.id;
+          const targetName = targetUser.displayName || targetUser.username;
+
+          const ecoData = await getEconomyUser(guildId, targetId);
+          const ptsData = await getPointsUser(guildId, targetId, targetName);
+          const xpNeeded = (ptsData.level * ptsData.level) * 150;
+
+          const profileEmbed = new EmbedBuilder()
+              .setColor('#9B59B6')
+              .setTitle(`👤 الهوية الشخصية: ${targetName}`)
+              .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+              .addFields(
+                  { name: '💳 الرصيد المالي', value: `\`$${ecoData.balance.toLocaleString()}\``, inline: true },
+                  { name: '👔 الوظيفة الحالية', value: `\`${ecoData.job}\``, inline: true },
+                  { name: '⭐ رصيد النقاط', value: `\`${~~ptsData.points} نقطة\``, inline: true },
+                  { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
+                  { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
+                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
+              )
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الهوية والإنجازات' })
+              .setTimestamp();
+
+          return message.channel.send({ embeds: [profileEmbed] });
       }
+
       if (message.content === '!سوق') {
           const embed = new EmbedBuilder().setColor('#0099ff').setTitle('📈 بورصة العقارات والأعمال');
           marketItems.forEach(i => embed.addFields({ name: `[${i.id}] ${i.emoji} ${i.name}`, value: `💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, inline: true }));
@@ -924,10 +945,10 @@ client.on('messageCreate', async message => {
           else if (r === 7) startGuessGame(message.channel, guildId);
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
-          else if (r === 10) startRPSGame(message, guildId);
-          else if (r === 11) startPenaltyGame(message, guildId);
+          else if (r === 10) startRPSGame(message.channel, guildId);
+          else if (r === 11) startPenaltyGame(message.channel, guildId);
           else if (r === 12) startMinesGame(message.channel, guildId, userId);
-          else if (r === 13) startRaceGame(message, guildId, userId);
+          else if (r === 13) startRaceGame(message.channel, guildId, userId);
           else if (r === 14) startVaultGame(message.channel, guildId, userId);
           else startBoxesGame(message.channel, guildId, userId);
           return;
@@ -976,7 +997,7 @@ client.on('messageCreate', async message => {
       }
 
       if (message.content === '!ايقاف') {
-          activeGames.delete(message.channel.id);
+          activeGames.delete(channel.id);
           return message.channel.send('🛑 **تم إيقاف اللعبة الجارية بنجاح!**');
       }
   }
