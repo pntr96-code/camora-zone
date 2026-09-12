@@ -731,7 +731,7 @@ client.on('messageCreate', async message => {
           marketItems.forEach(i => {
               embed.addFields({ name: `[${i.id}] ${i.emoji} ${i.name}`, value: `🏷️ \`${i.type}\`\n💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, inline: true });
           });
-          embed.setFooter({ text: '💡 لشراء عقار اكتب: !شراء [رقم العقار]' });
+          embed.setFooter({ text: '💡 لشراء عقار: !شراء [رقم] | 🏷️ رسوم بيع العقار: استرداد 90% من قيمته الحالية' });
           return message.channel.send({ embeds: [embed] });
       }
       if (message.content.startsWith('!شراء ')) {
@@ -761,7 +761,7 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
       
-      // --- تعديل أمر البيع ليعتمد على رقم العقار في محفظتك مباشرة ---
+      // --- تعديل رسالة وبيانات البيع لتصبح بنظام الـ Embed ---
       if (message.content.startsWith('!بيع ')) {
           const indexToSell = parseInt(message.content.split(' ')[1]) - 1;
           let user = await getEconomyUser(guildId, userId);
@@ -779,7 +779,17 @@ client.on('messageCreate', async message => {
           user.properties.splice(indexToSell, 1); 
           user.balance += sellPrice;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🤝 بعت **${item.name}** بـ **$${sellPrice.toLocaleString()}**! وانضافت الفلوس لرصيدك.`);
+
+          const sellEmbed = new EmbedBuilder()
+              .setColor('#E74C3C')
+              .setTitle('🤝 تمت عملية بيع العقار بنجاح')
+              .setDescription(`👤 <@${userId}>\nتم بيع العقار **${item.emoji} ${item.name}** مقابل **$${sellPrice.toLocaleString()}** (بعد خصم 10% رسوم بيع من القيمة الحالية).`)
+              .addFields(
+                  { name: '💳 رصيدك الكاش الجديد', value: `\`$${user.balance.toLocaleString()}\``, inline: false }
+              )
+              .setTimestamp();
+
+          return message.channel.send({ embeds: [sellEmbed] });
       }
 
       if (message.content === '!ارباح') {
