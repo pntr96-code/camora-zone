@@ -878,7 +878,7 @@ client.on('messageCreate', async message => {
 
           const updateEmbed = new EmbedBuilder()
               .setColor('#2ECC71')
-              .setTitle('🚀 تحديث جديد ومثير في قسم الألعاب!')
+              .setTitle('🚀 تحديث جديد في قسم الألعاب!')
               .setDescription(`تم تحديث وتطوير لعبة **${gameName}** وإضافة أسئلة جديدة جربها الان!`)
               .addFields(
                   { name: '🎮 لتجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
