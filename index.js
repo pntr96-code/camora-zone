@@ -115,13 +115,14 @@ setInterval(async () => {
 }, 5 * 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
-    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
+    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0, lastBox: 0 };
     let doc = await economyColl.findOne({ guildId, userId });
     if (!doc) {
-        doc = { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0 };
+        doc = { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0, lastBox: 0 };
         await economyColl.insertOne(doc);
     }
     if (!doc.job) doc.job = 'مواطن 🇸🇦';
+    if (doc.lastBox === undefined) doc.lastBox = 0;
     return doc;
 }
 
@@ -857,8 +858,6 @@ client.on('messageCreate', async message => {
           return message.reply('❌ عذراً، هذا الأمر مخصص للإدارة فقط!');
       }
 
-      // طريقة الاستخدام: !اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_اللعبة]
-      // مثال: !اعلان-تحديث 1547728033580847236 حقل الألغام !ألغام
       const args = message.content.replace('!اعلان-تحديث', '').trim().split(' ');
       const targetChannelId = args[0];
       const gameName = args[1];
@@ -879,7 +878,7 @@ client.on('messageCreate', async message => {
           const updateEmbed = new EmbedBuilder()
               .setColor('#2ECC71')
               .setTitle('🚀 تحديث جديد في قسم الألعاب!')
-              .setDescription(`تم تحديث وتطوير لعبة **${gameName}** وإضافة أسئلة جديدة جربها الان!`)
+              .setDescription(`تم تحديث وتطوير لعبة **${gameName}** وإضافة مميزات جديدة جربها الان!`)
               .addFields(
                   { name: '🎮 لتجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
                   { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
@@ -1090,15 +1089,30 @@ client.on('messageCreate', async message => {
           await saveEconomyUser(guildId, userId, user);
       }
 
-      if (message.content === '!صندوق') {
+      // أمر الصندوق مع تايمر 5 دقائق مثل الراتب
+      if (message.content === '!صندوق' || message.content === 'صندوق') {
           let user = await getEconomyUser(guildId, userId);
+          const now = Date.now();
+          const cooldown = 5 * 60 * 1000; // 5 دقائق
+
+          if (user.lastBox && (now - user.lastBox < cooldown)) {
+              const remainingMs = cooldown - (now - user.lastBox);
+              const m = Math.floor(remainingMs / 60000);
+              const s = Math.floor((remainingMs % 60000) / 1000);
+              return message.reply(`⏳ يابن الحلال! باقي **${m} دقيقة و ${s} ثانية** لفتح صندوق سري جديد.`);
+          }
+
           if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
+          
           user.balance -= 3000;
+          user.lastBox = now;
+          
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
           if (won > 0) user.balance += won;
+          
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`📦 فتحت الصندوق السري وطلع لك: **$${won.toLocaleString()}**!`);
+          return message.reply(`📦 فتحت الصندوق السري وطلع لك: **$${won.toLocaleString()}**! 🎁`);
       }
 
       if (message.content === '!مهامي') {
