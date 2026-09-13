@@ -1089,30 +1089,15 @@ client.on('messageCreate', async message => {
           await saveEconomyUser(guildId, userId, user);
       }
 
-      // أمر الصندوق مع تايمر 5 دقائق مثل الراتب
-      if (message.content === '!صندوق' || message.content === 'صندوق') {
+      if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          const now = Date.now();
-          const cooldown = 5 * 60 * 1000; // 5 دقائق
-
-          if (user.lastBox && (now - user.lastBox < cooldown)) {
-              const remainingMs = cooldown - (now - user.lastBox);
-              const m = Math.floor(remainingMs / 60000);
-              const s = Math.floor((remainingMs % 60000) / 1000);
-              return message.reply(`⏳ يابن الحلال! باقي **${m} دقيقة و ${s} ثانية** لفتح صندوق سري جديد.`);
-          }
-
           if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
-          
           user.balance -= 3000;
-          user.lastBox = now;
-          
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
           if (won > 0) user.balance += won;
-          
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`📦 فتحت الصندوق السري وطلع لك: **$${won.toLocaleString()}**! 🎁`);
+          return message.reply(`📦 فتحت الصندوق السري وطلع لك: **$${won.toLocaleString()}**!`);
       }
 
       if (message.content === '!مهامي') {
@@ -1156,7 +1141,7 @@ client.on('messageCreate', async message => {
           else if (r === 7) startGuessGame(message.channel, guildId);
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
-          else if (r === 10) startRPSGame(message, guildId);
+          else if (r === 10) startRPSGame(message.channel, guildId);
           else if (r === 11) startPenaltyGame(message.channel, guildId);
           else if (r === 12) startMinesGame(message.channel, guildId, userId);
           else if (r === 13) startRaceGame(message.channel, guildId, userId);
