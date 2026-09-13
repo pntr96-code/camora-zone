@@ -35,55 +35,6 @@ const client = new Client({
     ] 
 });
 
-// --- أمر إرسال إعلان تحديث لعبة لروم معين ---
-  if (message.content.startsWith('!اعلان-تحديث')) {
-      if (!message.member.permissions.has('ManageMessages')) {
-          return message.reply('❌ عذراً، هذا الأمر مخصص للإدارة فقط!');
-      }
-
-      // طريقة الاستخدام: !اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_اللعبة]
-      // مثال: !اعلان-تحديث 1547728033580847236 حقل الألغام !ألغام
-      const args = message.content.replace('!اعلان-تحديث', '').trim().split(' ');
-      const targetChannelId = args[0];
-      const gameName = args[1];
-      const gameCommand = args[2];
-
-      if (!targetChannelId || !gameName || !gameCommand) {
-          return message.reply('❌ الاستخدام الصحيح:\n`!اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_التشغيل]`\nمثال: `!اعلان-تحديث 123456789 حقل_الألغام !ألغام`');
-      }
-
-      try {
-          const targetChannel = await client.channels.fetch(targetChannelId);
-          if (!targetChannel || !targetChannel.isTextBased()) {
-              return message.reply('❌ آيدي الروم غير صحيح أو أنه ليس روم كتابي!');
-          }
-
-          await message.delete().catch(() => {});
-
-          const updateEmbed = new EmbedBuilder()
-              .setColor('#2ECC71')
-              .setTitle('🚀 تحديث جديد ومثير في قسم الألعاب!')
-              .setDescription(`تم بحمد الله تحديث وتطوير لعبة **${gameName}** وإضافة مميزات حماسية جديدة!`)
-              .addFields(
-                  { name: '🎮 تجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
-                  { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
-              )
-              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تحديثات السيرفر' })
-              .setTimestamp();
-
-          await targetChannel.send({ 
-              content: '@everyone 🔔 **تنبيه تحديث لعبة جديدة!**', 
-              embeds: [updateEmbed] 
-          });
-
-          return message.author.send(`✅ تم إرسال إعلان تحديث لعبة (${gameName}) إلى الروم <#${targetChannelId}> بنجاح!`).catch(() => {});
-      } catch (err) {
-          console.error(err);
-          return message.reply('❌ حدث خطأ أثناء محاولة إرسال الإعلان، تأكد من آيدي الروم وصلاحيات البوت.');
-      }
-  }
-
-
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 const activeGames = new Map(); 
 const processingUsers = new Set(); 
@@ -291,25 +242,21 @@ const triviaMasterPool = [
     { q: 'ما هي عاصمة المملكة العربية السعودية؟', ans: 'الرياض' }, { q: 'كم عدد أركان الإسلام؟', ans: '5' },
     { q: 'ما هو عنصر الكيمياء الذي يرمز له بـ H2O؟', ans: 'ماء' }, { q: 'في أي قارة تقع دولة مصر؟', ans: 'افريقيا' },
     { q: 'ما هي أكبر دولة في العالم من حيث المساحة؟ ', ans: 'روسيا' }, { q: 'ما هو أطول نهر في العالم؟', ans: 'نهر النيل' },
-        { q: 'كم عدد القارات في العالم؟ ', ans: '7 قارات' }, { q: 'ما هو الغاز الذي يشكل النسبة الكبرى من الغلاف الجوي للأرض؟', ans: 'غاز النيتروجين' },
+    { q: 'كم عدد القارات في العالم؟ ', ans: '7 قارات' }, { q: 'ما هو الغاز الذي يشكل النسبة الكبرى من الغلاف الجوي للأرض؟', ans: 'غاز النيتروجين' },
     { q: 'ما هو الكوكب المعروف باسم "الكوكب الأحمر"؟ ', ans: 'كوكب المريخ' }, { q: 'ما هو المعدن الوحيد الذي يكون في الحالة السائلة في درجة حرارة الغرفة؟', ans: 'الزئبق' },
     { q: 'ما هو العضو الذي يستهلك أكبر قدر من الطاقة في جسم الإنسان؟ ', ans: 'الدماغ' }, { q: 'في أي عام بدأت الحرب العالمية الثانية؟', ans: '1939' },
     { q: 'في أي دولة أقيمت أول بطولة لكأس العالم لكرة القدم؟ ', ans: 'الأوروغواي' }, { q: 'كم عدد اللاعبين الأساسيين في فريق كرة السلة؟', ans: '5' },
-    { q: 'ما هي الرياضة التي تُعرف بلقب "رياضة الملوك"؟ ', ans: 'الفروسية' }, { q: 'ما هو أطول نهر في العالم؟', ans: 'نهر النيل' }
-
-
+    { q: 'ما هي الرياضة التي تُعرف بلقب "رياضة الملوك"؟ ', ans: 'الفروسية' }
 ];
 
 const capitalMasterPool = [
     { c: 'السعودية', cap: 'الرياض' }, { c: 'الإمارات', cap: 'ابوظبي' }, { c: 'الكويت', cap: 'الكويت' },
     { c: 'مصر', cap: 'القاهرة' }, { c: 'قطر', cap: 'الدوحة' }, { c: 'عمان', cap: 'مسقط' },
     { c: 'البحرين', cap: 'المنامة' }, { c: 'الأردن', cap: 'عمان' }, { c: 'العراق', cap: 'بغداد' }, { c: 'لبنان', cap: 'بيروت' },
-        { c: 'المغرب', cap: 'الرباط' }, { c: 'تركيا', cap: 'أنقرة' }, { c: 'بريطانيا', cap: 'لندن' }, { c: 'فرنسا', cap: 'باريس' },
-            { c: 'إسبانيا', cap: 'مدريد' }, { c: 'ألمانيا', cap: 'برلين' }, { c: 'إندونيسيا', cap: 'جاكرتا' }, { c: 'إيطاليا', cap: 'روما' },
-        { c: 'روسيا', cap: 'موسكو' }, { c: 'كندا', cap: 'أوتاوا' }, { c: 'البرازيل', cap: 'برازيليا' }, { c: 'أستراليا', cap: 'كانبرا' },
-        { c: 'الولايات المتحدة الأمريكية', cap: 'واشنطن' }, { c: 'ماليزيا', cap: 'كوالالمبور' }, { c: 'كوريا الجنوبية', cap: 'سيؤول' }, { c: 'فلسطين', cap: 'القدس' },
-
-
+    { c: 'المغرب', cap: 'الرباط' }, { c: 'تركيا', cap: 'أنقرة' }, { c: 'بريطانيا', cap: 'لندن' }, { c: 'فرنسا', cap: 'باريس' },
+    { c: 'إسبانيا', cap: 'مدريد' }, { c: 'ألمانيا', cap: 'برلين' }, { c: 'إندونيسيا', cap: 'جاكرتا' }, { c: 'إيطاليا', cap: 'روما' },
+    { c: 'روسيا', cap: 'موسكو' }, { c: 'كندا', cap: 'أوتاوا' }, { c: 'البرازيل', cap: 'برازيليا' }, { c: 'أستراليا', cap: 'كانبرا' },
+    { c: 'الولايات المتحدة الأمريكية', cap: 'واشنطن' }, { c: 'ماليزيا', cap: 'كوالالمبور' }, { c: 'كوريا الجنوبية', cap: 'سيؤول' }, { c: 'فلسطين', cap: 'القدس' }
 ];
 
 client.once('clientReady', () => {
@@ -904,6 +851,54 @@ client.on('messageCreate', async message => {
       return;
   }
 
+  // --- أمر إرسال إعلان تحديث لعبة لروم معين ---
+  if (message.content.startsWith('!اعلان-تحديث')) {
+      if (!message.member.permissions.has('ManageMessages')) {
+          return message.reply('❌ عذراً، هذا الأمر مخصص للإدارة فقط!');
+      }
+
+      // طريقة الاستخدام: !اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_اللعبة]
+      // مثال: !اعلان-تحديث 1547728033580847236 حقل الألغام !ألغام
+      const args = message.content.replace('!اعلان-تحديث', '').trim().split(' ');
+      const targetChannelId = args[0];
+      const gameName = args[1];
+      const gameCommand = args[2];
+
+      if (!targetChannelId || !gameName || !gameCommand) {
+          return message.reply('❌ الاستخدام الصحيح:\n`!اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_التشغيل]`\nمثال: `!اعلان-تحديث 123456789 حقل_الألغام !ألغام`');
+      }
+
+      try {
+          const targetChannel = await client.channels.fetch(targetChannelId);
+          if (!targetChannel || !targetChannel.isTextBased()) {
+              return message.reply('❌ آيدي الروم غير صحيح أو أنه ليس روم كتابي!');
+          }
+
+          await message.delete().catch(() => {});
+
+          const updateEmbed = new EmbedBuilder()
+              .setColor('#2ECC71')
+              .setTitle('🚀 تحديث جديد ومثير في قسم الألعاب!')
+              .setDescription(`تم بحمد الله تحديث وتطوير لعبة **${gameName}** وإضافة مميزات حماسية جديدة!`)
+              .addFields(
+                  { name: '🎮 تجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
+                  { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
+              )
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تحديثات السيرفر' })
+              .setTimestamp();
+
+          await targetChannel.send({ 
+              content: '@everyone 🔔 **تنبيه تحديث لعبة جديدة!**', 
+              embeds: [updateEmbed] 
+          });
+
+          return message.author.send(`✅ تم إرسال إعلان تحديث لعبة (${gameName}) إلى الروم <#${targetChannelId}> بنجاح!`).catch(() => {});
+      } catch (err) {
+          console.error(err);
+          return message.reply('❌ حدث خطأ أثناء محاولة إرسال الإعلان، تأكد من آيدي الروم وصلاحيات البوت.');
+      }
+  }
+
   // أوامر الاقتصاد تعمل بسلاسة تامة في الروم المخصص أو المفتوح
   if (allowedEconomyChannels.includes(message.channel.id) || allowedChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
@@ -1148,7 +1143,7 @@ client.on('messageCreate', async message => {
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
           else if (r === 10) startRPSGame(message, guildId);
-          else if (r === 11) startPenaltyGame(message, guildId);
+          else if (r === 11) startPenaltyGame(message.channel, guildId);
           else if (r === 12) startMinesGame(message.channel, guildId, userId);
           else if (r === 13) startRaceGame(message.channel, guildId, userId);
           else if (r === 14) startVaultGame(message.channel, guildId, userId);
