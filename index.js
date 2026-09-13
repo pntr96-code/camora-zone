@@ -881,7 +881,7 @@ client.on('messageCreate', async message => {
               .setTitle('🚀 تحديث جديد ومثير في قسم الألعاب!')
               .setDescription(`تم تحديث وتطوير لعبة **${gameName}** وإضافة أسئلة جديدة جربها الان!`)
               .addFields(
-                  { name: '🎮 تجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
+                  { name: '🎮 لتجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
                   { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تحديثات السيرفر' })
