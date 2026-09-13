@@ -879,7 +879,7 @@ client.on('messageCreate', async message => {
           const updateEmbed = new EmbedBuilder()
               .setColor('#2ECC71')
               .setTitle('🚀 تحديث جديد ومثير في قسم الألعاب!')
-              .setDescription(`تم بحمد الله تحديث وتطوير لعبة **${gameName}** وإضافة مميزات حماسية جديدة!`)
+              .setDescription(`تم تحديث وتطوير لعبة **${gameName}** وإضافة أسئلة جديدة جربها الان!`)
               .addFields(
                   { name: '🎮 تجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
                   { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
@@ -888,7 +888,7 @@ client.on('messageCreate', async message => {
               .setTimestamp();
 
           await targetChannel.send({ 
-              content: '@everyone 🔔 **تنبيه تحديث لعبة جديدة!**', 
+              content: '🔔 **تنبيه تحديث لعبة جديدة!**', 
               embeds: [updateEmbed] 
           });
 
