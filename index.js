@@ -35,6 +35,55 @@ const client = new Client({
     ] 
 });
 
+// --- أمر إرسال إعلان تحديث لعبة لروم معين ---
+  if (message.content.startsWith('!اعلان-تحديث')) {
+      if (!message.member.permissions.has('ManageMessages')) {
+          return message.reply('❌ عذراً، هذا الأمر مخصص للإدارة فقط!');
+      }
+
+      // طريقة الاستخدام: !اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_اللعبة]
+      // مثال: !اعلان-تحديث 1547728033580847236 حقل الألغام !ألغام
+      const args = message.content.replace('!اعلان-تحديث', '').trim().split(' ');
+      const targetChannelId = args[0];
+      const gameName = args[1];
+      const gameCommand = args[2];
+
+      if (!targetChannelId || !gameName || !gameCommand) {
+          return message.reply('❌ الاستخدام الصحيح:\n`!اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_التشغيل]`\nمثال: `!اعلان-تحديث 123456789 حقل_الألغام !ألغام`');
+      }
+
+      try {
+          const targetChannel = await client.channels.fetch(targetChannelId);
+          if (!targetChannel || !targetChannel.isTextBased()) {
+              return message.reply('❌ آيدي الروم غير صحيح أو أنه ليس روم كتابي!');
+          }
+
+          await message.delete().catch(() => {});
+
+          const updateEmbed = new EmbedBuilder()
+              .setColor('#2ECC71')
+              .setTitle('🚀 تحديث جديد ومثير في قسم الألعاب!')
+              .setDescription(`تم بحمد الله تحديث وتطوير لعبة **${gameName}** وإضافة مميزات حماسية جديدة!`)
+              .addFields(
+                  { name: '🎮 تجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
+                  { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
+              )
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تحديثات السيرفر' })
+              .setTimestamp();
+
+          await targetChannel.send({ 
+              content: '@everyone 🔔 **تنبيه تحديث لعبة جديدة!**', 
+              embeds: [updateEmbed] 
+          });
+
+          return message.author.send(`✅ تم إرسال إعلان تحديث لعبة (${gameName}) إلى الروم <#${targetChannelId}> بنجاح!`).catch(() => {});
+      } catch (err) {
+          console.error(err);
+          return message.reply('❌ حدث خطأ أثناء محاولة إرسال الإعلان، تأكد من آيدي الروم وصلاحيات البوت.');
+      }
+  }
+
+
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 const activeGames = new Map(); 
 const processingUsers = new Set(); 
