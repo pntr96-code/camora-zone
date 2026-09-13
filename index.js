@@ -852,52 +852,6 @@ client.on('messageCreate', async message => {
       return;
   }
 
-  // --- أمر إرسال إعلان تحديث لعبة لروم معين ---
-  if (message.content.startsWith('!اعلان-تحديث')) {
-      if (!message.member.permissions.has('ManageMessages')) {
-          return message.reply('❌ عذراً، هذا الأمر مخصص للإدارة فقط!');
-      }
-
-      const args = message.content.replace('!اعلان-تحديث', '').trim().split(' ');
-      const targetChannelId = args[0];
-      const gameName = args[1];
-      const gameCommand = args[2];
-
-      if (!targetChannelId || !gameName || !gameCommand) {
-          return message.reply('❌ الاستخدام الصحيح:\n`!اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_التشغيل]`\nمثال: `!اعلان-تحديث 123456789 حقل_الألغام !ألغام`');
-      }
-
-      try {
-          const targetChannel = await client.channels.fetch(targetChannelId);
-          if (!targetChannel || !targetChannel.isTextBased()) {
-              return message.reply('❌ آيدي الروم غير صحيح أو أنه ليس روم كتابي!');
-          }
-
-          await message.delete().catch(() => {});
-
-          const updateEmbed = new EmbedBuilder()
-              .setColor('#2ECC71')
-              .setTitle('🚀 تحديث جديد في قسم الألعاب!')
-              .setDescription(`تم تحديث وتطوير لعبة **${gameName}** وإضافة مميزات جديدة جربها الان!`)
-              .addFields(
-                  { name: '🎮 لتجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
-                  { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
-              )
-              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تحديثات السيرفر' })
-              .setTimestamp();
-
-          await targetChannel.send({ 
-              content: '🔔 **تنبيه تحديث لعبة جديدة!**', 
-              embeds: [updateEmbed] 
-          });
-
-          return message.author.send(`✅ تم إرسال إعلان تحديث لعبة (${gameName}) إلى الروم <#${targetChannelId}> بنجاح!`).catch(() => {});
-      } catch (err) {
-          console.error(err);
-          return message.reply('❌ حدث خطأ أثناء محاولة إرسال الإعلان، تأكد من آيدي الروم وصلاحيات البوت.');
-      }
-  }
-
   // أوامر الاقتصاد تعمل بسلاسة تامة في الروم المخصص أو المفتوح
   if (allowedEconomyChannels.includes(message.channel.id) || allowedChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
@@ -905,7 +859,7 @@ client.on('messageCreate', async message => {
               { name: '💵 الأساسيات', value: '`!راتب` | `!بنك`', inline: false },
               { name: '👤 الهوية', value: '`!هوية`', inline: false },
               { name: '👔 الوظائف', value: '`!وظائف` | `!وظيفة [الرمز]`', inline: false },
-              { name: '📈 السوق', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي` | `!ارباح`', inline: false },
+              { name: '📈 السوق', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي`', inline: false },
               { name: '🦹‍♂️ الجريمة والحظ', value: '`!سرقة [@شخص]` | `!حظ [المبلغ]` | `!صندوق`', inline: false },
               { name: '🎯 المهام', value: '`!مهامي` | `!تحويل [@شخص] [المبلغ]`', inline: false }
           );
@@ -917,7 +871,7 @@ client.on('messageCreate', async message => {
           return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
       }
 
-      // نظام الرواتب مع التحقق الدقيق من الـ Cooldown (5 دقائق)
+      // نظام الرواتب (مدمج معه أرباح العقارات والأملاك) والتحقق من الـ Cooldown (5 دقائق)
       if (message.content === '!راتب' || message.content === 'راتب') {
           if (processingUsers.has(userId)) return;
           processingUsers.add(userId);
@@ -943,12 +897,22 @@ client.on('messageCreate', async message => {
                   }
               }
 
-              user.balance += baseSalary;
+              // حساب أرباح العقارات والأملاك ودمجها تلقائياً
+              let totalProfit = 0;
+              if (user.properties && user.properties.length > 0) {
+                  user.properties.forEach(pid => {
+                      const item = marketItems.find(i => i.id === pid);
+                      if (item) totalProfit += item.profit;
+                  });
+              }
+
+              const totalReceived = baseSalary + totalProfit;
+              user.balance += totalReceived;
               user.lastWork = now;
               await saveEconomyUser(guildId, userId, user);
               processingUsers.delete(userId);
 
-              return message.reply(`💵 تم إيداع راتبك (${user.job}) بقيمة **$${baseSalary.toLocaleString()}** في رصيدك! 💸`);
+              return message.reply(`💵 تم إيداع راتب وظيفتك (${user.job}) بقيمة **$${baseSalary.toLocaleString()}** + أرباح عقارك وأملاكك بقيمة **$${totalProfit.toLocaleString()}**.\n💰 **إجمالي المبلغ المودع:** \`$${totalReceived.toLocaleString()}\` 🚀`);
           } catch (err) {
               processingUsers.delete(userId);
               console.error(err);
@@ -1032,7 +996,7 @@ client.on('messageCreate', async message => {
           const embed = new EmbedBuilder().setColor('#00FF00').setTitle(`🏠 محفظتك`);
           user.properties.forEach((pid, idx) => {
               const item = marketItems.find(i => i.id === pid);
-              if (item) embed.addFields({ name: `${idx+1}. ${item.emoji} ${item.name}`, value: `القيمة الحالية: $${item.price.toLocaleString()}`, inline: false });
+              if (item) embed.addFields({ name: `${idx+1}. ${item.emoji} ${item.name}`, value: `القيمة الحالية: $${item.price.toLocaleString()} | أرباحه بالراتب: $${item.profit.toLocaleString()}`, inline: false });
           });
           return message.channel.send({ embeds: [embed] });
       }
@@ -1141,7 +1105,7 @@ client.on('messageCreate', async message => {
           else if (r === 7) startGuessGame(message.channel, guildId);
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
-          else if (r === 10) startRPSGame(message.channel, guildId);
+          else if (r === 10) startRPSGame(message, guildId);
           else if (r === 11) startPenaltyGame(message.channel, guildId);
           else if (r === 12) startMinesGame(message.channel, guildId, userId);
           else if (r === 13) startRaceGame(message.channel, guildId, userId);
