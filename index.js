@@ -852,6 +852,57 @@ client.on('messageCreate', async message => {
       return;
   }
 
+  // --- أمر إرسال إعلان تحديث لعبة لروم معين ---
+  if (message.content.startsWith('!اعلان-تحديث')) {
+      if (!message.member.permissions.has('ManageMessages')) {
+          return message.reply('❌ عذراً، هذا الأمر مخصص للإدارة فقط!');
+      }
+
+      const args = message.content.replace('!اعلان-تحديث', '').trim().split(' ');
+      const targetChannelId = args[0];
+      const gameName = args[1];
+      const gameCommand = args[2];
+
+      if (!targetChannelId || !gameName || !gameCommand) {
+          return message.reply('❌ الاستخدام الصحيح:\n`!اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_التشغيل]`\nمثال: `!اعلان-تحديث 123456789 حقل_الألغام !ألغام`');
+      }
+
+      try {
+          const targetChannel = await client.channels.fetch(targetChannelId);
+          if (!targetChannel || !targetChannel.isTextBased()) {
+              return message.reply('❌ آيدي الروم غير صحيح أو أنه ليس روم كتابي!');
+          }
+
+          await message.delete().catch(() => {});
+
+          const updateEmbed = new EmbedBuilder()
+              .setColor('#2ECC71')
+              .setTitle('🚀 تحديث جديد في قسم الألعاب!')
+              .setDescription(`تم تحديث وتطوير لعبة **${gameName}** وإضافة مميزات جديدة جربها الان!`)
+              .addFields(
+                  { name: '🎮 لتجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
+                  { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
+              )
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تحديثات السيرفر' })
+              .setTimestamp();
+
+          await targetChannel.send({ 
+              content: '🔔 **تنبيه تحديث لعبة جديدة!**', 
+              embeds: [updateEmbed] 
+          });
+
+          return message.author.send(`✅ تم إرسال إعلان تحديث لعبة (${gameName}) إلى الروم <#${targetChannelId}> بنجاح!`).catch(() => {});
+      } catch (err) {
+          console.error(err);
+          return message.reply('❌ حدث خطأ أثناء محاولة إرسال الإعلان، تأكد من آيدي الروم وصلاحيات البوت.');
+      }
+  }
+
+  // تفعيل نظام التلفيل (XP) في رومات الألعاب ورومات الاقتصاد جميعها
+  if (allowedChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
+      await trackUserMessage(guildId, userId, message.author.displayName, message.channel, message.member);
+  }
+
   // أوامر الاقتصاد تعمل بسلاسة تامة في الروم المخصص أو المفتوح
   if (allowedEconomyChannels.includes(message.channel.id) || allowedChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
@@ -1090,8 +1141,6 @@ client.on('messageCreate', async message => {
 
   // الألعاب والفعاليات
   if (allowedChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
-      if (allowedChannels.includes(message.channel.id)) trackUserMessage(guildId, userId, message.author.displayName, message.channel, message.member);
-
       if (message.content === '!فعالية' || message.content === '!لعبة') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة في هذه الروم!');
           const r = Math.floor(Math.random() * 16);
