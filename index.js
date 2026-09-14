@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, UserSelectMenuBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { GoogleGenAI } = require('@google/genai');
 const { MongoClient } = require('mongodb');
 
@@ -261,11 +261,11 @@ const capitalMasterPool = [
 ];
 
 client.once('clientReady', () => {
-  console.log(`[BOT STATUS] Camora Zone is Online & Secured with MongoDB Atlas! 🎮`);
+  console.log(`[BOT STATUS] Camora Zone is Online & Secured with MongoDB Atlas! 🚀`);
   client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
 });
 
-// قائمة الألعاب النصية ومعها أزرار لكل الألعاب (بضغطة زر واحدة تشغل اللعبة فوراً)
+// قائمة الألعاب النصية والأزرار
 function sendGamesMenu(channel) {
     const embed = new EmbedBuilder()
         .setColor('#5865F2')
@@ -325,10 +325,9 @@ function sendGamesMenu(channel) {
                 await i.deferUpdate().catch(()=>{});
                 launchXOGame(i.channel, i.guild.id, i.user, null);
             } else if (action === 'exec_xo_pvp') {
-                // بدلاً من انتظار كتابة الاسم، نستخدم قائمة اختيار الأعضاء لتجنب انتهاء المهلة
                 await i.update({ content: `👥 **[لعبة XO الثنائية]**\nاختر خصمك من القائمة أدناه:`, components: [
                     new ActionRowBuilder().addComponents(
-                        new (require('discord.js').UserSelectMenuBuilder)()
+                        new UserSelectMenuBuilder()
                             .setCustomId('select_xo_opponent')
                             .setPlaceholder('اختر خصمك من هنا...')
                             .setMinValues(1)
@@ -341,7 +340,7 @@ function sendGamesMenu(channel) {
             } else if (action === 'exec_rps_pvp') {
                 await i.update({ content: `👥 **[تحدي حجر ورقة مقص الثنائي]**\nاختر خصمك من القائمة أدناه:`, components: [
                     new ActionRowBuilder().addComponents(
-                        new (require('discord.js').UserSelectMenuBuilder)()
+                        new UserSelectMenuBuilder()
                             .setCustomId('select_rps_opponent')
                             .setPlaceholder('اختر خصمك من هنا...')
                             .setMinValues(1)
@@ -372,7 +371,6 @@ function sendGamesMenu(channel) {
             }
         });
 
-        // استقبال اختيار العضو من القائمة المنسدلة للعب الثنائي الفوري بدون أخطاء وقت
         client.on('interactionCreate', async interaction => {
             if (!interaction.isUserSelectMenu()) return;
             if (interaction.customId === 'select_xo_opponent') {
@@ -394,7 +392,7 @@ function sendGamesMenu(channel) {
     });
 }
 
-// دوال الألعاب اليدوية الكلاسيكية
+// دوال الألعاب والكلاسيكيات
 function startEmojiGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     const chosen = getUniqueRandomItem(emojiMasterPool, 'emoji', 'ans');
@@ -1072,7 +1070,7 @@ client.on('messageCreate', async message => {
       await trackUserMessage(guildId, userId, message.author.displayName, message.channel, message.member);
   }
 
-  // أوامر الاقتصاد تعمل بسلاسة تامة في الروم المخصص أو المفتوح
+  // أوامر الاقتصاد والألعاب
   if (allowedEconomyChannels.includes(message.channel.id) || allowedChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
@@ -1091,7 +1089,7 @@ client.on('messageCreate', async message => {
           return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
       }
 
-      // نظام الرواتب (مدمج معه أرباح العقارات والأملاك) والتحقق من الـ Cooldown (5 دقائق)
+      // نظام الرواتب (مدمج معه أرباح العقارات والأملاك)
       if (message.content === '!راتب' || message.content === 'راتب') {
           if (processingUsers.has(userId)) return;
           processingUsers.add(userId);
@@ -1099,7 +1097,7 @@ client.on('messageCreate', async message => {
           try {
               let user = await getEconomyUser(guildId, userId);
               const now = Date.now();
-              const cooldown = 5 * 60 * 1000; // 5 دقائق
+              const cooldown = 5 * 60 * 1000;
 
               if (user.lastWork && (now - user.lastWork < cooldown)) {
                   const remainingMs = cooldown - (now - user.lastWork);
@@ -1117,7 +1115,6 @@ client.on('messageCreate', async message => {
                   }
               }
 
-              // حساب أرباح العقارات والأملاك ودمجها تلقائياً
               let totalProfit = 0;
               if (user.properties && user.properties.length > 0) {
                   user.properties.forEach(pid => {
@@ -1167,7 +1164,7 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [profileEmbed] });
       }
 
-      // نظام الوظائف (20 وظيفة)
+      // نظام الوظائف
       if (message.content === '!وظائف') {
           const embed = new EmbedBuilder().setColor('#3498DB').setTitle('👔 سلّم الوظائف في السيرفر (20 وظيفة)');
           let desc = '';
@@ -1232,14 +1229,13 @@ client.on('messageCreate', async message => {
           return message.reply(`🤝 بعت **${item.name}** بـ **$${sellP.toLocaleString()}** (بعد خصم 10% رسوم).`);
       }
 
-      // نظام السرقة الفعال والمضبوط
       if (message.content.startsWith('!سرقة')) {
           const target = message.mentions.users.first();
           if (!target) return message.reply('❌ الاستخدام الصحيح: `!سرقة [@الشخص]`');
           if (target.bot || target.id === userId) return message.reply('😅 ما تقدر تسرق بوت أو تسرق نفسك!');
           let user = await getEconomyUser(guildId, userId);
           const now = Date.now();
-          const crimeCooldown = 10 * 60 * 1000; // 10 دقائق
+          const crimeCooldown = 10 * 60 * 1000;
           if (user.lastCrime && (now - user.lastCrime < crimeCooldown)) {
               const m = Math.ceil((crimeCooldown - (now - user.lastCrime)) / 60000);
               return message.reply(`🚓 الشرطة تراقبك! انتظر **${m} دقيقة** قبل محاولة السرقة التالية.`);
@@ -1308,7 +1304,7 @@ client.on('messageCreate', async message => {
       }
   }
 
-  // الألعاب والفعاليات
+  // الألعاب والفعاليات ونظام لوحة الصدارة بصفحات (الصفحات 1 إلى 4)
   if (allowedChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!فعالية' || message.content === '!لعبة' || message.content === '!العب') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة في هذه الروم!');
@@ -1323,7 +1319,7 @@ client.on('messageCreate', async message => {
           else if (r === 7) startGuessGame(message.channel, guildId);
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
-          else if (r === 10) startRPSGame(message, guildId);
+          else if (r === 10) startRPSBotGame(message, guildId);
           else if (r === 11) startPenaltyGame(message.channel, guildId);
           else if (r === 12) startMinesGame(message.channel, guildId, userId);
           else if (r === 13) startRaceGame(message.channel, guildId, userId);
@@ -1334,8 +1330,58 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!العاب' || message.content === '!العب') return sendGamesMenu(message.channel);
 
+      // لوحة الصدارة بنظام صفحات (4 صفحات: النقاط، الفلوس، الأسرع، اللفل)
+      if (message.content === '!ت') {
+          if (!pointsColl || !economyColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
+
+          const topPoints = await pointsColl.find({ guildId }).sort({ points: -1 }).limit(5).toArray();
+          const topRich = await economyColl.find({ guildId }).sort({ balance: -1 }).limit(5).toArray();
+          const topSpeed = await pointsColl.find({ guildId, bestTime: { $ne: 999999 } }).sort({ bestTime: 1 }).limit(5).toArray();
+          const topLevel = await pointsColl.find({ guildId }).sort({ level: -1, xp: -1 }).limit(5).toArray();
+
+          let page = 1;
+          const totalPages = 4;
+
+          const generateEmbed = (pageNum) => {
+              const embed = new EmbedBuilder().setColor('#FFD700').setFooter({ text: `صفحة ${pageNum} من ${totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
+              if (pageNum === 1) {
+                  embed.setTitle('👑 لوحة الصدارة - أبطال النقاط').setDescription(topPoints.length ? topPoints.map((d, i) => `${i+1}. <@${d.userId}>: \`${d.points} نقطة\``).join('\n') : 'لا توجد بيانات بعد.');
+              } else if (pageNum === 2) {
+                  embed.setTitle('💎 لوحة الصدارة - الأثرياء').setDescription(topRich.length ? topRich.map((d, i) => `${i+1}. <@${d.userId}>: \`$${d.balance.toLocaleString()}\``).join('\n') : 'لا توجد بيانات بعد.');
+              } else if (pageNum === 3) {
+                  embed.setTitle('⚡ لوحة الصدارة - الأسرع وقتًا').setDescription(topSpeed.length ? topSpeed.map((d, i) => `${i+1}. <@${d.userId}>: \`${d.bestTime} ثانية\``).join('\n') : 'لا توجد سجلات سرعة بعد.');
+              } else if (pageNum === 4) {
+                  embed.setTitle('🚀 لوحة الصدارة - أساطير اللفل (Levels)').setDescription(topLevel.length ? topLevel.map((d, i) => `${i+1}. <@${d.userId}>: \`Level ${d.level}\` (XP: ${d.xp})`).join('\n') : 'لا توجد بيانات بعد.');
+              }
+              return embed;
+          };
+
+          const getButtons = (pageNum) => {
+              return new ActionRowBuilder().addComponents(
+                  new ButtonBuilder().setCustomId('lb_prev').setLabel('⬅️ السابق').setStyle(ButtonStyle.Primary).setDisabled(pageNum === 1),
+                  new ButtonBuilder().setCustomId('lb_next').setLabel('التالي ➡️').setStyle(ButtonStyle.Primary).setDisabled(pageNum === totalPages)
+              );
+          };
+
+          const msg = await message.channel.send({ embeds: [generateEmbed(page)], components: [getButtons(page)] });
+          const collector = msg.createMessageComponentCollector({ time: 60000 });
+
+          collector.on('collect', async i => {
+              if (i.user.id !== userId) return i.reply({ content: '❌ هذه اللوحة ليست لك!', ephemeral: true });
+              await i.deferUpdate().catch(()=>{});
+              if (i.customId === 'lb_prev' && page > 1) page--;
+              else if (i.customId === 'lb_next' && page < totalPages) page++;
+              await msg.edit({ embeds: [generateEmbed(page)], components: [getButtons(page)] });
+          });
+
+          collector.on('end', () => {
+              msg.edit({ components: [] }).catch(()=>{});
+          });
+          return;
+      }
+
       const text = message.content.toLowerCase();
-      if (text.startsWith('!حجر') || text.startsWith('حجر')) return startRPSGame(message, guildId);
+      if (text.startsWith('!حجر') || text.startsWith('حجر')) return startRPSBotGame(message, guildId);
       if (text.startsWith('!xo') || text.startsWith('xo')) return startXOGame(message, guildId);
       if (text.startsWith('!ذاكرة') || text.startsWith('ذاكرة') || text.startsWith('إذاكرة')) return startMemoryGame(message, guildId);
       if (text.startsWith('!بلنتي') || text.startsWith('بلنتي')) return startPenaltyGame(message, guildId);
@@ -1364,14 +1410,6 @@ client.on('messageCreate', async message => {
               if (Math.floor(Math.random() * 6) + 1 === 1) message.channel.send(`💥 **بووووم!** ${message.author} خسر 💀.`);
               else { message.channel.send(`😅 المسدس فاضي! كسبت **10 نقاط** يا ${message.author}.`); addPoints(guildId, userId, message.author.displayName, message.channel); }
           }, 3000);
-      }
-
-      if (message.content === '!ت') {
-          if (!pointsColl || !economyColl) return message.reply('🏆 قاعدة البيانات غير متصلة.');
-          const topPoints = await pointsColl.find({ guildId }).sort({ points: -1 }).limit(3).toArray();
-          const topRich = await economyColl.find({ guildId }).sort({ balance: -1 }).limit(3).toArray();
-          const embed = new EmbedBuilder().setColor('#FFD700').setTitle('🏆 لوحة صدارة السيرفر').setDescription(`**👑 أبطال النقاط:**\n${topPoints.map((d, i) => `${i+1}. ${d.name}: \`${d.points} نقطة\``).join('\n')}\n\n**💎 الأثرياء:**\n${topRich.map((d, i) => `${i+1}. <@${d.userId}>: \`$${d.balance.toLocaleString()}\``).join('\n')}`);
-          return message.channel.send({ embeds: [embed] });
       }
 
       if (message.content === '!ايقاف') {
