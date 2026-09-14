@@ -44,7 +44,6 @@ const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821'];
 const lastActivityTime = new Map();
 const lastMarketMessages = new Map();
 
-// متغير لحفظ موعد تحديث السوق القادم (كل 5 دقائق)
 let marketNextUpdate = Date.now() + (5 * 60 * 1000);
 
 const jobsList = {
@@ -71,36 +70,49 @@ const jobsList = {
 };
 
 let marketItems = [
-    { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '🫖' },
-    { id: 2, name: 'ورشة سيارات', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1500, emoji: '🔧' },
-    { id: 3, name: 'شقة مفروشة بالرياض', type: 'عقار', basePrice: 45000, price: 45000, profit: 4500, emoji: '🏢' },
-    { id: 4, name: 'تسالي', type: 'مطعم', basePrice: 85000, price: 85000, profit: 8500, emoji: '🍔' },
-    { id: 5, name: 'استراحة بالمجمعة', type: 'عقار', basePrice: 120000, price: 120000, profit: 12000, emoji: '🏕️' },
-    { id: 6, name: 'معرض سيارات فخمة', type: 'معرض', basePrice: 350000, price: 350000, profit: 35000, emoji: '🏎️' },
-    { id: 7, name: 'برج تجاري ضخم', type: 'عقار', basePrice: 1000000, price: 1000000, profit: 100000, emoji: '🏗️' },
-    { id: 8, name: 'بوفية ليالي الشرقية', type: 'مشروع صغير', basePrice: 5000, price: 5000, profit: 550, emoji: '🥪' },
-    { id: 9, name: 'بوفية السعادة', type: 'مشروع صغير', basePrice: 3500, price: 3500, profit: 450, emoji: '🍳' },
-    { id: 10, name: 'استراحة بالرماح', type: 'عقار', basePrice: 100000, price: 100000, profit: 10000, emoji: '🏕️' },
-    { id: 11, name: 'اجدان ووك', type: 'مشروع كبير', basePrice: 1250000, price: 1250000, profit: 125000, emoji: '🏙️' },
-    { id: 12, name: 'فرنش شايز كيان', type: 'مشروع صغير', basePrice: 7500, price: 7500, profit: 750, emoji: '🥤' },
-    { id: 13, name: 'مطعم فلفل', type: 'مشروع كبير', basePrice: 2500000, price: 2500000, profit: 250000, emoji: '🌶️' },
-    { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '🥪' }
+    { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '🫖', trend: '➖' },
+    { id: 2, name: 'ورشة سيارات', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1500, emoji: '🔧', trend: '➖' },
+    { id: 3, name: 'شقة مفروشة بالرياض', type: 'عقار', basePrice: 45000, price: 45000, profit: 4500, emoji: '🏢', trend: '➖' },
+    { id: 4, name: 'تسالي', type: 'مطعم', basePrice: 85000, price: 85000, profit: 8500, emoji: '🍔', trend: '➖' },
+    { id: 5, name: 'استراحة بالمجمعة', type: 'عقار', basePrice: 120000, price: 120000, profit: 12000, emoji: '🏕️', trend: '➖' },
+    { id: 6, name: 'معرض سيارات فخمة', type: 'معرض', basePrice: 350000, price: 350000, profit: 35000, emoji: '🏎️', trend: '➖' },
+    { id: 7, name: 'برج تجاري ضخم', type: 'عقار', basePrice: 1000000, price: 1000000, profit: 100000, emoji: '🏗️', trend: '➖' },
+    { id: 8, name: 'بوفية ليالي الشرقية', type: 'مشروع صغير', basePrice: 5000, price: 5000, profit: 550, emoji: '🥪', trend: '➖' },
+    { id: 9, name: 'بوفية السعادة', type: 'مشروع صغير', basePrice: 3500, price: 3500, profit: 450, emoji: '🍳', trend: '➖' },
+    { id: 10, name: 'استراحة بالرماح', type: 'عقار', basePrice: 100000, price: 100000, profit: 10000, emoji: '🏕️', trend: '➖' },
+    { id: 11, name: 'اجدان ووك', type: 'مشروع كبير', basePrice: 1250000, price: 1250000, profit: 125000, emoji: '🏙️', trend: '➖' },
+    { id: 12, name: 'فرنش شايز كيان', type: 'مشروع صغير', basePrice: 7500, price: 7500, profit: 750, emoji: '🥤', trend: '➖' },
+    { id: 13, name: 'مطعم فلفل', type: 'مشروع كبير', basePrice: 2500000, price: 2500000, profit: 250000, emoji: '🌶️', trend: '➖' },
+    { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '🥪', trend: '➖' }
 ];
 
-// تحديث البورصة كل 5 دقائق مع تحديث عداد الوقت
+// تحديث البورصة كل 5 دقائق مع تباين عشوائي مستقل لكل عقار
 setInterval(async () => {
     marketItems.forEach(item => {
-        const multiplier = (Math.random() * 0.95) + 0.55;
-        item.price = Math.floor(item.basePrice * multiplier);
+        const oldPrice = item.price;
+        const randomPercent = (Math.random() * 0.60) - 0.25; 
+        let newPrice = Math.floor(item.basePrice * (1 + randomPercent));
+        
+        if (newPrice < Math.floor(item.basePrice * 0.4)) newPrice = Math.floor(item.basePrice * 0.4);
+        
+        item.price = newPrice;
         item.profit = Math.floor(item.price * 0.10);
+
+        if (item.price > oldPrice) {
+            item.trend = '📈';
+        } else if (item.price < oldPrice) {
+            item.trend = '📉';
+        } else {
+            item.trend = '➖';
+        }
     });
 
-    marketNextUpdate = Date.now() + (5 * 60 * 1000); // تحديث توقيت الـ 5 دقائق القادمة
+    marketNextUpdate = Date.now() + (5 * 60 * 1000);
 
     const embed = new EmbedBuilder()
         .setColor('#F1C40F')
         .setTitle('📈 تنبيه بورصة العقارات والأعمال')
-        .setDescription('🔄 **تم تجديد وتحديث أسعار وأرباح السوق الآن!**\nتأكد من زيارة السوق باستخدام أمر `!سوق` لمعرفة الأسعار الجديدة.')
+        .setDescription('🔄 **تم تجديد وتحديث أسعار وأرباح السوق الآن!**\nتأكد من زيارة السوق باستخدام أمر `!سوق` لمعرفة الأسعار والأسهم الجديدة.')
         .setTimestamp();
 
     for (const channelId of allowedEconomyChannels) {
@@ -1133,7 +1145,7 @@ client.on('messageCreate', async message => {
                   { name: '⭐ رصيد النقاط', value: `\`${~~ptsData.points} نقطة\``, inline: true },
                   { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
                   { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
-                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`{ptsData.messagesCount} رسالة\``, inline: true }
+                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الهوية والإنجازات' })
               .setTimestamp();
@@ -1171,7 +1183,7 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed], components: [row] });
       }
 
-      // --- أمر السوق مع التايمر التنازلي المحدث تلقائياً ---
+      // --- أمر السوق (مع أسهم الحركة وتايمر التجديد وزر الشراء المباشر) ---
       if (message.content === '!سوق') {
           const unixTime = Math.floor(marketNextUpdate / 1000);
           
@@ -1181,15 +1193,21 @@ client.on('messageCreate', async message => {
               .setDescription(`⏳ **يتجدد السوق وتتغير الأسعار:** <t:${unixTime}:R> (<t:${unixTime}:t>)`);
 
           marketItems.forEach(i => embed.addFields({ 
-              name: `[${i.id}] ${i.emoji} ${i.name}`, 
+              name: `[${i.id}] ${i.emoji} ${i.name} ${i.trend}`, 
               value: `💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, 
               inline: true 
           }));
 
-          return message.channel.send({ embeds: [embed] });
+          const buyButtonRow = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                  .setCustomId('open_buy_menu')
+                  .setLabel('🛒 شراء عقار')
+                  .setStyle(ButtonStyle.Success)
+          );
+
+          return message.channel.send({ embeds: [embed], components: [buyButtonRow] });
       }
 
-      // --- نظام الشراء التفاعلي بالقائمة المنسدلة عند كتابة !شراء ---
       if (message.content === '!شراء') {
           const user = await getEconomyUser(guildId, userId);
           
@@ -1439,11 +1457,37 @@ client.on('messageCreate', async message => {
   }
 });
 
-// معالج تفاعل القوائم المنسدلة (للشراء واختيار الوظائف)
+// معالج تفاعل الأزرار والقوائم المنسدلة
 client.on('interactionCreate', async interaction => {
+    if (interaction.isButton()) {
+        if (interaction.customId === 'open_buy_menu') {
+            const user = await getEconomyUser(interaction.guild.id, interaction.user.id);
+            
+            const options = marketItems.map((item) => ({
+                label: `${item.name} (${item.type})`,
+                description: `السعر: $${item.price.toLocaleString()} | الربح: $${item.profit.toLocaleString()}`,
+                value: `buy_${item.id}`,
+                emoji: item.emoji || '💼'
+            }));
+
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('market_buy_select')
+                    .setPlaceholder('🛒 اختر العقار أو المحل الذي تريد شراءه...')
+                    .addOptions(options)
+            );
+
+            return interaction.reply({
+                content: `🛍️ **متجر وسوق العقارات والأعمال**\nرصيدك الحالي: \`$${user.balance.toLocaleString()}\`\nاختر من القائمة أدناه للشراء فورا:`,
+                components: [row],
+                ephemeral: true
+            });
+        }
+    }
+
     if (!interaction.isStringSelectMenu()) return;
     
-    // نظام شراء العقارات
+    // نظام شراء العقارات عبر القائمة المنسدلة
     if (interaction.customId === 'market_buy_select') {
         const guildId = interaction.guild.id;
         const userId = interaction.user.id;
