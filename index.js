@@ -1137,15 +1137,72 @@ client.on('messageCreate', async message => {
       }
 
       // نظام الوظائف
-      if (message.content === '!وظائف') {
-          const embed = new EmbedBuilder().setColor('#3498DB').setTitle('👔 سلّم الوظائف في السيرفر (20 وظيفة)');
-          let desc = '';
-          for (let key in jobsList) {
-              const j = jobsList[key];
-              desc += `• **${j.name}** | الراتب: \`$${j.salary.toLocaleString()}\` | الشرط: \`Level ${j.level}\` (الرمز: \`${key}\`)\n`;
-          }
-          embed.setDescription(desc);
-          return message.channel.send({ embeds: [embed] });
+  if (message.content === '!وظائف') {
+          const embed1 = new EmbedBuilder()
+              .setColor('#3498DB')
+              .setTitle('👔 سلّم الوظائف في السيرفر (الجزء الأول: 1 - 10)')
+              .setDescription(
+                  '• **مواطن 🇸🇦** | الراتب: `$500` | الشرط: `Level 1` (الرمز: `مواطن`)\n' +
+                  '• **حارس أمن 🛡️** | الراتب: `$700` | الشرط: `Level 2` (الرمز: `حارس_أمن`)\n' +
+                  '• **عامل توصيل 📦** | الراتب: `$900` | الشرط: `Level 3` (الرمز: `عامل_توصيل`)\n' +
+                  '• **كاشير 🛒** | الراتب: `$1,100` | الشرط: `Level 4` (الرمز: `كاشير`)\n' +
+                  '• **ساقي قهوة (بارستا) ☕** | الراتب: `$1,350` | الشرط: `Level 5` (الرمز: `بارستا`)\n' +
+                  '• **كاتب محتوى 📝** | الراتب: `$1,600` | الشرط: `Level 6` (الرمز: `كاتب_محتوى`)\n' +
+                  '• **محاسب 📊** | الراتب: `$1,900` | الشرط: `Level 7` (الرمز: `محاسب`)\n' +
+                  '• **مصمم جرافيك 🎨** | الراتب: `$2,200` | الشرط: `Level 8` (الرمز: `مصمم`)\n' +
+                  '• **صحفي 📰** | الراتب: `$2,500` | الشرط: `Level 9` (الرمز: `صحفي`)\n' +
+                  '• **شرطي 👮‍♂️** | الراتب: `$2,900` | الشرط: `Level 10` (الرمز: `شرطي`)'
+              )
+              .setFooter({ text: 'صفحة 1 من 2 • استخدم الزر أدناه للانتقال' });
+
+          const embed2 = new EmbedBuilder()
+              .setColor('#E67E22')
+              .setTitle('👔 سلّم الوظائف في السيرفر (الجزء الثاني: 11 - 40)')
+              .setDescription(
+                  '• **مهندس 💻** | الراتب: `$3,400` | الشرط: `Level 12` (الرمز: `مهندس`)\n' +
+                  '• **محامي ⚖️** | الراتب: `$4,000` | الشرط: `Level 14` (الرمز: `محامي`)\n' +
+                  '• **طبيب 🩺** | الراتب: `$4,700` | الشرط: `Level 16` (الرمز: `طبيب`)\n' +
+                  '• **مبرمج ⚡** | الراتب: `$5,500` | الشرط: `Level 18` (الرمز: `مبرمج`)\n' +
+                  '• **مستشار مالي 💼** | الراتب: `$6,400` | الشرط: `Level 20` (الرمز: `مستشار`)\n' +
+                  '• **رائد فضاء 🚀** | الراتب: `$7,500` | الشرط: `Level 23` (الرمز: `رائد_فضاء`)\n' +
+                  '• **طيار ✈️** | الراتب: `$8,800` | الشرط: `Level 26` (الرمز: `طيار`)\n' +
+                  '• **قاضي 🏛️** | الراتب: `$10,300` | الشرط: `Level 30` (الرمز: `قاضي`)\n' +
+                  '• **مدير تنفيذي (CEO) 👔** | الراتب: `$12,500` | الشرط: `Level 35` (الرمز: `مدير_تنفيذي`)\n' +
+                  '• **رجل أعمال أسطوري 👑** | الراتب: `$15,000` | الشرط: `Level 40` (الرمز: `رجل_أعمال`)'
+              )
+              .setFooter({ text: 'صفحة 2 من 2 • استخدم الزر أدناه للعودة' });
+
+          const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('job_page_1').setLabel('📄 الصفحة الأولى').setStyle(ButtonStyle.Primary).setDisabled(true),
+              new ButtonBuilder().setCustomId('job_page_2').setLabel('📄 الصفحة الثانية').setStyle(ButtonStyle.Secondary)
+          );
+
+          const msg = await message.channel.send({ embeds: [embed1], components: [row] });
+          const collector = msg.createMessageComponentCollector({ time: 60000 });
+
+          collector.on('collect', async i => {
+              if (i.user.id !== userId) return i.reply({ content: '❌ هذه القائمة ليست لك!', ephemeral: true });
+              await i.deferUpdate().catch(()=>{});
+
+              if (i.customId === 'job_page_1') {
+                  const newRow = new ActionRowBuilder().addComponents(
+                      new ButtonBuilder().setCustomId('job_page_1').setLabel('📄 الصفحة الأولى').setStyle(ButtonStyle.Primary).setDisabled(true),
+                      new ButtonBuilder().setCustomId('job_page_2').setLabel('📄 الصفحة الثانية').setStyle(ButtonStyle.Secondary).setDisabled(false)
+                  );
+                  await msg.edit({ embeds: [embed1], components: [newRow] });
+              } else if (i.customId === 'job_page_2') {
+                  const newRow = new ActionRowBuilder().addComponents(
+                      new ButtonBuilder().setCustomId('job_page_1').setLabel('📄 الصفحة الأولى').setStyle(ButtonStyle.Secondary).setDisabled(false),
+                      new ButtonBuilder().setCustomId('job_page_2').setLabel('📄 الصفحة الثانية').setStyle(ButtonStyle.Primary).setDisabled(true)
+                  );
+                  await msg.edit({ embeds: [embed2], components: [newRow] });
+              }
+          });
+
+          collector.on('end', () => {
+              msg.edit({ components: [] }).catch(()=>{});
+          });
+          return;
       }
 
       if (message.content.startsWith('!وظيفة')) {
