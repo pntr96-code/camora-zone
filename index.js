@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, UserSelectMenuBuilder } = require('discord.js');
 const { GoogleGenAI } = require('@google/genai');
 const { MongoClient } = require('mongodb');
 
@@ -265,7 +265,7 @@ client.once('clientReady', () => {
   client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
 });
 
-// قائمة الألعاب النصية ومعها صفين كاملة من الأزرار تحتها لكل الألعاب
+// قائمة الألعاب النصية ومعها أزرار لكل الألعاب (بضغطة زر واحدة تشغل اللعبة فوراً)
 function sendGamesMenu(channel) {
     const embed = new EmbedBuilder()
         .setColor('#5865F2')
@@ -279,7 +279,6 @@ function sendGamesMenu(channel) {
         )
         .setFooter({ text: '🛑 لإلغاء أي لعبة جارية اكتب: !ايقاف' });
 
-    // صف الأزرار الأول (الألعاب الكبرى والتفاعلية)
     const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('btn_xo').setLabel('❌ XO').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId('btn_rps').setLabel('🪨 حجر ورقة مقص').setStyle(ButtonStyle.Success),
@@ -287,7 +286,6 @@ function sendGamesMenu(channel) {
         new ButtonBuilder().setCustomId('btn_roulette').setLabel('🔫 روليت').setStyle(ButtonStyle.Danger)
     );
 
-    // صف الأزرار الثاني (الألعاب السريعة والذكاء)
     const row2 = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('btn_scramble').setLabel('🧩 فكك').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('btn_reverse').setLabel('🔄 عكس').setStyle(ButtonStyle.Secondary),
@@ -295,7 +293,6 @@ function sendGamesMenu(channel) {
         new ButtonBuilder().setCustomId('btn_trivia').setLabel('🧠 ذكاء').setStyle(ButtonStyle.Secondary)
     );
 
-    // صف الأزرار الثالث (الألعاب التفاعلية والصناديق)
     const row3 = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('btn_penalty').setLabel('⚽ بلنتي').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId('btn_mines').setLabel('⚠️ ألغام').setStyle(ButtonStyle.Primary),
@@ -305,7 +302,7 @@ function sendGamesMenu(channel) {
     );
 
     channel.send({ embeds: [embed], components: [row1, row2, row3] }).then(msg => {
-        const coll = msg.createMessageComponentCollector({ time: 300000 }); // تبقى الأزرار شغالـة 5 دقائق
+        const coll = msg.createMessageComponentCollector({ time: 300000 });
         
         coll.on('collect', async i => {
             const action = i.customId.replace('btn_', '');
@@ -328,30 +325,30 @@ function sendGamesMenu(channel) {
                 await i.deferUpdate().catch(()=>{});
                 launchXOGame(i.channel, i.guild.id, i.user, null);
             } else if (action === 'exec_xo_pvp') {
-                await i.update({ content: `👥 **[لعبة XO الثنائية]**\nمنشن خويك في الشات الآن (مثال: @شخص) لبدء التحدي!`, components: [] });
-                const mColl = i.channel.createMessageCollector({ filter: m => m.author.id === i.user.id, time: 20000, max: 1 });
-                mColl.on('collect', async m => {
-                    const opponent = m.mentions.users.first();
-                    if (!opponent || opponent.bot || opponent.id === i.user.id) {
-                        return i.channel.send('❌ لم تقم بمنشن شخص صحيح! إلغاء التحدي.');
-                    }
-                    launchXOGame(i.channel, i.guild.id, i.user, opponent);
-                });
+                // بدلاً من انتظار كتابة الاسم، نستخدم قائمة اختيار الأعضاء لتجنب انتهاء المهلة
+                await i.update({ content: `👥 **[لعبة XO الثنائية]**\nاختر خصمك من القائمة أدناه:`, components: [
+                    new ActionRowBuilder().addComponents(
+                        new (require('discord.js').UserSelectMenuBuilder)()
+                            .setCustomId('select_xo_opponent')
+                            .setPlaceholder('اختر خصمك من هنا...')
+                            .setMinValues(1)
+                            .setMaxValues(1)
+                    )
+                ] });
             } else if (action === 'exec_rps_bot') {
                 await i.deferUpdate().catch(()=>{});
                 startRPSBotGame({ channel: i.channel, author: i.user }, i.guild.id);
             } else if (action === 'exec_rps_pvp') {
-                await i.update({ content: `👥 **[تحدي حجر ورقة مقص الثنائي]**\nمنشن خويك في الشات الآن لبدء التحدي!`, components: [] });
-                const mColl = i.channel.createMessageCollector({ filter: m => m.author.id === i.user.id, time: 20000, max: 1 });
-                mColl.on('collect', async m => {
-                    const opponent = m.mentions.users.first();
-                    if (!opponent || opponent.bot || opponent.id === i.user.id) {
-                        return i.channel.send('❌ لم تقم بمنشن شخص صحيح! إلغاء التحدي.');
-                    }
-                    launchRPSPvPGame(i.channel, i.guild.id, i.user, opponent);
-                });
+                await i.update({ content: `👥 **[تحدي حجر ورقة مقص الثنائي]**\nاختر خصمك من القائمة أدناه:`, components: [
+                    new ActionRowBuilder().addComponents(
+                        new (require('discord.js').UserSelectMenuBuilder)()
+                            .setCustomId('select_rps_opponent')
+                            .setPlaceholder('اختر خصمك من هنا...')
+                            .setMinValues(1)
+                            .setMaxValues(1)
+                    )
+                ] });
             } else {
-                // باقي الألعاب تبدأ بضغطة زر واحدة مباشرة
                 await i.deferUpdate().catch(()=>{});
                 if (action === 'bomb') startBombGame(i.channel, i.guild.id);
                 if (action === 'roulette') {
@@ -372,6 +369,26 @@ function sendGamesMenu(channel) {
                 if (action === 'race') startRaceGame(i.channel, i.guild.id, i.user.id);
                 if (action === 'vault') startVaultGame(i.channel, i.guild.id, i.user.id);
                 if (action === 'boxes') startBoxesGame(i.channel, i.guild.id, i.user.id);
+            }
+        });
+
+        // استقبال اختيار العضو من القائمة المنسدلة للعب الثنائي الفوري بدون أخطاء وقت
+        client.on('interactionCreate', async interaction => {
+            if (!interaction.isUserSelectMenu()) return;
+            if (interaction.customId === 'select_xo_opponent') {
+                const opponent = interaction.users.first();
+                if (opponent.bot || opponent.id === interaction.user.id) {
+                    return interaction.reply({ content: '❌ لا يمكنك تحدي بوت أو نفسك!', ephemeral: true });
+                }
+                await interaction.update({ content: `✅ تم اختيار الخصم ${opponent}! تبدأ لعبة XO الآن:`, components: [] });
+                launchXOGame(interaction.channel, interaction.guild.id, interaction.user, opponent);
+            } else if (interaction.customId === 'select_rps_opponent') {
+                const opponent = interaction.users.first();
+                if (opponent.bot || opponent.id === interaction.user.id) {
+                    return interaction.reply({ content: '❌ لا يمكنك تحدي بوت أو نفسك!', ephemeral: true });
+                }
+                await interaction.update({ content: `✅ تم اختيار الخصم ${opponent}! يبدأ التحدي الآن:`, components: [] });
+                launchRPSPvPGame(interaction.channel, interaction.guild.id, interaction.user, opponent);
             }
         });
     });
@@ -1293,7 +1310,7 @@ client.on('messageCreate', async message => {
 
   // الألعاب والفعاليات
   if (allowedChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
-      if (message.content === '!فعالية' || message.content === '!لعبة') {
+      if (message.content === '!فعالية' || message.content === '!لعبة' || message.content === '!العب') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة في هذه الروم!');
           const r = Math.floor(Math.random() * 16);
           if (r === 0) startBombGame(message.channel, guildId);
@@ -1306,7 +1323,7 @@ client.on('messageCreate', async message => {
           else if (r === 7) startGuessGame(message.channel, guildId);
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
-          else if (r === 10) startRPSGame(message.channel, guildId);
+          else if (r === 10) startRPSGame(message, guildId);
           else if (r === 11) startPenaltyGame(message.channel, guildId);
           else if (r === 12) startMinesGame(message.channel, guildId, userId);
           else if (r === 13) startRaceGame(message.channel, guildId, userId);
@@ -1315,7 +1332,7 @@ client.on('messageCreate', async message => {
           return;
       }
 
-      if (message.content === '!العاب') return sendGamesMenu(message.channel);
+      if (message.content === '!العاب' || message.content === '!العب') return sendGamesMenu(message.channel);
 
       const text = message.content.toLowerCase();
       if (text.startsWith('!حجر') || text.startsWith('حجر')) return startRPSGame(message, guildId);
