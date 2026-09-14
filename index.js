@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { GoogleGenAI } = require('@google/genai');
 const { MongoClient } = require('mongodb');
 
@@ -68,7 +68,7 @@ const jobsList = {
 };
 
 let marketItems = [
-    { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '☕' },
+    { id: 1, name: 'بسطة شاي جمر', type: 'مشروع صغير', basePrice: 2000, price: 2000, profit: 200, emoji: '🫖' },
     { id: 2, name: 'ورشة سيارات', type: 'صيانة', basePrice: 15000, price: 15000, profit: 1500, emoji: '🔧' },
     { id: 3, name: 'شقة مفروشة بالرياض', type: 'عقار', basePrice: 45000, price: 45000, profit: 4500, emoji: '🏢' },
     { id: 4, name: 'تسالي', type: 'مطعم', basePrice: 85000, price: 85000, profit: 8500, emoji: '🍔' },
@@ -81,8 +81,7 @@ let marketItems = [
     { id: 11, name: 'اجدان ووك', type: 'مشروع كبير', basePrice: 1250000, price: 1250000, profit: 125000, emoji: '🏙️' },
     { id: 12, name: 'فرنش شايز كيان', type: 'مشروع صغير', basePrice: 7500, price: 7500, profit: 750, emoji: '🥤' },
     { id: 13, name: 'مطعم فلفل', type: 'مشروع كبير', basePrice: 2500000, price: 2500000, profit: 250000, emoji: '🌶️' },
-    { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '🥪' },
-
+    { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '🥪' }
 ];
 
 // تحديث البورصة كل 5 دقائق
@@ -1050,7 +1049,7 @@ client.on('messageCreate', async message => {
               { name: '💵 الأساسيات', value: '`!راتب` | `!بنك`', inline: false },
               { name: '👤 الهوية', value: '`!هوية`', inline: false },
               { name: '👔 الوظائف', value: '`!وظائف` | `!وظيفة [الرمز]`', inline: false },
-              { name: '📈 السوق', value: '`!سوق` | `!شراء [رقم]` | `!بيع [رقم]` | `!املاكي`', inline: false },
+              { name: '📈 السوق', value: '`!سوق` | `!شراء` | `!بيع [رقم]` | `!املاكي`', inline: false },
               { name: '🦹‍♂️ الجريمة والحظ', value: '`!سرقة [@شخص]` | `!حظ [المبلغ]` | `!صندوق`', inline: false },
               { name: '🎯 المهام', value: '`!مهامي` | `!تحويل [@شخص] [المبلغ]`', inline: false }
           );
@@ -1169,15 +1168,28 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
 
-      if (message.content.startsWith('!شراء ')) {
-          const id = parseInt(message.content.split(' ')[1]);
-          const item = marketItems.find(i => i.id === id);
-          if (!item) return message.reply('❌ رقم العقار خطأ!');
-          let user = await getEconomyUser(guildId, userId);
-          if (user.balance < item.price) return message.reply('💸 فلوسك ما تكفي لشراء هذا العقار!');
-          user.balance -= item.price; user.properties.push(id);
-          await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🎉 شريت **${item.name}** بـ **$${item.price.toLocaleString()}**!`);
+      // --- نظام الشراء التفاعلي بالقائمة المنسدلة عند كتابة !شراء ---
+      if (message.content === '!شراء') {
+          const user = await getEconomyUser(guildId, userId);
+          
+          const options = marketItems.map((item) => ({
+              label: `${item.name} (${item.type})`,
+              description: `السعر: $${item.price.toLocaleString()} | الربح: $${item.profit.toLocaleString()}`,
+              value: `buy_${item.id}`,
+              emoji: item.emoji || '💼'
+          }));
+
+          const row = new ActionRowBuilder().addComponents(
+              new StringSelectMenuBuilder()
+                  .setCustomId('market_buy_select')
+                  .setPlaceholder('🛒 اختر العقار أو المحل الذي تريد شراءه...')
+                  .addOptions(options)
+          );
+
+          return message.channel.send({
+              content: `🛍️ **متجر وسوق العقارات والأعمال**\nرصيدك الحالي: \`$${user.balance.toLocaleString()}\`\nاختر من القائمة أدناه للشراء فورا:`,
+              components: [row]
+          });
       }
 
       if (message.content === '!املاكي') {
@@ -1230,15 +1242,14 @@ client.on('messageCreate', async message => {
           }
       }
 
-   if (message.content.startsWith('!حظ')) {
+      if (message.content.startsWith('!حظ')) {
           const amt = parseInt(message.content.split(' ')[1]);
           if (isNaN(amt) || amt <= 50) return message.reply('❌ أدخل مبلغ مراهنة صحيح (أقل مبلغ 50): `!حظ [المبلغ]`');
           
           let user = await getEconomyUser(guildId, userId);
           
-          // فحص التايمر (5 دقائق)
           const now = Date.now();
-          const cooldown = 5 * 60 * 1000;
+          const cooldown = 5 * 60 * 1000; // 5 دقائق
           if (user.lastGambling && (now - user.lastGambling < cooldown)) {
               const remainingMs = cooldown - (now - user.lastGambling);
               const m = Math.floor(remainingMs / 60000);
@@ -1248,7 +1259,7 @@ client.on('messageCreate', async message => {
 
           if (user.balance < amt) return message.reply('💸 رصيدك الكاش ما يكفي للمبلغ اللي تبيه!');
           
-          user.lastGambling = now; // حفظ وقت المحاولة الحالية
+          user.lastGambling = now;
           
           const roll = Math.random();
           if (roll < 0.40) { user.balance -= amt; message.reply(`😢 خسرت رهنتك وراحت عليك **$${amt.toLocaleString()}**!`); }
@@ -1405,6 +1416,33 @@ client.on('messageCreate', async message => {
           return message.channel.send('🛑 **تم إيقاف اللعبة الجارية بنجاح!**');
       }
   }
+});
+
+// معالج تفاعل قائمة الشراء المنسدلة
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isStringSelectMenu()) return;
+    if (interaction.customId === 'market_buy_select') {
+        const guildId = interaction.guild.id;
+        const userId = interaction.user.id;
+        const selectedId = parseInt(interaction.values[0].replace('buy_', ''));
+
+        const item = marketItems.find(i => i.id === selectedId);
+        if (!item) return interaction.reply({ content: '❌ العقار غير موجود!', ephemeral: true });
+
+        let user = await getEconomyUser(guildId, userId);
+        if (user.balance < item.price) {
+            return interaction.reply({ content: `💸 رصيدك الحالي ($${user.balance.toLocaleString()}) لا يكفي لشراء **${item.name}** ($${item.price.toLocaleString()})!`, ephemeral: true });
+        }
+
+        user.balance -= item.price;
+        user.properties.push(selectedId);
+        await saveEconomyUser(guildId, userId, user);
+
+        await interaction.update({
+            content: `🎉 **مبروك يا ${interaction.user}!** شريت **${item.emoji || '🏢'} ${item.name}** بنجاح مقابل \`$${item.price.toLocaleString()}\`! 🚀`,
+            components: []
+        });
+    }
 });
 
 client.login(DISCORD_TOKEN);
