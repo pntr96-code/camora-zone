@@ -1048,7 +1048,7 @@ client.on('messageCreate', async message => {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
               { name: '💵 الأساسيات', value: '`!راتب` | `!بنك`', inline: false },
               { name: '👤 الهوية', value: '`!هوية`', inline: false },
-              { name: '👔 الوظائف', value: '`!وظائف` | `!وظيفة [الرمز]`', inline: false },
+              { name: '👔 الوظائف', value: '`!وظائف`', inline: false },
               { name: '📈 السوق', value: '`!سوق` | `!شراء` | `!بيع [رقم]` | `!املاكي`', inline: false },
               { name: '🦹‍♂️ الجريمة والحظ', value: '`!سرقة [@شخص]` | `!حظ [المبلغ]` | `!صندوق`', inline: false },
               { name: '🎯 المهام', value: '`!مهامي` | `!تحويل [@شخص] [المبلغ]`', inline: false }
@@ -1136,87 +1136,34 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [profileEmbed] });
       }
 
-      // نظام الوظائف
-  if (message.content === '!وظائف') {
-          const embed1 = new EmbedBuilder()
-              .setColor('#3498DB')
-              .setTitle('👔 سلّم الوظائف في السيرفر (الجزء الأول: 1 - 10)')
-              .setDescription(
-                  '• **مواطن 🇸🇦** | الراتب: `$500` | الشرط: `Level 1` (الرمز: `مواطن`)\n' +
-                  '• **حارس أمن 🛡️** | الراتب: `$700` | الشرط: `Level 2` (الرمز: `حارس_أمن`)\n' +
-                  '• **عامل توصيل 📦** | الراتب: `$900` | الشرط: `Level 3` (الرمز: `عامل_توصيل`)\n' +
-                  '• **كاشير 🛒** | الراتب: `$1,100` | الشرط: `Level 4` (الرمز: `كاشير`)\n' +
-                  '• **ساقي قهوة (بارستا) ☕** | الراتب: `$1,350` | الشرط: `Level 5` (الرمز: `بارستا`)\n' +
-                  '• **كاتب محتوى 📝** | الراتب: `$1,600` | الشرط: `Level 6` (الرمز: `كاتب_محتوى`)\n' +
-                  '• **محاسب 📊** | الراتب: `$1,900` | الشرط: `Level 7` (الرمز: `محاسب`)\n' +
-                  '• **مصمم جرافيك 🎨** | الراتب: `$2,200` | الشرط: `Level 8` (الرمز: `مصمم`)\n' +
-                  '• **صحفي 📰** | الراتب: `$2,500` | الشرط: `Level 9` (الرمز: `صحفي`)\n' +
-                  '• **شرطي 👮‍♂️** | الراتب: `$2,900` | الشرط: `Level 10` (الرمز: `شرطي`)'
-              )
-              .setFooter({ text: 'صفحة 1 من 2 • استخدم الزر أدناه للانتقال' });
+      // --- نظام اختيار الوظائف بالقائمة المنسدلة النظيفة (بدون زحمة شات) ---
+      if (message.content === '!وظائف') {
+          const pUser = await getPointsUser(guildId, userId, message.author.displayName);
+          const user = await getEconomyUser(guildId, userId);
 
-          const embed2 = new EmbedBuilder()
-              .setColor('#E67E22')
-              .setTitle('👔 سلّم الوظائف في السيرفر (الجزء الثاني: 11 - 40)')
-              .setDescription(
-                  '• **مهندس 💻** | الراتب: `$3,400` | الشرط: `Level 12` (الرمز: `مهندس`)\n' +
-                  '• **محامي ⚖️** | الراتب: `$4,000` | الشرط: `Level 14` (الرمز: `محامي`)\n' +
-                  '• **طبيب 🩺** | الراتب: `$4,700` | الشرط: `Level 16` (الرمز: `طبيب`)\n' +
-                  '• **مبرمج ⚡** | الراتب: `$5,500` | الشرط: `Level 18` (الرمز: `مبرمج`)\n' +
-                  '• **مستشار مالي 💼** | الراتب: `$6,400` | الشرط: `Level 20` (الرمز: `مستشار`)\n' +
-                  '• **رائد فضاء 🚀** | الراتب: `$7,500` | الشرط: `Level 23` (الرمز: `رائد_فضاء`)\n' +
-                  '• **طيار ✈️** | الراتب: `$8,800` | الشرط: `Level 26` (الرمز: `طيار`)\n' +
-                  '• **قاضي 🏛️** | الراتب: `$10,300` | الشرط: `Level 30` (الرمز: `قاضي`)\n' +
-                  '• **مدير تنفيذي (CEO) 👔** | الراتب: `$12,500` | الشرط: `Level 35` (الرمز: `مدير_تنفيذي`)\n' +
-                  '• **رجل أعمال أسطوري 👑** | الراتب: `$15,000` | الشرط: `Level 40` (الرمز: `رجل_أعمال`)'
-              )
-              .setFooter({ text: 'صفحة 2 من 2 • استخدم الزر أدناه للعودة' });
+          const options = Object.keys(jobsList).map(key => {
+              const j = jobsList[key];
+              const isUnlocked = pUser.level >= j.level;
+              return {
+                  label: `${j.name} (راتب: $${j.salary.toLocaleString()})`,
+                  description: isUnlocked ? `✨ متاحة! تتطلب Level ${j.level}` : `🔒 مغلقة! تتطلب Level ${j.level}`,
+                  value: `job_${key}`
+              };
+          });
 
           const row = new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId('job_page_1').setLabel('📄 الصفحة الأولى').setStyle(ButtonStyle.Primary).setDisabled(true),
-              new ButtonBuilder().setCustomId('job_page_2').setLabel('📄 الصفحة الثانية').setStyle(ButtonStyle.Secondary)
+              new StringSelectMenuBuilder()
+                  .setCustomId('job_select_menu')
+                  .setPlaceholder('👔 اختر وظيفتك الجديدة من القائمة...')
+                  .addOptions(options)
           );
 
-          const msg = await message.channel.send({ embeds: [embed1], components: [row] });
-          const collector = msg.createMessageComponentCollector({ time: 60000 });
+          const embed = new EmbedBuilder()
+              .setColor('#3498DB')
+              .setTitle('👔 سلّم الوظائف واختيار المهنة')
+              .setDescription(`مستواك الحالي: \`Level ${pUser.level}\`\nوظيفتك الحالية: \`{user.job}\`\n\nاختر وظيفتك المطلوبة من القائمة أدناه للترقية الفورية بضغطة زر دون زحمة:`);
 
-          collector.on('collect', async i => {
-              if (i.user.id !== userId) return i.reply({ content: '❌ هذه القائمة ليست لك!', ephemeral: true });
-              await i.deferUpdate().catch(()=>{});
-
-              if (i.customId === 'job_page_1') {
-                  const newRow = new ActionRowBuilder().addComponents(
-                      new ButtonBuilder().setCustomId('job_page_1').setLabel('📄 الصفحة الأولى').setStyle(ButtonStyle.Primary).setDisabled(true),
-                      new ButtonBuilder().setCustomId('job_page_2').setLabel('📄 الصفحة الثانية').setStyle(ButtonStyle.Secondary).setDisabled(false)
-                  );
-                  await msg.edit({ embeds: [embed1], components: [newRow] });
-              } else if (i.customId === 'job_page_2') {
-                  const newRow = new ActionRowBuilder().addComponents(
-                      new ButtonBuilder().setCustomId('job_page_1').setLabel('📄 الصفحة الأولى').setStyle(ButtonStyle.Secondary).setDisabled(false),
-                      new ButtonBuilder().setCustomId('job_page_2').setLabel('📄 الصفحة الثانية').setStyle(ButtonStyle.Primary).setDisabled(true)
-                  );
-                  await msg.edit({ embeds: [embed2], components: [newRow] });
-              }
-          });
-
-          collector.on('end', () => {
-              msg.edit({ components: [] }).catch(()=>{});
-          });
-          return;
-      }
-
-      if (message.content.startsWith('!وظيفة')) {
-          const jobKey = message.content.split(' ')[1];
-          if (!jobKey || !jobsList[jobKey]) return message.reply('❌ يرجى إدخال رمز وظيفة صحيح! (مثال: `!وظيفة مهندس`)');
-          const targetJob = jobsList[jobKey];
-          let pUser = await getPointsUser(guildId, userId, message.author.displayName);
-          if (pUser.level < targetJob.level) {
-              return message.reply(`⛔ مستواك الحالي Level ${pUser.level} بينما وظيفة **${targetJob.name}** تتطلب Level ${targetJob.level}!`);
-          }
-          let user = await getEconomyUser(guildId, userId);
-          user.job = targetJob.name;
-          await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🎉 مبروك! تم ترقيتك رسمياً إلى وظيفة **${user.job}**! 🎖️`);
+          return message.channel.send({ embeds: [embed], components: [row] });
       }
 
       if (message.content === '!سوق') {
@@ -1475,9 +1422,11 @@ client.on('messageCreate', async message => {
   }
 });
 
-// معالج تفاعل قائمة الشراء المنسدلة
+// معالج تفاعل القوائم المنسدلة (للشراء واختيار الوظائف)
 client.on('interactionCreate', async interaction => {
     if (!interaction.isStringSelectMenu()) return;
+    
+    // نظام شراء العقارات
     if (interaction.customId === 'market_buy_select') {
         const guildId = interaction.guild.id;
         const userId = interaction.user.id;
@@ -1497,6 +1446,30 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.update({
             content: `🎉 **مبروك يا ${interaction.user}!** شريت **${item.emoji || '🏢'} ${item.name}** بنجاح مقابل \`$${item.price.toLocaleString()}\`! 🚀`,
+            components: []
+        });
+    }
+
+    // نظام اختيار الوظائف
+    if (interaction.customId === 'job_select_menu') {
+        const guildId = interaction.guild.id;
+        const userId = interaction.user.id;
+        const jobKey = interaction.values[0].replace('job_', '');
+        
+        const targetJob = jobsList[jobKey];
+        if (!targetJob) return interaction.reply({ content: '❌ الوظيفة غير موجودة!', ephemeral: true });
+
+        let pUser = await getPointsUser(guildId, userId, interaction.user.displayName);
+        if (pUser.level < targetJob.level) {
+            return interaction.reply({ content: `⛔ مستواك الحالي (Level ${pUser.level}) لا يكفي! وظيفة **${targetJob.name}** تتطلب Level ${targetJob.level}.`, ephemeral: true });
+        }
+
+        let user = await getEconomyUser(guildId, userId);
+        user.job = targetJob.name;
+        await saveEconomyUser(guildId, userId, user);
+
+        await interaction.update({
+            content: `🎉 مبروك يا ${interaction.user}! تم ترقيتك رسمياً وتعيينك في وظيفة **${user.job}** بنجاح! 🎖️🚀`,
             components: []
         });
     }
