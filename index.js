@@ -44,6 +44,9 @@ const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821'];
 const lastActivityTime = new Map();
 const lastMarketMessages = new Map();
 
+// متغير لحفظ موعد تحديث السوق القادم (كل 5 دقائق)
+let marketNextUpdate = Date.now() + (5 * 60 * 1000);
+
 const jobsList = {
     'مواطن': { name: 'مواطن 🇸🇦', salary: 500, level: 1, emoji: '🇸🇦' },
     'حارس_أمن': { name: 'حارس أمن 🛡️', salary: 700, level: 2, emoji: '🛡️' },
@@ -84,13 +87,15 @@ let marketItems = [
     { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '🥪' }
 ];
 
-// تحديث البورصة كل 5 دقائق
+// تحديث البورصة كل 5 دقائق مع تحديث عداد الوقت
 setInterval(async () => {
     marketItems.forEach(item => {
         const multiplier = (Math.random() * 0.95) + 0.55;
         item.price = Math.floor(item.basePrice * multiplier);
         item.profit = Math.floor(item.price * 0.10);
     });
+
+    marketNextUpdate = Date.now() + (5 * 60 * 1000); // تحديث توقيت الـ 5 دقائق القادمة
 
     const embed = new EmbedBuilder()
         .setColor('#F1C40F')
@@ -1128,7 +1133,7 @@ client.on('messageCreate', async message => {
                   { name: '⭐ رصيد النقاط', value: `\`${~~ptsData.points} نقطة\``, inline: true },
                   { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
                   { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
-                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
+                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`{ptsData.messagesCount} رسالة\``, inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الهوية والإنجازات' })
               .setTimestamp();
@@ -1136,7 +1141,7 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [profileEmbed] });
       }
 
-      // --- نظام اختيار الوظائف بالقائمة المنسدلة النظيفة (بدون زحمة شات) ---
+      // نظام الوظائف بالقائمة المنسدلة
       if (message.content === '!وظائف') {
           const pUser = await getPointsUser(guildId, userId, message.author.displayName);
           const user = await getEconomyUser(guildId, userId);
@@ -1161,14 +1166,26 @@ client.on('messageCreate', async message => {
           const embed = new EmbedBuilder()
               .setColor('#3498DB')
               .setTitle('👔 سلّم الوظائف واختيار المهنة')
-              .setDescription(`مستواك الحالي: \`Level ${pUser.level}\`\nوظيفتك الحالية: \`{user.job}\`\n\nاختر وظيفتك المطلوبة من القائمة أدناه للترقية الفورية بضغطة زر دون زحمة:`);
+              .setDescription(`مستواك الحالي: \`Level ${pUser.level}\`\nوظيفتك الحالية: \`${user.job}\`\n\nاختر وظيفتك المطلوبة من القائمة أدناه للترقية الفورية بضغطة زر:`);
 
           return message.channel.send({ embeds: [embed], components: [row] });
       }
 
+      // --- أمر السوق مع التايمر التنازلي المحدث تلقائياً ---
       if (message.content === '!سوق') {
-          const embed = new EmbedBuilder().setColor('#0099ff').setTitle('📈 بورصة العقارات والأعمال');
-          marketItems.forEach(i => embed.addFields({ name: `[${i.id}] ${i.emoji} ${i.name}`, value: `💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, inline: true }));
+          const unixTime = Math.floor(marketNextUpdate / 1000);
+          
+          const embed = new EmbedBuilder()
+              .setColor('#0099ff')
+              .setTitle('📈 بورصة العقارات والأعمال')
+              .setDescription(`⏳ **يتجدد السوق وتتغير الأسعار:** <t:${unixTime}:R> (<t:${unixTime}:t>)`);
+
+          marketItems.forEach(i => embed.addFields({ 
+              name: `[${i.id}] ${i.emoji} ${i.name}`, 
+              value: `💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, 
+              inline: true 
+          }));
+
           return message.channel.send({ embeds: [embed] });
       }
 
