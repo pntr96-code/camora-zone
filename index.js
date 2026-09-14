@@ -77,7 +77,12 @@ let marketItems = [
     { id: 7, name: 'برج تجاري ضخم', type: 'عقار', basePrice: 1000000, price: 1000000, profit: 100000, emoji: '🏙️' },
     { id: 8, name: 'بوفية ليالي الشرقية', type: 'مشروع صغير', basePrice: 5000, price: 5000, profit: 550, emoji: '☕' },
     { id: 9, name: 'بوفية السعادة', type: 'مشروع صغير', basePrice: 3500, price: 3500, profit: 450, emoji: '☕' },
-    { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2500, profit: 250, emoji: '🏡' }
+    { id: 10, name: 'استراحة بالرماح', type: 'عقار', basePrice: 100000, price: 100000, profit: 10000, emoji: '🏡' },
+    { id: 11, name: 'اجدان ووك', type: 'مشروع كبير', basePrice: 1250000, price: 1250000, profit: 125000, emoji: '🏙️' },
+    { id: 12, name: 'فرنش شايز كيان', type: 'مشروع صغير', basePrice: 7500, price: 7500, profit: 750, emoji: '🏙️' },
+    { id: 13, name: 'مطعم فلفل', type: 'مشروع كبير', basePrice: 2500000, price: 2500000, profit: 250000, emoji: '🏡' },
+    { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '☕' },
+
 ];
 
 // تحديث البورصة كل 5 دقائق
