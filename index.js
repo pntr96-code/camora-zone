@@ -80,7 +80,7 @@ let marketItems = [
     { id: 10, name: 'شقة مفروشة بالثقبه', type: 'مشروع صغير', basePrice: 2500, price: 2500, profit: 250, emoji: '🏡' }
 ];
 
-// تحديث البورصة كل 5 دقائق مع تجديد التنبيه وحذفه
+// تحديث البورصة كل 5 دقائق
 setInterval(async () => {
     marketItems.forEach(item => {
         const multiplier = (Math.random() * 0.95) + 0.55;
@@ -265,7 +265,7 @@ client.once('clientReady', () => {
   client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
 });
 
-// قائمة الألعاب النصية الأصلية مع أزرار XO وحجر ورقة مقص التفاعلية واختيار (بوت أو خوي)
+// قائمة الألعاب النصية ومعها صفين كاملة من الأزرار تحتها لكل الألعاب
 function sendGamesMenu(channel) {
     const embed = new EmbedBuilder()
         .setColor('#5865F2')
@@ -279,28 +279,99 @@ function sendGamesMenu(channel) {
         )
         .setFooter({ text: '🛑 لإلغاء أي لعبة جارية اكتب: !ايقاف' });
 
-    const menuRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('menu_xo_select').setLabel('❌ لعبة XO').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('menu_rps_select').setLabel('🪨 حجر ورقة مقص').setStyle(ButtonStyle.Success)
+    // صف الأزرار الأول (الألعاب الكبرى والتفاعلية)
+    const row1 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('btn_xo').setLabel('❌ XO').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('btn_rps').setLabel('🪨 حجر ورقة مقص').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('btn_bomb').setLabel('💣 قنبلة').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('btn_roulette').setLabel('🔫 روليت').setStyle(ButtonStyle.Danger)
     );
 
-    channel.send({ embeds: [embed], components: [menuRow] }).then(msg => {
-        const coll = msg.createMessageComponentCollector({ time: 120000 });
+    // صف الأزرار الثاني (الألعاب السريعة والذكاء)
+    const row2 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('btn_scramble').setLabel('🧩 فكك').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('btn_reverse').setLabel('🔄 عكس').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('btn_emoji').setLabel('😀 إيموجي').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('btn_trivia').setLabel('🧠 ذكاء').setStyle(ButtonStyle.Secondary)
+    );
+
+    // صف الأزرار الثالث (الألعاب التفاعلية والصناديق)
+    const row3 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('btn_penalty').setLabel('⚽ بلنتي').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('btn_mines').setLabel('⚠️ ألغام').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('btn_race').setLabel('🏎️ سباق').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('btn_vault').setLabel('🏦 خزنة').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('btn_boxes').setLabel('📦 صناديق').setStyle(ButtonStyle.Success)
+    );
+
+    channel.send({ embeds: [embed], components: [row1, row2, row3] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 300000 }); // تبقى الأزرار شغالـة 5 دقائق
+        
         coll.on('collect', async i => {
-            if (i.customId === 'menu_xo_select') {
-                await i.reply({ content: 'اختر نمط لعبة XO:', components: [
+            const action = i.customId.replace('btn_', '');
+
+            if (action === 'xo') {
+                await i.reply({ content: `🎮 **[لعبة XO]**\nاختر نمط اللعب يا ${i.user}:`, components: [
                     new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId('xo_bot').setLabel('🤖 ضد البوت').setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder().setCustomId('xo_pvp').setLabel('👥 مع خويك').setStyle(ButtonStyle.Success)
+                        new ButtonBuilder().setCustomId('exec_xo_bot').setLabel('🤖 ضد البوت').setStyle(ButtonStyle.Primary),
+                        new ButtonBuilder().setCustomId('exec_xo_pvp').setLabel('👥 مع خويك').setStyle(ButtonStyle.Success)
                     )
                 ], ephemeral: true });
-            } else if (i.customId === 'menu_rps_select') {
-                await i.reply({ content: 'اختر نمط لعبة حجر ورقة مقص:', components: [
+            } else if (action === 'rps') {
+                await i.reply({ content: `🎮 **[لعبة حجر ورقة مقص]**\nاختر نمط اللعب يا ${i.user}:`, components: [
                     new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId('rps_bot').setLabel('🤖 ضد البوت').setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder().setCustomId('rps_pvp').setLabel('👥 مع خويك').setStyle(ButtonStyle.Success)
+                        new ButtonBuilder().setCustomId('exec_rps_bot').setLabel('🤖 ضد البوت').setStyle(ButtonStyle.Primary),
+                        new ButtonBuilder().setCustomId('exec_rps_pvp').setLabel('👥 مع خويك').setStyle(ButtonStyle.Success)
                     )
                 ], ephemeral: true });
+            } else if (action === 'exec_xo_bot') {
+                await i.deferUpdate().catch(()=>{});
+                launchXOGame(i.channel, i.guild.id, i.user, null);
+            } else if (action === 'exec_xo_pvp') {
+                await i.update({ content: `👥 **[لعبة XO الثنائية]**\nمنشن خويك في الشات الآن (مثال: @شخص) لبدء التحدي!`, components: [] });
+                const mColl = i.channel.createMessageCollector({ filter: m => m.author.id === i.user.id, time: 20000, max: 1 });
+                mColl.on('collect', async m => {
+                    const opponent = m.mentions.users.first();
+                    if (!opponent || opponent.bot || opponent.id === i.user.id) {
+                        return i.channel.send('❌ لم تقم بمنشن شخص صحيح! إلغاء التحدي.');
+                    }
+                    launchXOGame(i.channel, i.guild.id, i.user, opponent);
+                });
+            } else if (action === 'exec_rps_bot') {
+                await i.deferUpdate().catch(()=>{});
+                startRPSBotGame({ channel: i.channel, author: i.user }, i.guild.id);
+            } else if (action === 'exec_rps_pvp') {
+                await i.update({ content: `👥 **[تحدي حجر ورقة مقص الثنائي]**\nمنشن خويك في الشات الآن لبدء التحدي!`, components: [] });
+                const mColl = i.channel.createMessageCollector({ filter: m => m.author.id === i.user.id, time: 20000, max: 1 });
+                mColl.on('collect', async m => {
+                    const opponent = m.mentions.users.first();
+                    if (!opponent || opponent.bot || opponent.id === i.user.id) {
+                        return i.channel.send('❌ لم تقم بمنشن شخص صحيح! إلغاء التحدي.');
+                    }
+                    launchRPSPvPGame(i.channel, i.guild.id, i.user, opponent);
+                });
+            } else {
+                // باقي الألعاب تبدأ بضغطة زر واحدة مباشرة
+                await i.deferUpdate().catch(()=>{});
+                if (action === 'bomb') startBombGame(i.channel, i.guild.id);
+                if (action === 'roulette') {
+                    if (activeGames.has(i.channel.id)) return i.followUp({ content: '⏳ فيه لعبة شغالة!', ephemeral: true });
+                    activeGames.set(i.channel.id, 'roulette');
+                    setTimeout(() => {
+                        activeGames.delete(i.channel.id);
+                        if (Math.floor(Math.random() * 6) + 1 === 1) i.channel.send(`💥 **بووووم!** ${i.user} خسر 💀.`);
+                        else { i.channel.send(`😅 المسدس فاضي! كسبت **10 نقاط** يا ${i.user}.`); addPoints(i.guild.id, i.user.id, i.user.displayName, i.channel); }
+                    }, 3000);
+                }
+                if (action === 'scramble') startScrambleGame(i.channel, i.guild.id);
+                if (action === 'reverse') startReverseGame(i.channel, i.guild.id);
+                if (action === 'emoji') startEmojiGame(i.channel, i.guild.id);
+                if (action === 'trivia') startTriviaGame(i.channel, i.guild.id);
+                if (action === 'penalty') startPenaltyGame({ channel: i.channel, author: i.user }, i.guild.id);
+                if (action === 'mines') startMinesGame(i.channel, i.guild.id, i.user.id);
+                if (action === 'race') startRaceGame(i.channel, i.guild.id, i.user.id);
+                if (action === 'vault') startVaultGame(i.channel, i.guild.id, i.user.id);
+                if (action === 'boxes') startBoxesGame(i.channel, i.guild.id, i.user.id);
             }
         });
     });
@@ -700,89 +771,81 @@ function startMemoryGame(message, guildId) {
     });
 }
 
-// لعبة حجر ورقة مقص (تدعم البوت أو خويك بالمنشن)
-function startRPSGame(message, guildId) {
+function startRPSBotGame(message, guildId) {
     const channel = message.channel;
     const challenger = message.author;
-    const opponent = message.mentions ? message.mentions.users.first() : null;
-
-    if (opponent && (opponent.bot || opponent.id === challenger.id)) {
-        return message.reply ? message.reply('❌ لا يمكنك تحدي بوت أو نفسك!') : channel.send('❌ لا يمكنك تحدي بوت أو نفسك!');
-    }
-
-    if (opponent) {
-        let choices = {};
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('rps_rock').setLabel('🪨 حجر').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('rps_paper').setLabel('📄 ورقة').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('rps_scissors').setLabel('✂️ مقص').setStyle(ButtonStyle.Danger)
-        );
-
-        channel.send({ content: `⚔️ **[تحدي حجر ورقة مقص الثنائي]**\nبين ${challenger} و ${opponent}\nالكل يختار حركته بسرية عبر الأزرار:`, components: [row] }).then(msg => {
-            const coll = msg.createMessageComponentCollector({ time: 20000 });
-            
-            coll.on('collect', async i => {
-                if (i.user.id !== challenger.id && i.user.id !== opponent.id) {
-                    return i.reply({ content: '❌ هذه اللعبة ليست لك!', ephemeral: true });
-                }
-                if (choices[i.user.id]) {
-                    return i.reply({ content: '⚠️ لقد اخترت مسبقاً، انتظر خصمك!', ephemeral: true });
-                }
-
-                choices[i.user.id] = i.customId.replace('rps_', '');
-                await i.reply({ content: `✅ تم تسجيل اختيارك بنجاح!`, ephemeral: true });
-
-                if (choices[challenger.id] && choices[opponent.id]) {
-                    coll.stop();
-                    const c1 = choices[challenger.id];
-                    const c2 = choices[opponent.id];
-                    const names = { rock: 'حجر 🪨', paper: 'ورقة 📄', scissors: 'مقص ✂️' };
-
-                    let resultText = `🎮 **نتيجة التحدي بين ${challenger} و ${opponent}:**\n`;
-                    resultText += `${challenger} اختر: **${names[c1]}**\n`;
-                    resultText += `${opponent} اختر: **${names[c2]}**\n\n`;
-
-                    if (c1 === c2) {
-                        resultText += `🤝 **تعادل بين اللاعبين!**`;
-                    } else if (
-                        (c1 === 'rock' && c2 === 'scissors') ||
-                        (c1 === 'paper' && c2 === 'rock') ||
-                        (c1 === 'scissors' && c2 === 'paper')
-                    ) {
-                        resultText += `🎉 **كفو الفائز هو ${challenger}** وكسب **10 نقاط**! 🌟`;
-                        addPoints(guildId, challenger.id, challenger.displayName, channel);
-                    } else {
-                        resultText += `🎉 **كفو الفائز هو ${opponent}** وكسب **10 نقاط**! 🌟`;
-                        addPoints(guildId, opponent.id, opponent.displayName, channel);
-                    }
-
-                    await msg.edit({ content: resultText, components: [] }).catch(()=>{});
-                }
-            });
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('rps_rock').setLabel('🪨 حجر').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('rps_paper').setLabel('📄 ورقة').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('rps_scissors').setLabel('✂️ مقص').setStyle(ButtonStyle.Danger)
+    );
+    channel.send({ content: `🤖 **[تحدي حجر ورقة مقص ضد البوت الذكي]**\nاختر حركتك:`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
+        coll.on('collect', async i => {
+            if (i.user.id !== challenger.id) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            await i.deferUpdate().catch(()=>{});
+            const userChoice = i.customId.replace('rps_', '');
+            const smartMoves = { rock: 'paper', paper: 'scissors', scissors: 'rock' };
+            const botChoice = Math.random() < 0.65 ? smartMoves[userChoice] : ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
+            let res = userChoice === botChoice ? `🤝 **تعادل ذكي!**` : (((userChoice === 'rock' && botChoice === 'scissors') || (userChoice === 'paper' && botChoice === 'rock') || (userChoice === 'scissors' && botChoice === 'paper')) ? `🎉 **كفو فزت على البوت!** كسبت **10 نقاط**!` : `🧠 **هزمك البوت الذكي!**`);
+            if (res.includes('فزت')) addPoints(guildId, challenger.id, challenger.displayName, channel);
+            await msg.edit({ content: res, components: [] }).catch(()=>{});
         });
-    } else {
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('rps_rock').setLabel('🪨 حجر').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('rps_paper').setLabel('📄 ورقة').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('rps_scissors').setLabel('✂️ مقص').setStyle(ButtonStyle.Danger)
-        );
-        channel.send({ content: `🤖 **[تحدي حجر ورقة مقص ضد البوت الذكي]**\nاختر حركتك:`, components: [row] }).then(msg => {
-            const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
-            coll.on('collect', async i => {
-                if (i.user.id !== challenger.id) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
-                await i.deferUpdate().catch(()=>{});
-                const userChoice = i.customId.replace('rps_', '');
-                const smartMoves = { rock: 'paper', paper: 'scissors', scissors: 'rock' };
-                const botChoice = Math.random() < 0.65 ? smartMoves[userChoice] : ['rock', 'paper', 'scissors'][Math.floor(Math.random() * 3)];
-                let res = userChoice === botChoice ? `🤝 **تعادل ذكي!**` : (((userChoice === 'rock' && botChoice === 'scissors') || (userChoice === 'paper' && botChoice === 'rock') || (userChoice === 'scissors' && botChoice === 'paper')) ? `🎉 **كفو فزت على البوت!** كسبت **10 نقاط**!` : `🧠 **هزمك البوت الذكي!**`);
-                if (res.includes('فزت')) addPoints(guildId, challenger.id, challenger.displayName, channel);
-                await msg.edit({ content: res, components: [] }).catch(()=>{});
-            });
-        });
-    }
+    });
 }
 
-// لعبة XO (تدعم البوت أو خويك بالمنشن)
+function launchRPSPvPGame(channel, guildId, challenger, opponent) {
+    let choices = {};
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('p_rock').setLabel('🪨 حجر').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('p_paper').setLabel('📄 ورقة').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('p_scissors').setLabel('✂️ مقص').setStyle(ButtonStyle.Danger)
+    );
+
+    channel.send({ content: `⚔️ **[تحدي حجر ورقة مقص الثنائي]**\nبين ${challenger} و ${opponent}\nكل لاعب يختار حركته بسرية عبر الأزرار:`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 20000 });
+        
+        coll.on('collect', async i => {
+            if (i.user.id !== challenger.id && i.user.id !== opponent.id) {
+                return i.reply({ content: '❌ هذه اللعبة ليست لك!', ephemeral: true });
+            }
+            if (choices[i.user.id]) {
+                return i.reply({ content: '⚠️ لقد اخترت مسبقاً، انتظر خصمك!', ephemeral: true });
+            }
+
+            choices[i.user.id] = i.customId.replace('p_', '');
+            await i.reply({ content: `✅ تم تسجيل اختيارك بنجاح!`, ephemeral: true });
+
+            if (choices[challenger.id] && choices[opponent.id]) {
+                coll.stop();
+                const c1 = choices[challenger.id];
+                const c2 = choices[opponent.id];
+                const names = { rock: 'حجر 🪨', paper: 'ورقة 📄', scissors: 'مقص ✂️' };
+
+                let resultText = `🎮 **نتيجة التحدي بين ${challenger} و ${opponent}:**\n`;
+                resultText += `${challenger} اختر: **${names[c1]}**\n`;
+                resultText += `${opponent} اختر: **${names[c2]}**\n\n`;
+
+                if (c1 === c2) {
+                    resultText += `🤝 **تعادل بين اللاعبين!**`;
+                } else if (
+                    (c1 === 'rock' && c2 === 'scissors') ||
+                    (c1 === 'paper' && c2 === 'rock') ||
+                    (c1 === 'scissors' && c2 === 'paper')
+                ) {
+                    resultText += `🎉 **كفو الفائز هو ${challenger}** وكسب **10 نقاط**! 🌟`;
+                    addPoints(guildId, challenger.id, challenger.displayName, channel);
+                } else {
+                    resultText += `🎉 **كفو الفائز هو ${opponent}** وكسب **10 نقاط**! 🌟`;
+                    addPoints(guildId, opponent.id, opponent.displayName, channel);
+                }
+
+                await msg.edit({ content: resultText, components: [] }).catch(()=>{});
+            }
+        });
+    });
+}
+
 function startXOGame(message, guildId) {
     const channel = message.channel;
     const challenger = message.author;
@@ -792,6 +855,10 @@ function startXOGame(message, guildId) {
         return message.reply ? message.reply('❌ لا يمكنك تحدي بوت أو نفسك!') : channel.send('❌ لا يمكنك تحدي بوت أو نفسك!');
     }
 
+    launchXOGame(channel, guildId, challenger, opponent);
+}
+
+function launchXOGame(channel, guildId, challenger, opponent, oldMsg = null) {
     let board = Array(9).fill(null);
     let currentPlayer = challenger.id;
 
@@ -826,7 +893,8 @@ function startXOGame(message, guildId) {
 
     const titleText = opponent ? `🎮 **[تحدي XO الثنائي]** بين ${challenger} و ${opponent}\nدور اللاعب: <@${currentPlayer}> (❌)` : `🎮 **[تحدي XO ضد البوت الذكي]**\nدورك (❌):`;
 
-    channel.send({ content: titleText, components: getBoardComponents() }).then(msg => {
+    const sendMethod = oldMsg ? oldMsg.edit.bind(oldMsg) : channel.send.bind(channel);
+    sendMethod({ content: titleText, components: getBoardComponents() }).then(msg => {
         const coll = msg.createMessageComponentCollector({ time: 60000 });
         coll.on('collect', async i => {
             const p1 = challenger.id;
@@ -1238,7 +1306,7 @@ client.on('messageCreate', async message => {
           else if (r === 7) startGuessGame(message.channel, guildId);
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
-          else if (r === 10) startRPSGame(message, guildId);
+          else if (r === 10) startRPSGame(message.channel, guildId);
           else if (r === 11) startPenaltyGame(message.channel, guildId);
           else if (r === 12) startMinesGame(message.channel, guildId, userId);
           else if (r === 13) startRaceGame(message.channel, guildId, userId);
