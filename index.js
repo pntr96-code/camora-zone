@@ -845,15 +845,15 @@ client.on('messageCreate', async message => {
               { name: '👤 الهوية', value: '`!هوية`', inline: false },
               { name: '👔 الوظائف', value: '`!وظائف`', inline: false },
               { name: '📈 السوق والعقارات', value: '`!سوق` | `!شراء` | `!بيع [رقم]` | `!املاكي`', inline: false },
-              { name: '🏢 الهيئات والشركات', value: '`!تأسيس-شركة [الاسم] | [شعار]`\n`!شركة` | `!ترتيب-الشركات`', inline: false },
-              { name: '💼 القروض وبنك السيرفر', value: '`!قرض [المبلغ]` | `!سداد` | `!لوحة-المتعثرين`', inline: false },
+              { name: '🏢 الهيئات والشركات', value: '`!تأسيس-شركة [الاسم] | [شعار]`\n`!شركة` | `!ترتيب-الشركات` | `!دعوة-شركة [@شخص]` | `!شعار-شركة [رابط]` | `!تعديل-اسم-الشركة [الاسم]`', inline: false },
+              { name: '💼 القروض والبنوك', value: '`!قرض [المبلغ]` | `!سداد` | `!لوحة-المتعثرين`', inline: false },
               { name: '🛡️ الحماية وسرقة البنوك (Heist)', value: '`!شراء-حارس` | `!سرقة-بنك [@خويك1] [@خويك2] [@خويك3]`', inline: false },
               { name: '🎲 الجريمة والحظ', value: '`!سرقة [@شخص]` | `!حظ [المبلغ]` | `!صندوق` | `!مهامي`', inline: false }
           );
           return message.channel.send({ embeds: [embed] });
       }
 
-      // 1. نظام الشركات والهوامير المطور
+      // 1. نظام الشركات والهوامير المطور (تأسيس، لوحة !شركة، دعوة، شعار، وتعديل الاسم)
       if (message.content.startsWith('!تأسيس-شركة')) {
           const args = message.content.replace('!تأسيس-شركة', '').trim().split('|');
           const corpName = args[0]?.trim();
@@ -893,6 +893,8 @@ client.on('messageCreate', async message => {
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الشركات والهوامير' })
               .setTimestamp();
 
+          if (corp.image) embed.setThumbnail(corp.image);
+
           const row = new ActionRowBuilder().addComponents(
               new ButtonBuilder().setCustomId('corp_donate_btn').setLabel('💸 تبرع برأس المال').setStyle(ButtonStyle.Success),
               new ButtonBuilder().setCustomId('corp_members_btn').setLabel('👥 قائمة الأعضاء').setStyle(ButtonStyle.Primary),
@@ -900,6 +902,46 @@ client.on('messageCreate', async message => {
           );
 
           return message.channel.send({ embeds: [embed], components: [row] });
+      }
+
+      if (message.content.startsWith('!دعوة-شركة')) {
+          const target = message.mentions.users.first();
+          if (!target || target.bot) return message.reply('❌ الاستخدام الصحيح: `!دعوة-شركة [@الشخص]`');
+
+          let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+          if (!corp) return message.reply('❌ عذراً، أمر الدعوة مخصص لمؤسس الشركة (المالك) فقط!');
+          if (corp.members.includes(target.id)) return message.reply('⚠️ هذا الشخص موجود في شركتك بالفعل!');
+          if (corp.members.length >= 5) return message.reply('❌ وصلت الشركة للحد الأقصى (5 أعضاء)!');
+
+          await guildsColl.updateOne({ _id: corp._id }, { $push: { members: target.id } });
+          return message.channel.send(`✅ **تمت إضافة العضو ${target} بنجاح إلى شركة ${corp.name}!** 🤝🏢`);
+      }
+
+      if (message.content.startsWith('!شعار-شركة')) {
+          const args = message.content.replace('!شعار-شركة', '').trim();
+          if (!args.startsWith('http://') && !args.startsWith('https://')) {
+              return message.reply('❌ يرجى وضع رابط صحيح للصورة أو الـ GIF!\nمثال: `!شعار-شركة https://example.com/logo.gif`');
+          }
+
+          let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+          if (!corp) return message.reply('❌ تغيير شعار وصورة الشركة مخصص لمؤسس الشركة (المالك) فقط!');
+
+          await guildsColl.updateOne({ _id: corp._id }, { $set: { image: args } });
+          return message.reply(`✅ **تم تحديث شعار وصورة شركة ${corp.name} بنجاح!** 🖼️✨`);
+      }
+
+      if (message.content.startsWith('!تعديل-اسم-الشركة')) {
+          const newName = message.content.replace('!تعديل-اسم-الشركة', '').trim();
+          if (!newName) return message.reply('❌ الاستخدام الصحيح: `!تعديل-اسم-الشركة [الاسم الجديد]`');
+
+          let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+          if (!corp) return message.reply('❌ تعديل اسم الشركة مخصص لمؤسس الشركة (المالك) فقط!');
+
+          let existing = await guildsColl.findOne({ guildId, name: newName });
+          if (existing) return message.reply('❌ اسم الشركة الجديد مستخدم مسبقاً!');
+
+          await guildsColl.updateOne({ _id: corp._id }, { $set: { name: newName } });
+          return message.reply(`✅ **تم تعديل اسم الشركة بنجاح إلى:** **${corp.logo} ${newName}** 🏢✨`);
       }
 
       if (message.content === '!ترتيب-الشركات') {
@@ -1241,7 +1283,7 @@ client.on('messageCreate', async message => {
           return message.reply(`🤝 بعت **${item.name}** بـ **$${sellP.toLocaleString()}** (بعد خصم 10% رسوم).`);
       }
 
-      if (message.content.startsWith('!سرقة ')) {
+      if (message.content.startsWith('!سرقة')) {
           const target = message.mentions.users.first();
           if (!target) return message.reply('❌ الاستخدام الصحيح: `!سرقة [@الشخص]`');
           if (target.bot || target.id === userId) return message.reply('😅 ما تقدر تسرق بوت أو تسرق نفسك!');
@@ -1288,7 +1330,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
+          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك لا يكفي!');
           user.balance -= 3000;
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
@@ -1482,7 +1524,7 @@ client.on('interactionCreate', async interaction => {
             return interaction.showModal(modal);
         }
 
-        // أزرار لوحة الشركات الملدورة (!شركة)
+        // أزرار لوحة الشركات (!شركة)
         if (interaction.customId === 'corp_donate_btn') {
             const modal = new ModalBuilder().setCustomId('corp_donate_modal').setTitle('💸 تبرع لدعم رأس مال الشركة');
             const amountInput = new TextInputBuilder().setCustomId('donate_amount').setLabel('أدخل مبلغ التبرع (بالدولار)').setStyle(TextInputStyle.Short).setRequired(true);
