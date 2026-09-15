@@ -66,12 +66,12 @@ let stockMarket = [
     { id: 'SOL', name: 'سولانا (Solana)', price: 150, base: 150, trend: '➖', emoji: '☀️' }
 ];
 
-// قائمة مشاريع وأصول الشركات المتاحة للشراء برأس مال الهيئة
+// سوق مشاريع وأصول الشركات الاستثمارية
 let corpAssetsMarket = [
-    { id: 101, name: 'مصنع تعبئة وتغليف', price: 50000, profit: 5000, emoji: '🏭' },
-    { id: 102, name: 'أسطول شحن وتوصيل', price: 120000, profit: 13000, emoji: '🚚' },
-    { id: 103, name: 'مجمع تجاري إلكتروني', price: 300000, profit: 35000, emoji: '🌐' },
-    { id: 104, name: 'برج استثماري ضخم', price: 850000, profit: 100000, emoji: '🏗️' }
+    { id: 101, name: 'مصنع تعبئة وتغليف', price: 40000, profit: 4000, emoji: '🏭' },
+    { id: 102, name: 'أسطول شحن وتوصيل', price: 95000, profit: 10000, emoji: '🚚' },
+    { id: 103, name: 'منصة تجارة إلكترونية', price: 220000, profit: 25000, emoji: '🌐' },
+    { id: 104, name: 'برج تجاري استثماري', price: 600000, profit: 75000, emoji: '🏗️' }
 ];
 
 // 1. نظام الطفرة والانهيار التلقائي (Bull Market & Black Monday)
@@ -132,6 +132,24 @@ setInterval(async () => {
         } catch (err) {}
     }
 }, 3 * 60 * 60 * 1000);
+
+// نظام توزيع أرباح أصول الشركات تلقائياً كل ساعة
+setInterval(async () => {
+    if (!guildsColl) return;
+    try {
+        const corps = await guildsColl.find({ assets: { $exists: true, $not: { $size: 0 } } }).toArray();
+        for (const corp of corps) {
+            let totalProfit = 0;
+            corp.assets.forEach(assetId => {
+                const assetItem = corpAssetsMarket.find(a => a.id === assetId);
+                if (assetItem) totalProfit += assetItem.profit;
+            });
+            if (totalProfit > 0) {
+                await guildsColl.updateOne({ _id: corp._id }, { $inc: { capital: totalProfit } });
+            }
+        }
+    } catch (e) {}
+}, 60 * 60 * 1000);
 
 // 2. نظام فحص القروض والمتعثرين والحجز التلقائي
 setInterval(async () => {
@@ -308,7 +326,7 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     await pointsColl.updateOne({ guildId: guildId, userId: userId }, { $set: doc }, { upsert: true });
 }
 
-// الألعاب النصية والكلاسيكية الكاملة
+// أ pools الألعاب النصية والكلاسيكية الكاملة
 const historyTracker = { emoji: [], meaning: [], scramble: [], reverse: [], trivia: [], capital: [], writing: [] };
 
 function getUniqueRandomItem(pool, historyKey, propertyName = null) {
@@ -853,7 +871,7 @@ client.on('messageCreate', async message => {
               { name: '👤 الهوية', value: '`!هوية`', inline: false },
               { name: '👔 الوظائف', value: '`!وظائف`', inline: false },
               { name: '📈 السوق والعقارات', value: '`!سوق` | `!شراء` | `!بيع [رقم]` | `!املاكي`', inline: false },
-              { name: '🏢 الهيئات والشركات', value: '`!تأسيس-شركة [الاسم] | [الشعار]`\n`!شركة` | `!ترتيب-الشركات` | `!دعوة-شركة [@شخص]` | `!شعار-شركة [رابط]` | `!تعديل-اسم-الشركة [الاسم]`', inline: false },
+              { name: '🏢 الهيئات والشركات', value: '`!تأسيس-شركة [الاسم] | [الشعار]`\n`!شركة` | `!مشاريع-الشركة` | `!ترتيب-الشركات` | `!دعوة-شركة [@شخص]` | `!شعار-شركة [رابط]`', inline: false },
               { name: '💼 القروض والبنوك', value: '`!قرض [المبلغ]` | `!سداد` | `!لوحة-المتعثرين`', inline: false },
               { name: '🛡️ الحماية وسرقة البنوك (Heist)', value: '`!شراء-حارس` | `!سرقة-بنك [@خويك1] [@خويك2] [@خويك3]`', inline: false },
               { name: '🎲 الجريمة والحظ', value: '`!سرقة [@شخص]` | `!حظ [المبلغ]` | `!صندوق` | `!مهامي`', inline: false }
@@ -861,7 +879,7 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
 
-      // 1. نظام الشركات والهوامير المطور (تأسيس، لوحة !شركة، دعوة، شعار، وتعديل الاسم)
+      // 1. نظام الشركات والأصول التفاعلي
       if (message.content.startsWith('!تأسيس-شركة')) {
           const args = message.content.replace('!تأسيس-شركة', '').trim().split('|');
           const corpName = args[0]?.trim();
@@ -879,7 +897,7 @@ client.on('messageCreate', async message => {
           user.balance -= creationCost;
           await saveEconomyUser(guildId, userId, user);
 
-          const newCorp = { guildId, name: corpName, logo: corpTag, ownerId: userId, members: [userId], capital: creationCost, createdAt: Date.now() };
+          const newCorp = { guildId, name: corpName, logo: corpTag, ownerId: userId, members: [userId], capital: creationCost, assets: [], createdAt: Date.now() };
           await guildsColl.insertOne(newCorp);
 
           return message.channel.send({ content: `🏢 **مبروك!** تم تأسيس شركة **${corpTag} ${corpName}** بنجاح! 🚀` });
@@ -895,19 +913,20 @@ client.on('messageCreate', async message => {
               .setDescription('مرحباً بك في لوحة تحكم شركتك التجارية. استخدم الأزرار أدناه لإدارة الهيئة:')
               .addFields(
                   { name: '👑 المؤسس', value: `<@${corp.ownerId}>`, inline: true },
-                  { name: '💰 رأس المال الإجمالي', value: `\`$${corp.capital.toLocaleString()}\``, inline: true },
-                  { name: '👥 عدد الأعضاء', value: `\`${corp.members.length} أعضاء\``, inline: true }
+                  { name: '💰 رأس المال', value: `\`$${(corp.capital || 0).toLocaleString()}\``, inline: true },
+                  { name: '👥 عدد الأعضاء', value: `\`${corp.members.length} أعضاء\``, inline: true },
+                  { name: '🏭 الأصول والمشاريع', value: `\`${corp.assets ? corp.assets.length : 0} مشاريع مملوكة\``, inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الشركات والهوامير' })
               .setTimestamp();
 
           if (corp.image) embed.setThumbnail(corp.image);
 
-          // تنظيم الأزرار في صفين بوضوح لكي تظهر جميعها تحت اللوحة
           const row1 = new ActionRowBuilder().addComponents(
               new ButtonBuilder().setCustomId('corp_donate_btn').setLabel('💸 تبرع برأس المال').setStyle(ButtonStyle.Success),
               new ButtonBuilder().setCustomId('corp_members_btn').setLabel('👥 قائمة الأعضاء').setStyle(ButtonStyle.Primary),
-              new ButtonBuilder().setCustomId('corp_leave_btn').setLabel('🚪 مغادرة الشركة').setStyle(ButtonStyle.Danger)
+              new ButtonBuilder().setCustomId('corp_assets_btn').setLabel('🏭 مشاريع الشركة').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('corp_leave_btn').setLabel('🚪 مغادرة').setStyle(ButtonStyle.Danger)
           );
 
           const row2 = new ActionRowBuilder().addComponents(
@@ -917,6 +936,40 @@ client.on('messageCreate', async message => {
           );
 
           return message.channel.send({ embeds: [embed], components: [row1, row2] });
+      }
+
+      if (message.content === '!مشاريع-الشركة' || message.content === '!سوق-الشركة') {
+          const corp = await guildsColl.findOne({ guildId, members: userId });
+          if (!corp) return message.reply('❌ أنت لست في شركة حالياً!');
+
+          const embed = new EmbedBuilder()
+              .setColor('#3498DB')
+              .setTitle(`🏭 سوق مشاريع وأصول شركة: ${corp.name}`)
+              .setDescription(`💰 **رأس مال الشركة الحالي:** \`$${(corp.capital || 0).toLocaleString()}\`\n\nاختر من القائمة أدناه لشراء مشاريع تدر أرباحاً دورية على رأس مال شركتي:`);
+
+          corpAssetsMarket.forEach(asset => {
+              embed.addFields({
+                  name: `${asset.emoji} ${asset.name}`,
+                  value: `💵 التكلفة: \`$${asset.price.toLocaleString()}\` | 📈 الربح الساعي: \`$${asset.profit.toLocaleString()}\``,
+                  inline: false
+              });
+          });
+
+          const options = corpAssetsMarket.map(asset => ({
+              label: `${asset.name} ($${asset.price.toLocaleString()})`,
+              description: `الربح الساعي: $${asset.profit.toLocaleString()}`,
+              value: `buy_asset_${asset.id}`,
+              emoji: asset.emoji
+          }));
+
+          const row = new ActionRowBuilder().addComponents(
+              new StringSelectMenuBuilder()
+                  .setCustomId('corp_buy_asset_select')
+                  .setPlaceholder('🏭 اختر مشروعاً لشراءه برأس مال الشركة...')
+                  .addOptions(options)
+          );
+
+          return message.channel.send({ embeds: [embed], components: [row] });
       }
 
       if (message.content.startsWith('!دعوة-شركة')) {
@@ -965,7 +1018,7 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder().setColor('#3498DB').setTitle('🏆 لوحة صدارة الهيئات والشركات');
           corps.forEach((c, index) => {
-              embed.addFields({ name: `${index + 1}. ${c.logo} **${c.name}**`, value: `👑 المالك: <@${c.ownerId}>\n💰 رأس المال: \`$${c.capital.toLocaleString()}\``, inline: false });
+              embed.addFields({ name: `${index + 1}. ${c.logo} **${c.name}**`, value: `👑 المالك: <@${c.ownerId}>\n💰 رأس المال: \`$${(c.capital || 0).toLocaleString()}\``, inline: false });
           });
           return message.channel.send({ embeds: [embed] });
       }
@@ -1071,7 +1124,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
-          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **$${user.guard ? '🛡️ مفعل' : '❌'}** | وظيفتك: **${user.job}**`);
+          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **${user.guard ? '🛡️ مفعل' : '❌'}** | وظيفتك: **${user.job}**`);
       }
 
       if (message.content === '!راتب' || message.content === 'راتب') {
@@ -1539,7 +1592,7 @@ client.on('interactionCreate', async interaction => {
             return interaction.showModal(modal);
         }
 
-        // أزرار لوحة الشركات المتكاملة (!شركة)
+        // أزرار لوحة الشركات (!شركة)
         if (interaction.customId === 'corp_donate_btn') {
             const modal = new ModalBuilder().setCustomId('corp_donate_modal').setTitle('💸 تبرع لدعم رأس مال الشركة');
             const amountInput = new TextInputBuilder().setCustomId('donate_amount').setLabel('أدخل مبلغ التبرع (بالدولار)').setStyle(TextInputStyle.Short).setRequired(true);
@@ -1553,6 +1606,26 @@ client.on('interactionCreate', async interaction => {
 
             const memberList = corp.members.map(id => `<@${id}>`).join('\n');
             const embed = new EmbedBuilder().setColor('#3498DB').setTitle(`👥 أعضاء شركة: ${corp.name}`).setDescription(memberList);
+            return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        if (interaction.customId === 'corp_assets_btn') {
+            const corp = await guildsColl.findOne({ guildId, members: userId });
+            if (!corp) return interaction.reply({ content: '❌ أنت لست في شركة!', ephemeral: true });
+
+            let assetList = '📭 لا توجد مشاريع مملوكة للشركة حتى الآن.';
+            if (corp.assets && corp.assets.length > 0) {
+                assetList = corp.assets.map(aId => {
+                    const item = corpAssetsMarket.find(a => a.id === aId);
+                    return item ? `• ${item.emoji} **${item.name}** (ربح ساعي: \`$${item.profit.toLocaleString()}\`)` : '';
+                }).filter(Boolean).join('\n');
+            }
+
+            const embed = new EmbedBuilder()
+                .setColor('#2ECC71')
+                .setTitle(`🏭 أصول ومشاريع شركة: ${corp.name}`)
+                .setDescription(`📊 **الأصول المملوكة حالياً:**\n${assetList}\n\n💡 أرباح هذه المشاريع تضاف تلقائياً لرأس مال الشركة كل ساعة!`);
+
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
@@ -1658,7 +1731,7 @@ client.on('interactionCreate', async interaction => {
             const targetId = interaction.fields.getTextInputValue('invite_user_id').trim();
             let corp = await guildsColl.findOne({ guildId, ownerId: userId });
             if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
-            if (corp.members.includes(targetId)) return interaction.reply({ content: '⚠️ هذا العضو موجود في شركتي مسبقاً!', ephemeral: true });
+            if (corp.members.includes(targetId)) return interaction.reply({ content: '⚠️ هذا العضو موجود في شركتك مسبقاً!', ephemeral: true });
             if (corp.members.length >= 5) return interaction.reply({ content: '❌ وصلت الشركة للحد الأقصى (5 أعضاء)!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $push: { members: targetId } });
@@ -1702,6 +1775,35 @@ client.on('interactionCreate', async interaction => {
         user.properties.push(selectedId);
         await saveEconomyUser(guildId, userId, user);
         await interaction.update({ content: `🎉 شريت **${item.name}** بـ \`$${item.price.toLocaleString()}\`!`, components: [] });
+    }
+
+    if (interaction.customId === 'corp_buy_asset_select') {
+        const guildId = interaction.guild.id;
+        const userId = interaction.user.id;
+        const assetId = parseInt(interaction.values[0].replace('buy_asset_', ''));
+        const assetItem = corpAssetsMarket.find(a => a.id === assetId);
+
+        let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+        if (!corp) {
+            return interaction.reply({ content: '❌ عذراً، شراء مشاريع وأصول الشركة مخصص لمؤسس الشركة (المالك) فقط!', ephemeral: true });
+        }
+
+        if ((corp.capital || 0) < assetItem.price) {
+            return interaction.reply({ content: `💸 رأس مال الشركة الحالي ($\`${(corp.capital || 0).toLocaleString()}\`) لا يكفي لشراء هذا المشروع (\`$${assetItem.price.toLocaleString()}\`)!`, ephemeral: true });
+        }
+
+        await guildsColl.updateOne(
+            { _id: corp._id },
+            { 
+                $inc: { capital: -assetItem.price },
+                $push: { assets: assetId }
+            }
+        );
+
+        return interaction.update({
+            content: `🎉 **تم شراء المشروع بنجاح لصالح شركة ${corp.name}!**\n• المشروع المشتري: ${assetItem.emoji} **${assetItem.name}**\n• التكلفة الخصومة من رأس المال: \`$${assetItem.price.toLocaleString()}\`\n• الربح الساعي المضاف: \`$${assetItem.profit.toLocaleString()}\` 📈🔥`,
+            components: []
+        });
     }
 
     if (interaction.customId === 'job_select_menu') {
