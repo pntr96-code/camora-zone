@@ -506,11 +506,13 @@ client.on('messageCreate', async message => {
       try {
           await message.delete().catch(() => {});
 
+          const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان الاستبيان على الخاص للأعضاء بالخلفية..**');
+
           const embed = new EmbedBuilder()
               .setColor('#5865F2')
               .setTitle('📢 إعلان هام وتطويري في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
               .setDescription(
-                  ' أهلاً بك في مجتمعنا اعرف اننا قروشناك ولاكن تحملنا شوي! 🎮🔥\n\n' +
+                  'أهلاً بك يا بطل! ندرين إننا قروشناك ولكن تحملنا شوي! 🎮🔥\n\n' +
                   'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! ' +
                   'نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
                   '📋 **شاركنا رأيك عبر استبياننا السريع (10 أسئلة ممتعة + مساحة لاقتراحاتك):**\n' +
@@ -523,21 +525,22 @@ client.on('messageCreate', async message => {
               new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
           );
 
-          // إرسال رد فوري في الروم بأن عملية الإرسال بدأت بالخلفية
-          await message.channel.send(`⏳ **جاري إرسال إعلان الاستبيان على الخاص لجميع الأعضاء.. يرجى الانتظار قليلاً.**`);
-
           await message.guild.members.fetch();
           let sentCount = 0;
 
-          for (const member of message.guild.members.cache.values()) {
-              if (member.user.bot) continue;
-              try {
-                  await member.send({ embeds: [embed], components: [row] });
-                  sentCount++;
-              } catch (e) {}
-          }
+          // تشغيل الإرسال بالخلفية بدون إيقاف استجابة البوت
+          setTimeout(async () => {
+              for (const member of message.guild.members.cache.values()) {
+                  if (member.user.bot) continue;
+                  try {
+                      await member.send({ embeds: [embed], components: [row] });
+                      sentCount++;
+                  } catch (e) {}
+              }
+              await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الاستبيان على الخاص لـ **${sentCount}** عضو في السيرفر بنجاح! 🚀`).catch(()=>{});
+          }, 100);
 
-          return message.channel.send(`✅ تم إرسال إعلان الاستبيان على الخاص لـ **${sentCount}** عضو في السيرفر بنجاح! 🚀`);
+          return;
       } catch (err) {
           console.error(err);
           return message.reply('❌ حدث خطأ أثناء إرسال إعلان الاستبيان.');
@@ -933,7 +936,7 @@ client.on('messageCreate', async message => {
                   { name: '⭐ رصيد النقاط', value: `\`${~~ptsData.points} نقطة\``, inline: true },
                   { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
                   { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
-                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
+                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`{ptsData.messagesCount} رسالة\``, inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الهوية والإنجازات' })
               .setTimestamp();
@@ -1455,8 +1458,6 @@ client.on('interactionCreate', async interaction => {
         }
 
         if (interaction.customId === 'start_survey_btn') {
-            await interaction.deferReply({ ephemeral: true });
-
             const row = new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId('survey_q1')
@@ -1469,7 +1470,7 @@ client.on('interactionCreate', async interaction => {
                         { label: '⭐ سيئة ومملة', value: 'q1_1' }
                     ])
             );
-            return interaction.followUp({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
+            return interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
         }
     }
 
