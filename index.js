@@ -1231,14 +1231,53 @@ client.on('messageCreate', async message => {
           });
       }
 
-      if (message.content === '!املاكي') {
+    if (message.content === '!املاكي') {
           const user = await getEconomyUser(guildId, userId);
-          if (user.properties.length === 0) return message.reply('مفلس! ما عندك عقارات مسجلة.');
-          const embed = new EmbedBuilder().setColor('#00FF00').setTitle(`🏠 محفظتك`);
-          user.properties.forEach((pid, idx) => {
-              const item = marketItems.find(i => i.id === pid);
-              if (item) embed.addFields({ name: `${idx+1}. ${item.emoji} ${item.name}`, value: `القيمة الحالية: $${item.price.toLocaleString()} | أرباحه بالراتب: $${item.profit.toLocaleString()}`, inline: false });
+          if (!user.properties || user.properties.length === 0) {
+              return message.reply('مفلس! ما عندك عقارات مسجلة.');
+          }
+
+          // تجميع العقارات المتكررة لعدم تجاوز حد ديسكورد وعرضها بشكل أنيق
+          const propertyCounts = {};
+          user.properties.forEach(pid => {
+              propertyCounts[pid] = (propertyCounts[pid] || 0) + 1;
           });
+
+          const embed = new EmbedBuilder()
+              .setColor('#00FF00')
+              .setTitle(`🏠 محفظة وعقارات: ${message.author.displayName}`)
+              .setDescription('إليك جميع أملاكك وعقاراتك المسجلة وأرباحها الدورية:');
+
+          let totalValue = 0;
+          let totalProfit = 0;
+
+          // تحويل العقارات المجمعة إلى حقول (بحد أقصى 25 حقل كحماية تامة)
+          const uniqueIds = Object.keys(propertyCounts);
+          const slicedIds = uniqueIds.slice(0, 25); // حماية ضد تجاوز الـ 25 حقل
+
+          slicedIds.forEach((pid, idx) => {
+              const count = propertyCounts[pid];
+              const item = marketItems.find(i => i.id === parseInt(pid));
+              if (item) {
+                  const itemTotalVal = item.price * count;
+                  const itemTotalProf = item.profit * count;
+                  totalValue += itemTotalVal;
+                  totalProfit += itemTotalProf;
+
+                  embed.addFields({ 
+                      name: `${idx + 1}. ${item.emoji} ${item.name} ${count > 1 ? `(x${count})` : ''}`, 
+                      value: `💰 القيمة الإجمالية: \`$${itemTotalVal.toLocaleString()}\`\n💸 أرباحها بالراتب: \`$${itemTotalProf.toLocaleString()}\``, 
+                      inline: false 
+                  });
+              }
+          });
+
+          embed.addFields({
+              name: '📊 الملخص المالي للأملاك',
+              value: `💎 **إجمالي قيمة العقارات:** \`$${totalValue.toLocaleString()}\`\n🚀 **إجمالي أرباح الراتب:** \`$${totalProfit.toLocaleString()}\``,
+              inline: false
+          });
+
           return message.channel.send({ embeds: [embed] });
       }
 
