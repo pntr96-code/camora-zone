@@ -66,6 +66,14 @@ let stockMarket = [
     { id: 'SOL', name: 'سولانا (Solana)', price: 150, base: 150, trend: '➖', emoji: '☀️' }
 ];
 
+// قائمة مشاريع وأصول الشركات المتاحة للشراء برأس مال الهيئة
+let corpAssetsMarket = [
+    { id: 101, name: 'مصنع تعبئة وتغليف', price: 50000, profit: 5000, emoji: '🏭' },
+    { id: 102, name: 'أسطول شحن وتوصيل', price: 120000, profit: 13000, emoji: '🚚' },
+    { id: 103, name: 'مجمع تجاري إلكتروني', price: 300000, profit: 35000, emoji: '🌐' },
+    { id: 104, name: 'برج استثماري ضخم', price: 850000, profit: 100000, emoji: '🏗️' }
+];
+
 // 1. نظام الطفرة والانهيار التلقائي (Bull Market & Black Monday)
 setInterval(async () => {
     const eventRoll = Math.random();
@@ -300,7 +308,7 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     await pointsColl.updateOne({ guildId: guildId, userId: userId }, { $set: doc }, { upsert: true });
 }
 
-// أ pools الألعاب النصية والكلاسيكية الكاملة
+// الألعاب النصية والكلاسيكية الكاملة
 const historyTracker = { emoji: [], meaning: [], scramble: [], reverse: [], trivia: [], capital: [], writing: [] };
 
 function getUniqueRandomItem(pool, historyKey, propertyName = null) {
@@ -845,7 +853,7 @@ client.on('messageCreate', async message => {
               { name: '👤 الهوية', value: '`!هوية`', inline: false },
               { name: '👔 الوظائف', value: '`!وظائف`', inline: false },
               { name: '📈 السوق والعقارات', value: '`!سوق` | `!شراء` | `!بيع [رقم]` | `!املاكي`', inline: false },
-              { name: '🏢 الهيئات والشركات', value: '`!تأسيس-شركة [الاسم] | [شعار]`\n`!شركة` | `!ترتيب-الشركات` | `!دعوة-شركة [@شخص]` | `!شعار-شركة [رابط]` | `!تعديل-اسم-الشركة [الاسم]`', inline: false },
+              { name: '🏢 الهيئات والشركات', value: '`!تأسيس-شركة [الاسم] | [الشعار]`\n`!شركة` | `!ترتيب-الشركات` | `!دعوة-شركة [@شخص]` | `!شعار-شركة [رابط]` | `!تعديل-اسم-الشركة [الاسم]`', inline: false },
               { name: '💼 القروض والبنوك', value: '`!قرض [المبلغ]` | `!سداد` | `!لوحة-المتعثرين`', inline: false },
               { name: '🛡️ الحماية وسرقة البنوك (Heist)', value: '`!شراء-حارس` | `!سرقة-بنك [@خويك1] [@خويك2] [@خويك3]`', inline: false },
               { name: '🎲 الجريمة والحظ', value: '`!سرقة [@شخص]` | `!حظ [المبلغ]` | `!صندوق` | `!مهامي`', inline: false }
@@ -895,7 +903,7 @@ client.on('messageCreate', async message => {
 
           if (corp.image) embed.setThumbnail(corp.image);
 
-          // تنظيم الأزرار في صفين (Rows) لضمان ظهور كل الخيارات بوضوح
+          // تنظيم الأزرار في صفين بوضوح لكي تظهر جميعها تحت اللوحة
           const row1 = new ActionRowBuilder().addComponents(
               new ButtonBuilder().setCustomId('corp_donate_btn').setLabel('💸 تبرع برأس المال').setStyle(ButtonStyle.Success),
               new ButtonBuilder().setCustomId('corp_members_btn').setLabel('👥 قائمة الأعضاء').setStyle(ButtonStyle.Primary),
@@ -1063,7 +1071,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
-          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **${user.guard ? '🛡️ مفعل' : '❌'}** | وظيفتك: **${user.job}**`);
+          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **$${user.guard ? '🛡️ مفعل' : '❌'}** | وظيفتك: **${user.job}**`);
       }
 
       if (message.content === '!راتب' || message.content === 'راتب') {
@@ -1337,7 +1345,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك لا يكفي!');
+          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
           user.balance -= 3000;
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
@@ -1650,7 +1658,7 @@ client.on('interactionCreate', async interaction => {
             const targetId = interaction.fields.getTextInputValue('invite_user_id').trim();
             let corp = await guildsColl.findOne({ guildId, ownerId: userId });
             if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
-            if (corp.members.includes(targetId)) return.reply({ content: '⚠️ هذا العضو موجود في شركتك مسبقاً!', ephemeral: true });
+            if (corp.members.includes(targetId)) return interaction.reply({ content: '⚠️ هذا العضو موجود في شركتي مسبقاً!', ephemeral: true });
             if (corp.members.length >= 5) return interaction.reply({ content: '❌ وصلت الشركة للحد الأقصى (5 أعضاء)!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $push: { members: targetId } });
