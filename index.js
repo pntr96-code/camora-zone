@@ -497,7 +497,7 @@ client.on('messageCreate', async message => {
       return;
   }
 
-  // --- أمر إرسال الاستبيان الشامل (10 أسئلة + سؤال كتابي) مخصص لرومك الخاص ---
+  // --- إعلان استطلاع الرأي الشامل (مخصص لرومك الخاص) ---
   if (message.content === '!ارسل-استبيان') {
       if (message.channel.id !== adminSurveyChannel) {
           return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
@@ -508,13 +508,19 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder()
               .setColor('#5865F2')
-              .setTitle('📋 استطلاع رأي شامل لتقييم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
-              .setDescription('مرحباً بك يا غالي! 🎮\nنحتاج تقييمك الشامل (10 أسئلة) لألعاب السيرفر، الاقتصاد، والعقارات والأسهم لتطوير التحديثات القادمة!\n\nاضغط على الزر أدناه لبدء الاستبيان على الخاص:')
-              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تقييم اللاعبين' })
+              .setTitle('📢 إعلان هام وتطويري في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
+              .setDescription(
+                  'أهلاً بك يا بطل في مجتمعنا! 🎮🔥\n\n' +
+                  'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! ' +
+                  'نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
+                  '📋 **شاركنا رأيك عبر استبياننا السريع (10 أسئلة ممتعة + مساحة لاقتراحاتك):**\n' +
+                  'اضغط على الزر أدناه لبدء الاستبيان على الخاص مباشرة ولا تنسَ تعطيني رأيك بكل صراحة! 💡'
+              )
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تطوير السيرفر وتقييم اللاعبين' })
               .setTimestamp();
 
           const row = new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 ابدأ الاستبيان الآن').setStyle(ButtonStyle.Success)
+              new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
           );
 
           await message.guild.members.fetch();
@@ -528,10 +534,10 @@ client.on('messageCreate', async message => {
               } catch (e) {}
           }
 
-          return message.channel.send(`✅ تم إرسال دعوة الاستبيان على الخاص لـ **${sentCount}** عضو في السيرفر بنجاح! 🚀`);
+          return message.channel.send(`✅ تم إرسال إعلان الاستبيان على الخاص لـ **${sentCount}** عضو في السيرفر بنجاح! 🚀`);
       } catch (err) {
           console.error(err);
-          return message.reply('❌ حدث خطأ أثناء إرسال الاستبيان.');
+          return message.reply('❌ حدث خطأ أثناء إرسال إعلان الاستبيان.');
       }
   }
 
@@ -550,10 +556,10 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder()
               .setColor('#F1C40F')
-              .setTitle('📊 نتائج وتقارير استبيان السيرفر الشامل')
+              .setTitle('📊 تقارير ونتائج إعلان الاستبيان الشامل')
               .setDescription(`📈 **إجمالي اللاعبين المشاركين:** \`${totalResponses} لاعب\`\n\n---`)
               .addFields(
-                  { name: '💡 الاقتراحات والكتابات الحرة من اللاعبين', value: suggestions.length > 1024 ? suggestions.substring(0, 1020) + '...' : suggestions, inline: false }
+                  { name: '💡 الاقتراحات والأفكار المقترحة من اللاعبين', value: suggestions.length > 1024 ? suggestions.substring(0, 1020) + '...' : suggestions, inline: false }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • لوحة إدارة الاستبيان' })
               .setTimestamp();
