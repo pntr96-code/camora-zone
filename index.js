@@ -253,15 +253,16 @@ setInterval(async () => {
 }, 5 * 60 * 1000);
 
 async function getEconomyUser(guildId, userId) {
-    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0, lastBox: 0, loan: 0, guard: false, loanDueDate: 0 };
+    if (!economyColl) return { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0, lastBox: 0, loan: 0, guard: false, guardShields: 0, loanDueDate: 0 };
     let doc = await economyColl.findOne({ guildId, userId });
     if (!doc) {
-        doc = { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0, lastBox: 0, loan: 0, guard: false, loanDueDate: 0 };
+        doc = { guildId, userId, balance: 1500, properties: [], job: 'مواطن 🇸🇦', lastWork: 0, lastProfit: 0, lastCrime: 0, lastQuest: 0, questsCompleted: 0, lastBox: 0, loan: 0, guard: false, guardShields: 0, loanDueDate: 0 };
         await economyColl.insertOne(doc);
     }
     if (!doc.job) doc.job = 'مواطن 🇸🇦';
     if (doc.loan === undefined) doc.loan = 0;
     if (doc.guard === undefined) doc.guard = false;
+    if (doc.guardShields === undefined) doc.guardShields = 0;
     return doc;
 }
 
@@ -1064,17 +1065,20 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
 
-      // 3. نظام الحماية الشخصية للعقارات
+      // 3. نظام الحماية الشخصية للعقارات (مع عدد الصدات Durability)
       if (message.content === '!شراء-حارس' || message.content === '!حماية') {
           let user = await getEconomyUser(guildId, userId);
           const cost = 15000;
-          if (user.guard) return message.reply('🛡️ لديك حارس شخصي مفعل بالفعل!');
+          if (user.guard && user.guardShields > 0) {
+              return message.reply(`🛡️ لديك حارس شخصي مفعل حالياً ومتبقي له **${user.guardShields} صدات** دفاعية!`);
+          }
           if (user.balance < cost) return message.reply(`💸 التكلفة \`$${cost.toLocaleString()}\` ورصيدك لا يكفي!`);
 
           user.balance -= cost;
           user.guard = true;
+          user.guardShields = 3; // يحميك من 3 سرقات كحد أقصى
           await saveEconomyUser(guildId, userId, user);
-          return message.reply('🛡️ **تم تعيين حارس شخصي ونظام إنذار لعقاراتك بنجاح!**');
+          return message.reply('🛡️ **تم تعيين حارس شخصي بنجاح!**\n⚡ الحارس جاهز لصد أول **3 محاولات سرقة** تتعرض لها.');
       }
 
       // 4. سرقة البنوك الكبرى الجماعية (Heist)
@@ -1124,7 +1128,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
-          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **${user.guard ? '🛡️ مفعل' : '❌'}** | وظيفتك: **${user.job}**`);
+          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **${user.guard && user.guardShields > 0 ? `🛡️ مفعل (${user.guardShields} صدات)` : '❌'}** | وظيفتك: **${user.job}**`);
       }
 
       if (message.content === '!راتب' || message.content === 'راتب') {
@@ -1236,7 +1240,10 @@ client.on('messageCreate', async message => {
               .setTitle('📈 بورصة العقارات والأعمال')
               .setDescription(`⏳ **يتجدد السوق وتتغير الأسعار:** <t:${unixTime}:R> (<t:${unixTime}:t>)`);
 
-          marketItems.forEach(i => embed.addFields({ 
+          // ترتيب العقارات تصاعدياً من الأرخص إلى الأغلى بناءً على السعر الحالي
+          const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
+
+          sortedMarket.forEach(i => embed.addFields({ 
               name: `[${i.id}] ${i.emoji} ${i.name} ${i.trend}`, 
               value: `💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, 
               inline: true 
@@ -1254,9 +1261,12 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!شراء') {
           const user = await getEconomyUser(guildId, userId);
-          const options = marketItems.map((item) => ({
-              label: `${item.name} (${item.type})`,
-              description: `السعر: $${item.price.toLocaleString()} | الربح: $${item.profit.toLocaleString()}`,
+          // ترتيب خيارات الشراء تصاعدياً من الأرخص إلى الأغلى
+          const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
+
+          const options = sortedMarket.map((item) => ({
+              label: `${item.name} ($${item.price.toLocaleString()})`,
+              description: `الربح: $${item.profit.toLocaleString()}`,
               value: `buy_${item.id}`,
               emoji: item.emoji || '💼'
           }));
@@ -1269,7 +1279,7 @@ client.on('messageCreate', async message => {
           );
 
           return message.channel.send({
-              content: `🛍️ **متجر وسوق العقارات والأعمال**\nرصيدك الحالي: \`$${user.balance.toLocaleString()}\`\nاختر من القائمة أدناه للشراء فورا:`,
+              content: `🛍️ **متجر وسوق العقارات والأعمال (مرتب من الأرخص للأغلى)**\nرصيدك الحالي: \`$${user.balance.toLocaleString()}\`\nاختر من القائمة أدناه للشراء فورا:`,
               components: [row]
           });
       }
@@ -1364,18 +1374,32 @@ client.on('messageCreate', async message => {
           if (targetUser.balance < 500) return message.reply('💸 الضحية مفلس!');
           user.lastCrime = now;
 
-          let successChance = targetUser.guard ? 0.15 : 0.45;
+          let hasActiveGuard = targetUser.guard && targetUser.guardShields > 0;
+          let successChance = hasActiveGuard ? 0.15 : 0.45;
+
           if (Math.random() < successChance) {
-              const stolen = Math.floor(targetUser.balance * (targetUser.guard ? 0.1 : 0.3)) + 100;
+              const stolen = Math.floor(targetUser.balance * (hasActiveGuard ? 0.1 : 0.3)) + 100;
               targetUser.balance -= stolen; user.balance += stolen;
               await saveEconomyUser(guildId, target.id, targetUser);
               await saveEconomyUser(guildId, userId, user);
               return message.channel.send(`🦹‍♂️ **عملية ناجحة!** سرق ${message.author} مبلغ **$${stolen.toLocaleString()}** من ${target}! 💰🔥`);
           } else {
-              const fine = targetUser.guard ? 800 : 300;
+              let guardMsg = '';
+              if (hasActiveGuard) {
+                  targetUser.guardShields -= 1;
+                  if (targetUser.guardShields <= 0) {
+                      targetUser.guard = false;
+                      guardMsg = '\n🛡️💥 **انتهت طاقة الحارس وهرب بعد تصديه للهجوم!** (يجب شراء حارس جديد)';
+                  } else {
+                      guardMsg = `\n🛡️ **تصدى الحارس للسرقة!** متبقي له (${targetUser.guardShields}) صدات دفاعية.`;
+                  }
+                  await saveEconomyUser(guildId, target.id, targetUser);
+              }
+
+              const fine = hasActiveGuard ? 800 : 300;
               user.balance = Math.max(0, user.balance - fine);
               await saveEconomyUser(guildId, userId, user);
-              return message.channel.send(`🚨 **فشلت السرقة ${targetUser.guard ? '(وجود حارس شخصي)' : ''}!** غرمته الشرطة **$${fine}**! 🚔💀`);
+              return message.channel.send(`🚨 **فشلت السرقة!** غرمته الشرطة **$${fine}**! 🚔💀${guardMsg}`);
           }
       }
 
@@ -1398,7 +1422,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
+          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك لا يكفي!');
           user.balance -= 3000;
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
@@ -1551,7 +1575,8 @@ client.on('interactionCreate', async interaction => {
 
         if (interaction.customId === 'open_buy_menu') {
             const user = await getEconomyUser(guildId, userId);
-            const options = marketItems.map((item) => ({ label: `${item.name} ($${item.price.toLocaleString()})`, value: `buy_${item.id}`, emoji: item.emoji || '💼' }));
+            const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
+            const options = sortedMarket.map((item) => ({ label: `${item.name} ($${item.price.toLocaleString()})`, value: `buy_${item.id}`, emoji: item.emoji || '💼' }));
             const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('market_buy_select').setPlaceholder('🛒 اختر عقاراً...').addOptions(options));
             return interaction.reply({ content: `🛍️ رصيدك: \`$${user.balance.toLocaleString()}\``, components: [row], ephemeral: true });
         }
