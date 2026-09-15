@@ -74,7 +74,7 @@ let corpAssetsMarket = [
     { id: 104, name: 'برج تجاري استثماري', price: 600000, profit: 75000, emoji: '🏗️' }
 ];
 
-// 1. نظام الطفرة والانهيار التلقائي (Bull Market & Black Monday)
+// 1. نظام الطفرة والانهيار التلقائي للأسهم
 setInterval(async () => {
     const eventRoll = Math.random();
     let eventTitle = '';
@@ -84,7 +84,7 @@ setInterval(async () => {
 
     if (eventRoll < 0.35) {
         multiplier = 1.50;
-        eventTitle = '🚀 طفرة اقتصادية كبرى (Bull Market)!';
+        eventTitle = '🚀 طفرة اقتصادية كبرى للأسهم (Bull Market)!';
         eventDesc = '📈 **انتعاش عام في الأسواق العالمية!** ارتفعت جميع الأسهم بنسبة **50%**.';
         color = '#2ecc71';
     } else if (eventRoll > 0.70) {
@@ -211,11 +211,33 @@ let marketItems = [
     { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '🥪', trend: '➖' }
 ];
 
+// نظام تحديث وتذبذب وطفرة/انهيار سوق العقارات كل 5 دقائق
 setInterval(async () => {
+    const propEventRoll = Math.random();
+    let propEventTitle = '';
+    let propEventDesc = '';
+    let propColor = '#3498DB';
+    let propMultiplier = 1;
+
+    if (propEventRoll < 0.30) {
+        propMultiplier = 1.50; // طفرة عقارية (+50%)
+        propEventTitle = '🚀 طفرة عقارية كبرى (Real Estate Boom)!';
+        propEventDesc = '📈 **انتعاش هائل في سوق العقارات والأراضي!** ارتفعت قيمة جميع العقارات والأرباح بنسبة **50%**.';
+        propColor = '#2ECC71';
+    } else if (propEventRoll > 0.75) {
+        propMultiplier = 0.60; // ركود عقاري (-40%)
+        propEventTitle = '🏚️ ركود وهبوط عقاري مفاجئ (Real Estate Crash)!';
+        propEventDesc = '📉 **أزمة سيولة تضرب سوق العقارات!** هبطت أسعار وقيم العقارات بشدة.';
+        propColor = '#E74C3C';
+    } else {
+        propEventTitle = '📈 تحديث أسعار العقارات والأعمال';
+        propEventDesc = '🔄 استمرار التذبذب الطبيعي في حركة سوق العقارات والمشاريع.';
+    }
+
     marketItems.forEach(item => {
         const oldPrice = item.price;
-        const randomPercent = (Math.random() * 0.60) - 0.25; 
-        let newPrice = Math.floor(item.basePrice * (1 + randomPercent));
+        const randomPercent = (Math.random() * 0.50) - 0.20; 
+        let newPrice = Math.floor(item.basePrice * (1 + randomPercent) * propMultiplier);
         if (newPrice < Math.floor(item.basePrice * 0.4)) newPrice = Math.floor(item.basePrice * 0.4);
         
         item.price = newPrice;
@@ -229,9 +251,9 @@ setInterval(async () => {
     marketNextUpdate = Date.now() + (5 * 60 * 1000);
 
     const embed = new EmbedBuilder()
-        .setColor('#F1C40F')
-        .setTitle('📈 تنبيه بورصة العقارات والأعمال')
-        .setDescription('🔄 **تم تجديد وتحديث أسعار وأرباح السوق الآن!**')
+        .setColor(propColor)
+        .setTitle(propEventTitle)
+        .setDescription(`${propEventDesc}\n\n🔄 **تم تجديد وتحديث أسعار وأرباح السوق الآن!**`)
         .setTimestamp();
 
     for (const channelId of allowedEconomyChannels) {
@@ -1240,7 +1262,6 @@ client.on('messageCreate', async message => {
               .setTitle('📈 بورصة العقارات والأعمال')
               .setDescription(`⏳ **يتجدد السوق وتتغير الأسعار:** <t:${unixTime}:R> (<t:${unixTime}:t>)`);
 
-          // ترتيب العقارات تصاعدياً من الأرخص إلى الأغلى
           const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
 
           sortedMarket.forEach(i => embed.addFields({ 
@@ -1249,7 +1270,6 @@ client.on('messageCreate', async message => {
               inline: true 
           }));
 
-          // زر الشراء وزر البيع جنباً إلى جنب
           const actionRow = new ActionRowBuilder().addComponents(
               new ButtonBuilder().setCustomId('open_buy_menu').setLabel('🛒 شراء عقار').setStyle(ButtonStyle.Success),
               new ButtonBuilder().setCustomId('open_sell_menu').setLabel('🤝 بيع عقار').setStyle(ButtonStyle.Danger)
@@ -1420,7 +1440,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك لا يكفي!');
+          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
           user.balance -= 3000;
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
@@ -1585,7 +1605,6 @@ client.on('interactionCreate', async interaction => {
                 return interaction.reply({ content: '❌ ليس لديك أي عقارات أو أملاك لبيعها!', ephemeral: true });
             }
 
-            // تجميع أملاك المستخدم مع فهارسها الحقيقية
             const options = user.properties.map((propId, idx) => {
                 const item = marketItems.find(i => i.id === propId);
                 const sellP = Math.floor(item.price * 0.90);
