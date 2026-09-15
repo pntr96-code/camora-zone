@@ -497,7 +497,42 @@ client.on('messageCreate', async message => {
       return;
   }
 
-  // --- إعلان استطلاع الرأي الشامل (مخصص لرومك الخاص) ---
+  // --- أمر تجربة الاستبيان على نفسك وحدك ---
+  if (message.content === '!تجربة-استبيان') {
+      if (message.channel.id !== adminSurveyChannel) {
+          return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
+      }
+
+      try {
+          await message.delete().catch(() => {});
+
+          const embed = new EmbedBuilder()
+              .setColor('#5865F2')
+              .setTitle('📢 إعلان هام وتطويري في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
+              .setDescription(
+                  'أهلاً بك في مجتمعنا اعرف اننا قروشناك ولكن تحملنا شوي! 🎮🔥\n\n' +
+                  'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
+                  '📋 **شاركنا رأيك عبر استبياننا السريع (10 أسئلة ممتعة + مساحة لاقتراحاتك):**\n' +
+                  'اضغط على الزر أدناه لبدء الاستبيان على الخاص مباشرة ولا تنسَ تعطيني رأيك بكل صراحة! 💡'
+              )
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تطوير السيرفر وتقييم اللاعبين' })
+              .setTimestamp();
+
+          const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
+          );
+
+          await message.author.send({ embeds: [embed], components: [row] });
+          return message.channel.send(`✅ **أرسلت لك رسالة التجربة على الخاص يا أحمد!** شيك على محادثتك مع البوت. 🚀`).then(msg => {
+              setTimeout(() => msg.delete().catch(()=>{}), 5000);
+          });
+      } catch (err) {
+          console.error(err);
+          return message.reply('❌ ما قدرت أرسل لك رسالة على الخاص، تأكد أن رسائلك الخاصة مفتوحة من البوت.');
+      }
+  }
+
+  // --- إعلان استطلاع الرأي الشامل (لكل الأعضاء) ---
   if (message.content === '!ارسل-استبيان') {
       if (message.channel.id !== adminSurveyChannel) {
           return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
@@ -512,9 +547,8 @@ client.on('messageCreate', async message => {
               .setColor('#5865F2')
               .setTitle('📢 إعلان هام وتطويري في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
               .setDescription(
-                  'أهلاً بك يا بطل! ندرين إننا قروشناك ولكن تحملنا شوي! 🎮🔥\n\n' +
-                  'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! ' +
-                  'نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
+                  'أهلاً بك في مجتمعنا اعرف اننا قروشناك ولكن تحملنا شوي! 🎮🔥\n\n' +
+                  'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
                   '📋 **شاركنا رأيك عبر استبياننا السريع (10 أسئلة ممتعة + مساحة لاقتراحاتك):**\n' +
                   'اضغط على الزر أدناه لبدء الاستبيان على الخاص مباشرة ولا تنسَ تعطيني رأيك بكل صراحة! 💡'
               )
@@ -936,7 +970,7 @@ client.on('messageCreate', async message => {
                   { name: '⭐ رصيد النقاط', value: `\`${~~ptsData.points} نقطة\``, inline: true },
                   { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
                   { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
-                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`{ptsData.messagesCount} رسالة\``, inline: true }
+                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الهوية والإنجازات' })
               .setTimestamp();
