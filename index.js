@@ -12,7 +12,7 @@ const dbClient = new MongoClient(mongoUri, {
     tlsAllowInvalidCertificates: true
 });
 
-let db, pointsColl, economyColl, guildsColl, surveyColl;
+let db, pointsColl, economyColl, guildsColl;
 
 async function connectDB() {
     try {
@@ -21,7 +21,6 @@ async function connectDB() {
         pointsColl = db.collection('points');
         economyColl = db.collection('economy');
         guildsColl = db.collection('corporations'); 
-        surveyColl = db.collection('surveys'); 
         console.log('[DATABASE] Connected to MongoDB Atlas successfully! 🚀');
     } catch (e) {
         console.error('[DATABASE ERROR] Failed to connect to MongoDB:', e);
@@ -44,7 +43,6 @@ const processingUsers = new Set();
 const allowedChannels = ['1547728033580847236', '1547728346081927262', '1548010683692748821']; 
 const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821']; 
 const allowedStockChannels = ['1549387597221068900', '1549387358343004220'];
-const adminSurveyChannel = '1549507504457916546'; // روم الإدارة الخاص بك
 
 const lastActivityTime = new Map();
 const lastMarketMessages = new Map();
@@ -68,6 +66,7 @@ let stockMarket = [
     { id: 'SOL', name: 'سولانا (Solana)', price: 150, base: 150, trend: '➖', emoji: '☀️' }
 ];
 
+// سوق مشاريع وأصول الشركات الاستثمارية
 let corpAssetsMarket = [
     { id: 101, name: 'مصنع تعبئة وتغليف', price: 40000, profit: 4000, emoji: '🏭' },
     { id: 102, name: 'أسطول شحن وتوصيل', price: 95000, profit: 10000, emoji: '🚚' },
@@ -75,6 +74,7 @@ let corpAssetsMarket = [
     { id: 104, name: 'برج تجاري استثماري', price: 600000, profit: 75000, emoji: '🏗️' }
 ];
 
+// 1. نظام الطفرة والانهيار التلقائي للأسهم
 setInterval(async () => {
     const eventRoll = Math.random();
     let eventTitle = '';
@@ -133,6 +133,7 @@ setInterval(async () => {
     }
 }, 3 * 60 * 60 * 1000);
 
+// نظام توزيع أرباح أصول الشركات تلقائياً كل ساعة
 setInterval(async () => {
     if (!guildsColl) return;
     try {
@@ -150,6 +151,7 @@ setInterval(async () => {
     } catch (e) {}
 }, 60 * 60 * 1000);
 
+// 2. نظام فحص القروض والمتعثرين والحجز التلقائي
 setInterval(async () => {
     if (!economyColl) return;
     try {
@@ -209,6 +211,7 @@ let marketItems = [
     { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '🥪', trend: '➖' }
 ];
 
+// نظام تحديث وتذبذب وطفرة/انهيار سوق العقارات كل 5 دقائق
 setInterval(async () => {
     const propEventRoll = Math.random();
     let propEventTitle = '';
@@ -217,12 +220,12 @@ setInterval(async () => {
     let propMultiplier = 1;
 
     if (propEventRoll < 0.30) {
-        propMultiplier = 1.50;
+        propMultiplier = 1.50; // طفرة عقارية (+50%)
         propEventTitle = '🚀 طفرة عقارية كبرى (Real Estate Boom)!';
         propEventDesc = '📈 **انتعاش هائل في سوق العقارات والأراضي!** ارتفعت قيمة جميع العقارات والأرباح بنسبة **50%**.';
         propColor = '#2ECC71';
     } else if (propEventRoll > 0.75) {
-        propMultiplier = 0.60;
+        propMultiplier = 0.60; // ركود عقاري (-40%)
         propEventTitle = '🏚️ ركود وهبوط عقاري مفاجئ (Real Estate Crash)!';
         propEventDesc = '📉 **أزمة سيولة تضرب سوق العقارات!** هبطت أسعار وقيم العقارات بشدة.';
         propColor = '#E74C3C';
@@ -346,7 +349,7 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     await pointsColl.updateOne({ guildId: guildId, userId: userId }, { $set: doc }, { upsert: true });
 }
 
-// دوال الألعاب الكاملة
+// أ pools الألعاب النصية والكلاسيكية الكاملة
 const historyTracker = { emoji: [], meaning: [], scramble: [], reverse: [], trivia: [], capital: [], writing: [] };
 
 function getUniqueRandomItem(pool, historyKey, propertyName = null) {
@@ -402,9 +405,52 @@ function sendGamesMenu(channel) {
         new ButtonBuilder().setCustomId('btn_boxes').setLabel('📦 صناديق').setStyle(ButtonStyle.Success)
     );
 
-    channel.send({ embeds: [embed], components: [row1, row2, row3] });
+    channel.send({ embeds: [embed], components: [row1, row2, row3] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 300000 });
+        coll.on('collect', async i => {
+            const action = i.customId;
+            if (action === 'btn_xo') {
+                await i.reply({ content: `🎮 **[لعبة XO]**\nاختر نمط اللعب يا ${i.user}:`, components: [
+                    new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId('exec_xo_bot').setLabel('🤖 ضد البوت').setStyle(ButtonStyle.Primary),
+                        new ButtonBuilder().setCustomId('exec_xo_pvp').setLabel('👥 مع خويك').setStyle(ButtonStyle.Success)
+                    )
+                ], ephemeral: true });
+            } else if (action === 'btn_rps') {
+                await i.reply({ content: `🎮 **[لعبة حجر ورقة مقص]**\nاختر نمط اللعب يا ${i.user}:`, components: [
+                    new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId('exec_rps_bot').setLabel('🤖 ضد البوت').setStyle(ButtonStyle.Primary),
+                        new ButtonBuilder().setCustomId('exec_rps_pvp').setLabel('👥 مع خويك').setStyle(ButtonStyle.Success)
+                    )
+                ], ephemeral: true });
+            } else if (action === 'exec_xo_bot') {
+                await i.update({ content: '🤖 بدأت لعبة XO ضد البوت:', components: [] }).catch(()=>{});
+                launchXOGame(i.channel, i.guild.id, i.user, null);
+            } else if (action === 'exec_xo_pvp') {
+                await i.update({ content: `👥 **[لعبة XO الثنائية]**\nاكتب في الشات:\n\`!xo @اسم_خويك\``, components: [] }).catch(()=>{});
+            } else if (action === 'exec_rps_bot') {
+                await i.update({ content: '🤖 بدأ تحدي حجر ورقة مقص ضد البوت:', components: [] }).catch(()=>{});
+                startRPSBotGame({ channel: i.channel, author: i.user }, i.guild.id);
+            } else if (action === 'exec_rps_pvp') {
+                await i.update({ content: `👥 **[تحدي حجر ورقة مقص الثنائي]**\nاكتب في الشات:\n\`!حجر @اسم_خويك\``, components: [] }).catch(()=>{});
+            } else {
+                await i.deferUpdate().catch(()=>{});
+                if (action === 'btn_bomb') startBombGame(i.channel, i.guild.id);
+                else if (action === 'btn_scramble') startScrambleGame(i.channel, i.guild.id);
+                else if (action === 'btn_reverse') startReverseGame(i.channel, i.guild.id);
+                else if (action === 'btn_emoji') startEmojiGame(i.channel, i.guild.id);
+                else if (action === 'btn_trivia') startTriviaGame(i.channel, i.guild.id);
+                else if (action === 'btn_penalty') startPenaltyGame({ channel: i.channel, author: i.user }, i.guild.id);
+                else if (action === 'btn_mines') startMinesGame(i.channel, i.guild.id, i.user.id);
+                else if (action === 'btn_race') startRaceGame(i.channel, i.guild.id, i.user.id);
+                else if (action === 'btn_vault') startVaultGame(i.channel, i.guild.id, i.user.id);
+                else if (action === 'btn_boxes') startBoxesGame(i.channel, i.guild.id, i.user.id);
+            }
+        });
+    });
 }
 
+// دوال الألعاب المتكاملة
 function startEmojiGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     const chosen = getUniqueRandomItem(emojiMasterPool, 'emoji', 'ans');
@@ -421,6 +467,83 @@ function startEmojiGame(channel, guildId) {
             addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
         });
         coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${chosen.ans}**`); } });
+    });
+}
+
+function startMeaningGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const chosen = getUniqueRandomItem(meaningMasterPool, 'meaning', 'word');
+    channel.send(`📖 **[معاني الكلمات]** ما معنى كلمة **"${chosen.word}"**؟`).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(chosen.desc.toLowerCase());
+        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! عرفت المعنى في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! المعنى الصحيح هو: **${chosen.desc}**`); } });
+    });
+}
+
+function startGuessGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const target = Math.floor(Math.random() * 100) + 1;
+    channel.send(`🎯 **[تخمين الأرقام]** خمن الرقم الصحيح بين **1 و 100** (معك 25 ثانية):`).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && parseInt(m.content.trim()) === target;
+        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎯');
+            m.reply(`🎯 كفو ${m.author}! خمنت الرقم الصحيح **${target}** في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الرقم الصحيح كان: **${target}**`); } });
+    });
+}
+
+function startReverseGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const word = getUniqueRandomItem(scrambleMasterPool, 'reverse');
+    const reversed = word.split('').reverse().join('');
+    channel.send(`🔄 **[عكس الكلمة]** اكتب الكلمة التالية بالشكل الصحيح:\n\n\`${reversed}\``).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim().toLowerCase() === word.toLowerCase();
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! عدلت الكلمة في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الكلمة كانت: **${word}**`); } });
+    });
+}
+
+function startTriviaGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const qObj = getUniqueRandomItem(triviaMasterPool, 'trivia', 'q');
+    channel.send(`🧠 **[سؤال ذكاء]**\n\n${qObj.q}`).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(qObj.ans.toLowerCase());
+        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! الإجابة صحيحة في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${qObj.ans}**`); } });
     });
 }
 
@@ -455,7 +578,7 @@ function startScrambleGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     const word = getUniqueRandomItem(scrambleMasterPool, 'scramble');
     const scrambled = word.split('').sort(() => 0.5 - Math.random()).join(' ');
-    channel.send(`🧩 **[فكك]** رتب الحروف التالية:\n\n\`{scrambled}\``).then(() => {
+    channel.send(`🧩 **[فكك]** رتب الحروف التالية:\n\n\`${scrambled}\``).then(() => {
         const startTime = Date.now();
         const filter = m => !m.author.bot && m.content.trim().toLowerCase() === word.toLowerCase();
         const collector = channel.createMessageCollector({ filter, time: 25000, max: 1 });
@@ -464,16 +587,203 @@ function startScrambleGame(channel, guildId) {
             activeGames.delete(channel.id);
             const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(2);
             m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! رتبت الكلمة في **{timeElapsed} ثانية** وكسبت **10 نقاط**! 🌟`);
+            m.reply(`🎉 كفو ${m.author}! رتبت الكلمة في **${timeElapsed} ثانية** وكسبت **10 نقاط**! 🌟`);
             addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(timeElapsed));
         });
-        collector.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الكلمة كانت: **{word}**`); } });
+        collector.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الكلمة كانت: **${word}**`); } });
+    });
+}
+
+function startMathGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const n1 = Math.floor(Math.random() * 50) + 10;
+    const n2 = Math.floor(Math.random() * 50) + 10;
+    const ans = (n1 + n2).toString();
+    channel.send(`🔢 **[رياضيات]** كم ناتج الحساب التالي:\n\n\`${n1} + ${n2}\``).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim() === ans;
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! جاوبت في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${ans}**`); } });
+    });
+}
+
+function startCapitalGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const chosen = getUniqueRandomItem(capitalMasterPool, 'capital', 'c');
+    channel.send(`🌍 **[عواصم]** ما هي عاصمة **${chosen.c}**؟`).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim().toLowerCase() === chosen.cap.toLowerCase();
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! العاصمة صحيحة في **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! العاصمة كانت: **${chosen.cap}**`); } });
+    });
+}
+
+function startButtonGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'button');
+    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('fc').setLabel('⚡ اضغطني!').setStyle(ButtonStyle.Success));
+    channel.send({ content: `🔥 **[أسرع ضغطة]** أسرع شخص يضغط الزر!`, components: [row] }).then(msg => {
+        const start = Date.now();
+        const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
+        coll.on('collect', async i => {
+            await i.deferUpdate().catch(()=>{});
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            await msg.edit({ content: `🏆 كفو ${i.user}! في **${t} ثانية** وكسبت **10 نقاط**!`, components: [] }).catch(()=>{});
+            addPoints(guildId, i.user.id, i.user.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); msg.edit({ content: `😴 محد ضغط الزر وانتهى الوقت!`, components: [] }).catch(()=>{}); } });
+    });
+}
+
+function startWritingGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const sentence = getUniqueRandomItem(['تحدي السرعة في كتابة الجملة', 'برمجة البوتات تتطلب صبرا وتركيزا', 'المحترف لا ييأس أبدا مهما كانت الصعاب', 'الذكاء الاصطناعي يغير مستقبل العالم التقني', 'تطوير الألعاب والبرمجيات فن ممتع', 'إمبراطورية كامورا زون ترحب بالجميع'], 'writing');
+    channel.send(`⌨️ **[أسرع كاتب]** اكتب الجملة التالية:\n\n\`${sentence}\``).then(() => {
+        const start = Date.now();
+        const filter = m => !m.author.bot && m.content.trim() === sentence;
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => {
+            activeGames.delete(channel.id);
+            const t = ((Date.now() - start) / 1000).toFixed(2);
+            m.react('🎉');
+            m.reply(`🎉 كفو ${m.author}! كتبت بـ **${t} ثانية** وكسبت **10 نقاط**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت!`); } });
+    });
+}
+
+function startPenaltyGame(message, guildId) {
+    const channel = message.channel;
+    const challenger = message.author;
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('pen_left').setLabel('⬅️ يسار').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('pen_center').setLabel('⬆️ وسط').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('pen_right').setLabel('➡️ يمين').setStyle(ButtonStyle.Danger)
+    );
+    channel.send({ content: `⚽ **[تحدي ركلات الترجيح]**\n${challenger} يستعد لتسديد الكورة! اختر زاوية التسديد:`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
+        coll.on('collect', async i => {
+            if (i.user.id !== challenger.id) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            await i.deferUpdate().catch(()=>{});
+            const botGoalie = ['left', 'center', 'right'][Math.floor(Math.random() * 3)];
+            const userChoice = i.customId.replace('pen_', '');
+            let res = userChoice === botGoalie ? `🥅 **تصدى لها الحارس!**` : `⚽💥 **قووووول!** كسبت **10 نقاط**!`;
+            if (userChoice !== botGoalie) addPoints(guildId, challenger.id, challenger.displayName, channel);
+            await msg.edit({ content: res, components: [] }).catch(()=>{});
+        });
+    });
+}
+
+function startMinesGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'mines');
+    const mineIndex = Math.floor(Math.random() * 9);
+    const rows = [];
+    for (let r = 0; r < 3; r++) {
+        const rowComps = [];
+        for (let c = 0; c < 3; c++) {
+            const idx = r * 3 + c;
+            rowComps.push(new ButtonBuilder().setCustomId(`mine_${idx}_${idx === mineIndex ? 'boom' : 'safe'}`).setLabel(`مربع ${idx + 1}`).setStyle(ButtonStyle.Secondary));
+        }
+        rows.push(new ActionRowBuilder().addComponents(rowComps));
+    }
+    channel.send({ content: `💣 **[تحدي حقل الألغام]**\nاضغط مربعات آمنة واجمع الأرباح، واحذر من اللغم!`, components: rows }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 30000 });
+        coll.on('collect', async i => {
+            if (i.user.id !== userId) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            await i.deferUpdate().catch(()=>{});
+            if (i.customId.includes('boom')) {
+                activeGames.delete(channel.id);
+                coll.stop();
+                return msg.edit({ content: `💥 **انفجر اللغم!** راحت عليك الأرباح 💀`, components: [] }).catch(()=>{});
+            } else {
+                i.followUp({ content: `✨ مربع آمن! استمر بالتقدم.`, ephemeral: true }).catch(()=>{});
+            }
+        });
+    });
+}
+
+function startRaceGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'race');
+    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('race_btn').setLabel('🏎️ انطلق بأقصى سرعة!').setStyle(ButtonStyle.Success));
+    channel.send({ content: `🏁 **[سباق السرعة التفاعلي]**\nأسرع شخص يضغط على زر الانطلاق 5 مرات يفوز!`, components: [row] }).then(msg => {
+        let progress = new Map();
+        const coll = msg.createMessageComponentCollector({ time: 15000 });
+        coll.on('collect', async i => {
+            await i.deferUpdate().catch(()=>{});
+            let count = (progress.get(i.user.id) || 0) + 1;
+            progress.set(i.user.id, count);
+            if (count >= 5) {
+                coll.stop();
+                activeGames.delete(channel.id);
+                let eco = await getEconomyUser(guildId, i.user.id);
+                eco.balance += 5000;
+                await saveEconomyUser(guildId, i.user.id, eco);
+                addPoints(guildId, i.user.id, i.user.displayName, channel);
+                return msg.edit({ content: `🏎️🏆 **فاز بالسباق ${i.user}!** وكسب **$5,000 كاش** و **10 نقاط**! 🔥`, components: [] }).catch(()=>{});
+            }
+            i.followUp({ content: `⚡ تقدمت في السباق (${count}/5)`, ephemeral: true }).catch(()=>{});
+        });
+    });
+}
+
+function startVaultGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'vault');
+    const correctCode = Math.floor(Math.random() * 6) + 1;
+    const row = new ActionRowBuilder();
+    for (let i = 1; i <= 6; i++) {
+        row.addComponents(new ButtonBuilder().setCustomId(`vault_${i}`).setLabel(`رقم ${i}`).setStyle(ButtonStyle.Primary));
+    }
+    channel.send({ content: `🏦 **[تحدي كسر خزنة البنك]**\nاختر الرقم الصحيح (بين 1 و 6):`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
+        coll.on('collect', async i => {
+            if (i.user.id !== userId) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
+            await i.deferUpdate().catch(()=>{});
+            activeGames.delete(channel.id);
+            const chosenNum = parseInt(i.customId.replace('vault_', ''));
+            if (chosenNum === correctCode) {
+                let eco = await getEconomyUser(guildId, userId);
+                eco.balance += 15000;
+                await saveEconomyUser(guildId, userId, eco);
+                addPoints(guildId, userId, i.user.displayName, channel);
+                await msg.edit({ content: `🔓👑 **تم فتح الخزنة بنجاح يا ${i.user}!** فزت بـ **$15,000 كاش** و **10 نقاط**! 🔥`, components: [] }).catch(()=>{});
+            } else {
+                await msg.edit({ content: `🔒 **إنذار البنك!** الرقم الصحيح كان (${correctCode}). هاردلك! 🚨💀`, components: [] }).catch(()=>{});
+            }
+        });
     });
 }
 
 client.once('clientReady', () => {
   console.log(`[BOT STATUS] Camora Zone is Online & Secured with MongoDB Atlas! 🚀`);
   client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
+
+  setInterval(() => {
+      client.guilds.cache.forEach(guild => {
+          checkAndDistributeAutoRoles(guild);
+      });
+  }, 10 * 60 * 1000);
 });
 
 client.on('messageCreate', async message => {
@@ -491,122 +801,55 @@ client.on('messageCreate', async message => {
           await message.delete().catch(() => {});
           const fetched = await message.channel.messages.fetch({ limit: count });
           await message.channel.bulkDelete(fetched, true);
-          const confirmMsg = await message.channel.send(`🧹 تم حذف **{fetched.size}** رسالة بنجاح!`);
+          const confirmMsg = await message.channel.send(`🧹 تم حذف **${fetched.size}** رسالة بنجاح!`);
           setTimeout(() => confirmMsg.delete().catch(() => {}), 4000);
       } catch (err) {}
       return;
   }
 
-  // --- أمر تجربة الاستبيان على نفسك وحدك ---
-  if (message.content === '!تجربة-استبيان') {
-      if (message.channel.id !== adminSurveyChannel) {
-          return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
+  // --- أمر إرسال إعلان تحديث لعبة لروم معين ---
+  if (message.content.startsWith('!اعلان-تحديث')) {
+      if (!message.member.permissions.has('ManageMessages')) {
+          return message.reply('❌ عذراً، هذا الأمر مخصص للإدارة فقط!');
+      }
+
+      const args = message.content.replace('!اعلان-تحديث', '').trim().split(' ');
+      const targetChannelId = args[0];
+      const gameName = args[1];
+      const gameCommand = args[2];
+
+      if (!targetChannelId || !gameName || !gameCommand) {
+          return message.reply('❌ الاستخدام الصحيح:\n`!اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_التشغيل]`\nمثال: `!اعلان-تحديث 123456789 حقل_الألغام !ألغام`');
       }
 
       try {
+          const targetChannel = await client.channels.fetch(targetChannelId);
+          if (!targetChannel || !targetChannel.isTextBased()) {
+              return message.reply('❌ آيدي الروم غير صحيح أو أنه ليس روم كتابي!');
+          }
+
           await message.delete().catch(() => {});
 
-          const embed = new EmbedBuilder()
-              .setColor('#5865F2')
-              .setTitle('📢 إعلان هام وتطويري في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
-              .setDescription(
-                  'أهلاً بك في مجتمعنا اعرف اننا قروشناك ولكن تحملنا شوي! 🎮🔥\n\n' +
-                  'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
-                  '📋 **شاركنا رأيك عبر استبياننا السريع (10 أسئلة ممتعة + مساحة لاقتراحاتك):**\n' +
-                  'اضغط على الزر أدناه لبدء الاستبيان على الخاص مباشرة ولا تنسَ تعطيني رأيك بكل صراحة! 💡'
-              )
-              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تطوير السيرفر وتقييم اللاعبين' })
-              .setTimestamp();
-
-          const row = new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
-          );
-
-          await message.author.send({ embeds: [embed], components: [row] });
-          return message.channel.send(`✅ **أرسلت لك رسالة التجربة على الخاص يا أحمد!** شيك على محادثتك مع البوت. 🚀`).then(msg => {
-              setTimeout(() => msg.delete().catch(()=>{}), 5000);
-          });
-      } catch (err) {
-          console.error(err);
-          return message.reply('❌ ما قدرت أرسل لك رسالة على الخاص، تأكد أن رسائلك الخاصة مفتوحة من البوت.');
-      }
-  }
-
-  // --- إعلان استطلاع الرأي الشامل (لكل الأعضاء) ---
-  if (message.content === '!ارسل-استبيان') {
-      if (message.channel.id !== adminSurveyChannel) {
-          return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
-      }
-
-      try {
-          await message.delete().catch(() => {});
-
-          const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان الاستبيان على الخاص للأعضاء بالخلفية..**');
-
-          const embed = new EmbedBuilder()
-              .setColor('#5865F2')
-              .setTitle('📢 إعلان هام وتطويري في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
-              .setDescription(
-                  'أهلاً بك في مجتمعنا اعرف اننا قروشناك ولكن تحملنا شوي! 🎮🔥\n\n' +
-                  'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
-                  '📋 **شاركنا رأيك عبر استبياننا السريع (10 أسئلة ممتعة + مساحة لاقتراحاتك):**\n' +
-                  'اضغط على الزر أدناه لبدء الاستبيان على الخاص مباشرة ولا تنسَ تعطيني رأيك بكل صراحة! 💡'
-              )
-              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تطوير السيرفر وتقييم اللاعبين' })
-              .setTimestamp();
-
-          const row = new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
-          );
-
-          await message.guild.members.fetch();
-          let sentCount = 0;
-
-          setTimeout(async () => {
-              for (const member of message.guild.members.cache.values()) {
-                  if (member.user.bot) continue;
-                  try {
-                      await member.send({ embeds: [embed], components: [row] });
-                      sentCount++;
-                  } catch (e) {}
-              }
-              await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الاستبيان على الخاص لـ **{sentCount}** عضو في السيرفر بنجاح! 🚀`).catch(()=>{});
-          }, 100);
-
-          return;
-      } catch (err) {
-          console.error(err);
-          return message.reply('❌ حدث خطأ أثناء إرسال إعلان الاستبيان.');
-      }
-  }
-
-  // --- أمر عرض نتائج الاستبيان والاقتراحات الكتابية (مخصص لرومك الخاص فقط) ---
-  if (message.content === '!نتائج-الاستبيان' || message.content === '!الاستبيان') {
-      if (message.channel.id !== adminSurveyChannel) {
-          return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
-      }
-
-      if (!surveyColl) return message.reply('❌ قاعدة البيانات غير متصلة.');
-
-      try {
-          const totalResponses = await surveyColl.countDocuments({ guildId });
-          const allSurveys = await surveyColl.find({ guildId }).toArray();
-          const suggestions = allSurveys.filter(s => s.suggestion && s.suggestion.trim() !== '').map(s => `• <@{s.userId}>: "{s.suggestion}"`).join('\n') || 'لا توجد اقتراحات كتابية حتى الآن.';
-
-          const embed = new EmbedBuilder()
-              .setColor('#F1C40F')
-              .setTitle('📊 تقارير ونتائج إعلان الاستبيان الشامل')
-              .setDescription(`📈 **إجمالي اللاعبين المشاركين:** \`{totalResponses} لاعب\`\n\n---`)
+          const updateEmbed = new EmbedBuilder()
+              .setColor('#2ECC71')
+              .setTitle('🚀 تحديث جديد في قسم الألعاب!')
+              .setDescription(`تم تحديث وتطوير لعبة **${gameName}** وإضافة مميزات جديدة جربها الان!`)
               .addFields(
-                  { name: '💡 الاقتراحات والأفكار المقترحة من اللاعبين', value: suggestions.length > 1024 ? suggestions.substring(0, 1020) + '...' : suggestions, inline: false }
+                  { name: '🎮 لتجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
+                  { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
               )
-              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • لوحة إدارة الاستبيان' })
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تحديثات السيرفر' })
               .setTimestamp();
 
-          return message.channel.send({ embeds: [embed] });
+          await targetChannel.send({ 
+              content: '🔔 **تنبيه تحديث لعبة جديدة!**', 
+              embeds: [updateEmbed] 
+          });
+
+          return message.author.send(`✅ تم إرسال إعلان تحديث لعبة (${gameName}) إلى الروم <#${targetChannelId}> بنجاح!`).catch(() => {});
       } catch (err) {
           console.error(err);
-          return message.reply('❌ حدث خطأ أثناء جلب نتائج الاستبيان.');
+          return message.reply('❌ حدث خطأ أثناء محاولة إرسال الإعلان، تأكد من آيدي الروم وصلاحيات البوت.');
       }
   }
 
@@ -614,6 +857,7 @@ client.on('messageCreate', async message => {
       await trackUserMessage(guildId, userId, message.author.displayName, message.channel, message.member);
   }
 
+  // --- أوامر الأسهم العالمية ---
   if (allowedStockChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!اسهم' || message.content === '!الأسهم') {
           const unixTime = Math.floor(stockNextUpdate / 1000);
@@ -621,12 +865,12 @@ client.on('messageCreate', async message => {
           const embed = new EmbedBuilder()
               .setColor('#9b59b6')
               .setTitle('📊 بورصة الأسهم العالمية والأصول الرقمية')
-              .setDescription(`⏳ **يتجدد السوق وتتغير أسعار الأسهم:** <t:{unixTime}:R> (<t:{unixTime}:t>)\n\nاختر من الأزرار أدناه لإدارة استثماراتك ومحفظتك بكل سهولة:`);
+              .setDescription(`⏳ **يتجدد السوق وتتغير أسعار الأسهم:** <t:${unixTime}:R> (<t:${unixTime}:t>)\n\nاختر من الأزرار أدناه لإدارة استثماراتك ومحفظتك بكل سهولة:`);
 
           stockMarket.forEach(s => {
               embed.addFields({
-                  name: `${s.emoji} {s.name} (\`{s.id}\`) {s.trend}`,
-                  value: `💵 السعر الحالي: \`${s.price.toLocaleString()}\``,
+                  name: `${s.emoji} ${s.name} (\`${s.id}\`) ${s.trend}`,
+                  value: `💵 السعر الحالي: \`$${s.price.toLocaleString()}\``,
                   inline: true
               });
           });
@@ -642,6 +886,7 @@ client.on('messageCreate', async message => {
       }
   }
 
+  // أوامر الاقتصاد والألعاب الشاملة
   if (allowedEconomyChannels.includes(message.channel.id) || allowedChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
@@ -657,6 +902,7 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
 
+      // 1. نظام الشركات والأصول التفاعلي
       if (message.content.startsWith('!تأسيس-شركة')) {
           const args = message.content.replace('!تأسيس-شركة', '').trim().split('|');
           const corpName = args[0]?.trim();
@@ -666,7 +912,7 @@ client.on('messageCreate', async message => {
 
           let user = await getEconomyUser(guildId, userId);
           const creationCost = 25000;
-          if (user.balance < creationCost) return message.reply(`💸 يتطلب تأسيس شركة \`{creationCost.toLocaleString()}\`!`);
+          if (user.balance < creationCost) return message.reply(`💸 يتطلب تأسيس شركة \`$${creationCost.toLocaleString()}\`!`);
 
           let existingCorp = await guildsColl.findOne({ guildId, name: corpName });
           if (existingCorp) return message.reply('❌ اسم الشركة مستخدم مسبقاً!');
@@ -677,7 +923,7 @@ client.on('messageCreate', async message => {
           const newCorp = { guildId, name: corpName, logo: corpTag, ownerId: userId, members: [userId], capital: creationCost, assets: [], createdAt: Date.now() };
           await guildsColl.insertOne(newCorp);
 
-          return message.channel.send({ content: `🏢 **مبروك!** تم تأسيس شركة **{corpTag} {corpName}** بنجاح! 🚀` });
+          return message.channel.send({ content: `🏢 **مبروك!** تم تأسيس شركة **${corpTag} ${corpName}** بنجاح! 🚀` });
       }
 
       if (message.content === '!شركة' || message.content === '!شركتي') {
@@ -686,13 +932,13 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder()
               .setColor('#f1c40f')
-              .setTitle(`🏢 إدارة شركة: {corp.logo} {corp.name}`)
+              .setTitle(`🏢 إدارة شركة: ${corp.logo} ${corp.name}`)
               .setDescription('مرحباً بك في لوحة تحكم شركتك التجارية. استخدم الأزرار أدناه لإدارة الهيئة:')
               .addFields(
-                  { name: '👑 المؤسس', value: `<@{corp.ownerId}>`, inline: true },
-                  { name: '💰 رأس المال', value: `\`{(corp.capital || 0).toLocaleString()}\``, inline: true },
-                  { name: '👥 عدد الأعضاء', value: `\`{corp.members.length} أعضاء\``, inline: true },
-                  { name: '🏭 الأصول والمشاريع', value: `\`{corp.assets ? corp.assets.length : 0} مشاريع مملوكة\``, inline: true }
+                  { name: '👑 المؤسس', value: `<@${corp.ownerId}>`, inline: true },
+                  { name: '💰 رأس المال', value: `\`$${(corp.capital || 0).toLocaleString()}\``, inline: true },
+                  { name: '👥 عدد الأعضاء', value: `\`${corp.members.length} أعضاء\``, inline: true },
+                  { name: '🏭 الأصول والمشاريع', value: `\`${corp.assets ? corp.assets.length : 0} مشاريع مملوكة\``, inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الشركات والهوامير' })
               .setTimestamp();
@@ -721,21 +967,21 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder()
               .setColor('#3498DB')
-              .setTitle(`🏭 سوق مشاريع وأصول شركة: {corp.name}`)
-              .setDescription(`💰 **رأس مال الشركة الحالي:** \`{(corp.capital || 0).toLocaleString()}\`\n\nاختر من القائمة أدناه لشراء مشاريع تدر أرباحاً دورية على رأس مال شركتي:`);
+              .setTitle(`🏭 سوق مشاريع وأصول شركة: ${corp.name}`)
+              .setDescription(`💰 **رأس مال الشركة الحالي:** \`$${(corp.capital || 0).toLocaleString()}\`\n\nاختر من القائمة أدناه لشراء مشاريع تدر أرباحاً دورية على رأس مال شركتي:`);
 
           corpAssetsMarket.forEach(asset => {
               embed.addFields({
-                  name: `${asset.emoji} {asset.name}`,
-                  value: `💵 التكلفة: \`{asset.price.toLocaleString()}\` | 📈 الربح الساعي: \`{asset.profit.toLocaleString()}\``,
+                  name: `${asset.emoji} ${asset.name}`,
+                  value: `💵 التكلفة: \`$${asset.price.toLocaleString()}\` | 📈 الربح الساعي: \`$${asset.profit.toLocaleString()}\``,
                   inline: false
               });
           });
 
           const options = corpAssetsMarket.map(asset => ({
-              label: `${asset.name} (${asset.price.toLocaleString()})`,
-              description: `الربح الساعي: ${asset.profit.toLocaleString()}`,
-              value: `buy_asset_{asset.id}`,
+              label: `${asset.name} ($${asset.price.toLocaleString()})`,
+              description: `الربح الساعي: $${asset.profit.toLocaleString()}`,
+              value: `buy_asset_${asset.id}`,
               emoji: asset.emoji
           }));
 
@@ -759,7 +1005,7 @@ client.on('messageCreate', async message => {
           if (corp.members.length >= 5) return message.reply('❌ وصلت الشركة للحد الأقصى (5 أعضاء)!');
 
           await guildsColl.updateOne({ _id: corp._id }, { $push: { members: target.id } });
-          return message.channel.send(`✅ **تمت إضافة العضو {target} بنجاح إلى شركة {corp.name}!** 🤝🏢`);
+          return message.channel.send(`✅ **تمت إضافة العضو ${target} بنجاح إلى شركة ${corp.name}!** 🤝🏢`);
       }
 
       if (message.content.startsWith('!شعار-شركة')) {
@@ -772,7 +1018,7 @@ client.on('messageCreate', async message => {
           if (!corp) return message.reply('❌ تغيير شعار وصورة الشركة مخصص لمؤسس الشركة (المالك) فقط!');
 
           await guildsColl.updateOne({ _id: corp._id }, { $set: { image: args } });
-          return message.reply(`✅ **تم تحديث شعار وصورة شركة {corp.name} بنجاح!** 🖼️✨`);
+          return message.reply(`✅ **تم تحديث شعار وصورة شركة ${corp.name} بنجاح!** 🖼️✨`);
       }
 
       if (message.content.startsWith('!تعديل-اسم-الشركة')) {
@@ -786,7 +1032,7 @@ client.on('messageCreate', async message => {
           if (existing) return message.reply('❌ اسم الشركة الجديد مستخدم مسبقاً!');
 
           await guildsColl.updateOne({ _id: corp._id }, { $set: { name: newName } });
-          return message.reply(`✅ **تم تعديل اسم الشركة بنجاح إلى:** **{corp.logo} {newName}** 🏢✨`);
+          return message.reply(`✅ **تم تعديل اسم الشركة بنجاح إلى:** **${corp.logo} ${newName}** 🏢✨`);
       }
 
       if (message.content === '!ترتيب-الشركات') {
@@ -795,18 +1041,19 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder().setColor('#3498DB').setTitle('🏆 لوحة صدارة الهيئات والشركات');
           corps.forEach((c, index) => {
-              embed.addFields({ name: `${index + 1}. {c.logo} **{c.name}**`, value: `👑 المالك: <@{c.ownerId}>\n💰 رأس المال: \`{(c.capital || 0).toLocaleString()}\``, inline: false });
+              embed.addFields({ name: `${index + 1}. ${c.logo} **${c.name}**`, value: `👑 المالك: <@${c.ownerId}>\n💰 رأس المال: \`$${(c.capital || 0).toLocaleString()}\``, inline: false });
           });
           return message.channel.send({ embeds: [embed] });
       }
 
+      // 2. نظام القروض وبنك السيرفر
       if (message.content.startsWith('!قرض')) {
           const args = message.content.split(' ');
           const loanAmt = parseInt(args[1]);
           if (isNaN(loanAmt) || loanAmt <= 0) return message.reply('❌ الاستخدام الصحيح: `!قرض [المبلغ]`');
 
           let user = await getEconomyUser(guildId, userId);
-          if (user.loan > 0) return message.reply(`❌ لديك قرض غير مسدد بقيمة \`{user.loan.toLocaleString()}\`!`);
+          if (user.loan > 0) return message.reply(`❌ لديك قرض غير مسدد بقيمة \`$${user.loan.toLocaleString()}\`!`);
 
           const totalDebt = Math.floor(loanAmt * 1.15);
           user.balance += loanAmt;
@@ -814,13 +1061,13 @@ client.on('messageCreate', async message => {
           user.loanDueDate = Date.now() + (24 * 60 * 60 * 1000);
           await saveEconomyUser(guildId, userId, user);
 
-          return message.reply(`✅ تم إيداع **{loanAmt.toLocaleString()}** بحسابك.\n📌 إجمالي واجب السداد (مع فائدة 15%): \`{totalDebt.toLocaleString()}\``);
+          return message.reply(`✅ تم إيداع **$${loanAmt.toLocaleString()}** بحسابك.\n📌 إجمالي واجب السداد (مع فائدة 15%): \`$${totalDebt.toLocaleString()}\``);
       }
 
       if (message.content === '!سداد') {
           let user = await getEconomyUser(guildId, userId);
           if (!user.loan || user.loan <= 0) return message.reply('✅ ليس عليك أي ديون مستحقة!');
-          if (user.balance < user.loan) return message.reply(`💸 رصيدك لا يكفي لسداد القرض ({user.loan.toLocaleString()})!`);
+          if (user.balance < user.loan) return message.reply(`💸 رصيدك لا يكفي لسداد القرض ($${user.loan.toLocaleString()})!`);
 
           user.balance -= user.loan;
           user.loan = 0;
@@ -835,26 +1082,28 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder().setColor('#e74c3c').setTitle('🚨 لوحة المتعثرين والمديونين');
           debtors.forEach((d, idx) => {
-              embed.addFields({ name: `${idx + 1}. <@{d.userId}>`, value: `📉 الدين: \`{d.loan.toLocaleString()}\``, inline: false });
+              embed.addFields({ name: `${idx + 1}. <@${d.userId}>`, value: `📉 الدين: \`$${d.loan.toLocaleString()}\``, inline: false });
           });
           return message.channel.send({ embeds: [embed] });
       }
 
+      // 3. نظام الحماية الشخصية للعقارات (مع عدد الصدات Durability)
       if (message.content === '!شراء-حارس' || message.content === '!حماية') {
           let user = await getEconomyUser(guildId, userId);
           const cost = 15000;
           if (user.guard && user.guardShields > 0) {
-              return message.reply(`🛡️ لديك حارس شخصي مفعل حالياً ومتبقي له **{user.guardShields} صدات** دفاعية!`);
+              return message.reply(`🛡️ لديك حارس شخصي مفعل حالياً ومتبقي له **${user.guardShields} صدات** دفاعية!`);
           }
-          if (user.balance < cost) return message.reply(`💸 التكلفة \`{cost.toLocaleString()}\` ورصيدك لا يكفي!`);
+          if (user.balance < cost) return message.reply(`💸 التكلفة \`$${cost.toLocaleString()}\` ورصيدك لا يكفي!`);
 
           user.balance -= cost;
           user.guard = true;
-          user.guardShields = 3; 
+          user.guardShields = 3; // يحميك من 3 سرقات كحد أقصى
           await saveEconomyUser(guildId, userId, user);
           return message.reply('🛡️ **تم تعيين حارس شخصي بنجاح!**\n⚡ الحارس جاهز لصد أول **3 محاولات سرقة** تتعرض لها.');
       }
 
+      // 4. سرقة البنوك الكبرى الجماعية (Heist)
       if (message.content.startsWith('!سرقة-بنك')) {
           const mentions = message.mentions.users.filter(u => !u.bot && u.id !== userId);
           if (mentions.size < 3) return message.reply('❌ سرقة البنك تتطلب قائد و **3 من خويك**: `!سرقة-بنك [@خويك1] [@خويك2] [@خويك3]`');
@@ -868,9 +1117,9 @@ client.on('messageCreate', async message => {
           await saveEconomyUser(guildId, userId, leader);
 
           const teamMembers = [message.author, ...mentions.values()];
-          const teamMentions = teamMembers.map(m => `<@{m.id}>`).join('، ');
+          const teamMentions = teamMembers.map(m => `<@${m.id}>`).join('، ');
 
-          const embed = new EmbedBuilder().setColor('#e74c3c').setTitle('🚨 تخطيط وتجهيز لسرقة البنك المركزي (Heist)!').setDescription(`عصابة {teamMentions} تقتحم البنك المركزي الآن!\n\n⚡ اضغط الزر السريع أدناه للنجاح خلال 15 ثانية!`);
+          const embed = new EmbedBuilder().setColor('#e74c3c').setTitle('🚨 تخطيط وتجهيز لسرقة البنك المركزي (Heist)!').setDescription(`عصابة ${teamMentions} تقتحم البنك المركزي الآن!\n\n⚡ اضغط الزر السريع أدناه للنجاح خلال 15 ثانية!`);
           const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('heist_hack').setLabel('💻 اختراق الخزنة').setStyle(ButtonStyle.Success));
 
           const msg = await message.channel.send({ embeds: [embed], components: [row] });
@@ -887,21 +1136,21 @@ client.on('messageCreate', async message => {
                       mEco.balance += share;
                       await saveEconomyUser(guildId, member.id, mEco);
                   }
-                  await msg.edit({ content: `💰 **نجحت العصابة ({teamMentions}) في سرقة البنك المركزي!** حصيلة كل فرد: \`{share.toLocaleString()}\` 🚀`, components: [] }).catch(()=>{});
+                  await msg.edit({ content: `💰 **نجحت العصابة (${teamMentions}) في سرقة البنك المركزي!** حصيلة كل فرد: \`$${share.toLocaleString()}\` 🚀`, components: [] }).catch(()=>{});
               } else {
                   for (const member of teamMembers) {
                       let mEco = await getEconomyUser(guildId, member.id);
                       mEco.balance = Math.max(0, mEco.balance - 15000);
                       await saveEconomyUser(guildId, member.id, mEco);
                   }
-                  await msg.edit({ content: `🚨 **فشلت العملية وتم القبض على العصابة ({teamMentions})!** غرامة 15,000$ لكل فرد 🚔💀`, components: [] }).catch(()=>{});
+                  await msg.edit({ content: `🚨 **فشلت العملية وتم القبض على العصابة (${teamMentions})!** غرامة 15,000$ لكل فرد 🚔💀`, components: [] }).catch(()=>{});
               }
           });
       }
 
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
-          return message.reply(`💳 رصيدك: **{user.balance.toLocaleString()}** | القرض: **{(user.loan || 0).toLocaleString()}** | الحارس: **{user.guard && user.guardShields > 0 ? `🛡️ مفعل ({user.guardShields} صدات)` : '❌'}** | وظيفتك: **{user.job}**`);
+          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **${user.guard && user.guardShields > 0 ? `🛡️ مفعل (${user.guardShields} صدات)` : '❌'}** | وظيفتك: **${user.job}**`);
       }
 
       if (message.content === '!راتب' || message.content === 'راتب') {
@@ -918,7 +1167,7 @@ client.on('messageCreate', async message => {
                   const m = Math.floor(remainingMs / 60000);
                   const s = Math.floor((remainingMs % 60000) / 1000);
                   processingUsers.delete(userId);
-                  return message.reply(`⏳ يابن الحلال! باقي **{m} دقيقة و {s} ثانية** على راتبك القادم.`);
+                  return message.reply(`⏳ يابن الحلال! باقي **${m} دقيقة و ${s} ثانية** على راتبك القادم.`);
               }
 
               let baseSalary = 500;
@@ -943,7 +1192,7 @@ client.on('messageCreate', async message => {
               await saveEconomyUser(guildId, userId, user);
               processingUsers.delete(userId);
 
-              return message.reply(`💵 تم إيداع راتب وظيفتك ({user.job}) بقيمة **{baseSalary.toLocaleString()}** + أرباح عقارك وأملاكك بقيمة **{totalProfit.toLocaleString()}**.\n💰 **إجمالي المبلغ المودع:** \`{totalReceived.toLocaleString()}\` 🚀`);
+              return message.reply(`💵 تم إيداع راتب وظيفتك (${user.job}) بقيمة **$${baseSalary.toLocaleString()}** + أرباح عقارك وأملاكك بقيمة **$${totalProfit.toLocaleString()}**.\n💰 **إجمالي المبلغ المودع:** \`$${totalReceived.toLocaleString()}\` 🚀`);
           } catch (err) {
               processingUsers.delete(userId);
               console.error(err);
@@ -961,15 +1210,15 @@ client.on('messageCreate', async message => {
 
           const profileEmbed = new EmbedBuilder()
               .setColor('#9B59B6')
-              .setTitle(`👤 الهوية الشخصية: {targetName}`)
+              .setTitle(`👤 الهوية الشخصية: ${targetName}`)
               .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
               .addFields(
-                  { name: '💳 الرصيد المالي', value: `\`{ecoData.balance.toLocaleString()}\``, inline: true },
-                  { name: '👔 الوظيفة الحالية', value: `\`{ecoData.job}\``, inline: true },
-                  { name: '⭐ رصيد النقاط', value: `\`{${~~ptsData.points} نقطة\``, inline: true },
-                  { name: '🚀 المستوى (Level)', value: `\`Level {ptsData.level}\` (XP: {ptsData.xp} / {xpNeeded})`, inline: false },
-                  { name: '🏠 عدد العقارات والأملاك', value: `\`{ecoData.properties.length} عقار\``, inline: true },
-                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`{ptsData.messagesCount} رسالة\``, inline: true }
+                  { name: '💳 الرصيد المالي', value: `\`$${ecoData.balance.toLocaleString()}\``, inline: true },
+                  { name: '👔 الوظيفة الحالية', value: `\`${ecoData.job}\``, inline: true },
+                  { name: '⭐ رصيد النقاط', value: `\`${~~ptsData.points} نقطة\``, inline: true },
+                  { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
+                  { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
+                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الهوية والإنجازات' })
               .setTimestamp();
@@ -985,9 +1234,9 @@ client.on('messageCreate', async message => {
               const j = jobsList[key];
               const isUnlocked = pUser.level >= j.level;
               return {
-                  label: `${j.name} (راتب: ${j.salary.toLocaleString()})`,
-                  description: isUnlocked ? `✨ متاحة! تتطلب Level {j.level}` : `🔒 مغلقة! تتطلب Level {j.level}`,
-                  value: `job_{key}`
+                  label: `${j.name} (راتب: $${j.salary.toLocaleString()})`,
+                  description: isUnlocked ? `✨ متاحة! تتطلب Level ${j.level}` : `🔒 مغلقة! تتطلب Level ${j.level}`,
+                  value: `job_${key}`
               };
           });
 
@@ -1001,7 +1250,7 @@ client.on('messageCreate', async message => {
           const embed = new EmbedBuilder()
               .setColor('#3498DB')
               .setTitle('👔 سلّم الوظائف واختيار المهنة')
-              .setDescription(`مستواك الحالي: \`Level {pUser.level}\`\nوظيفتك الحالية: \`{user.job}\`\n\nاختر وظيفتك المطلوبة من القائمة أدناه للترقية الفورية بضغطة زر:`);
+              .setDescription(`مستواك الحالي: \`Level ${pUser.level}\`\nوظيفتك الحالية: \`${user.job}\`\n\nاختر وظيفتك المطلوبة من القائمة أدناه للترقية الفورية بضغطة زر:`);
 
           return message.channel.send({ embeds: [embed], components: [row] });
       }
@@ -1011,13 +1260,13 @@ client.on('messageCreate', async message => {
           const embed = new EmbedBuilder()
               .setColor('#0099ff')
               .setTitle('📈 بورصة العقارات والأعمال')
-              .setDescription(`⏳ **يتجدد السوق وتتغير الأسعار:** <t:{unixTime}:R> (<t:{unixTime}:t>)`);
+              .setDescription(`⏳ **يتجدد السوق وتتغير الأسعار:** <t:${unixTime}:R> (<t:${unixTime}:t>)`);
 
           const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
 
           sortedMarket.forEach(i => embed.addFields({ 
-              name: `${i.emoji} {i.name} {i.trend}`, 
-              value: `💰 السعر: \`{i.price.toLocaleString()}\` | 💸 ربح: \`{i.profit.toLocaleString()}\``, 
+              name: `${i.emoji} ${i.name} ${i.trend}`, 
+              value: `💰 السعر: \`$${i.price.toLocaleString()}\` | 💸 ربح: \`$${i.profit.toLocaleString()}\``, 
               inline: true 
           }));
 
@@ -1034,9 +1283,9 @@ client.on('messageCreate', async message => {
           const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
 
           const options = sortedMarket.map((item) => ({
-              label: `${item.name} (${item.price.toLocaleString()})`,
-              description: `الربح: ${item.profit.toLocaleString()}`,
-              value: `buy_{item.id}`,
+              label: `${item.name} ($${item.price.toLocaleString()})`,
+              description: `الربح: $${item.profit.toLocaleString()}`,
+              value: `buy_${item.id}`,
               emoji: item.emoji || '💼'
           }));
 
@@ -1048,7 +1297,7 @@ client.on('messageCreate', async message => {
           );
 
           return message.channel.send({
-              content: `🛍️ **متجر وسوق العقارات والأعمال**\nرصيدك الحالي: \`{user.balance.toLocaleString()}\``,
+              content: `🛍️ **متجر وسوق العقارات والأعمال**\nرصيدك الحالي: \`$${user.balance.toLocaleString()}\``,
               components: [row]
           });
       }
@@ -1081,15 +1330,15 @@ client.on('messageCreate', async message => {
 
               const embed = new EmbedBuilder()
                   .setColor('#00FF00')
-                  .setTitle(`🏠 محفظة وعقارات: {message.author.displayName}`)
-                  .setDescription(`📊 **ملخص المحفظة الشامل:**\n• إجمالي العقارات: \`{totalCountProperties} عقار\`\n• المبلغ الكامل للقيمة: \`{grandTotalValue.toLocaleString()}\`\n• إجمالي الربح بالراتب: \`{grandTotalProfit.toLocaleString()}\`\n\n---`)
-                  .setFooter({ text: `صفحة {pageNum} من {totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
+                  .setTitle(`🏠 محفظة وعقارات: ${message.author.displayName}`)
+                  .setDescription(`📊 **ملخص المحفظة الشامل:**\n• إجمالي العقارات: \`${totalCountProperties} عقار\`\n• المبلغ الكامل للقيمة: \`$${grandTotalValue.toLocaleString()}\`\n• إجمالي الربح بالراتب: \`$${grandTotalProfit.toLocaleString()}\`\n\n---`)
+                  .setFooter({ text: `صفحة ${pageNum} من ${totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
 
               pageItems.forEach((item, idx) => {
                   const globalIdx = start + idx + 1;
                   embed.addFields({
-                      name: `${globalIdx}. {item.emoji} {item.name} {item.count > 1 ? `(العدد: x{item.count})` : ''}`,
-                      value: `💰 القيمة: \`{item.totalPrice.toLocaleString()}\` | 💸 الربح: \`{item.totalProfit.toLocaleString()}\``,
+                      name: `${globalIdx}. ${item.emoji} ${item.name} ${item.count > 1 ? `(العدد: x${item.count})` : ''}`,
+                      value: `💰 القيمة: \`$${item.totalPrice.toLocaleString()}\` | 💸 الربح: \`$${item.totalProfit.toLocaleString()}\``,
                       inline: false
                   });
               });
@@ -1127,7 +1376,7 @@ client.on('messageCreate', async message => {
           const sellP = Math.floor(item.price * 0.90);
           user.properties.splice(idx, 1); user.balance += sellP;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🤝 بعت **{item.name}** بـ **{sellP.toLocaleString()}** (بعد خصم 10% رسوم).`);
+          return message.reply(`🤝 بعت **${item.name}** بـ **$${sellP.toLocaleString()}** (بعد خصم 10% رسوم).`);
       }
 
       if (message.content.startsWith('!سرقة')) {
@@ -1151,7 +1400,7 @@ client.on('messageCreate', async message => {
               targetUser.balance -= stolen; user.balance += stolen;
               await saveEconomyUser(guildId, target.id, targetUser);
               await saveEconomyUser(guildId, userId, user);
-              return message.channel.send(`🦹‍♂️ **عملية ناجحة!** سرق {message.author} مبلغ **{stolen.toLocaleString()}** من {target}! 💰🔥`);
+              return message.channel.send(`🦹‍♂️ **عملية ناجحة!** سرق ${message.author} مبلغ **$${stolen.toLocaleString()}** من ${target}! 💰🔥`);
           } else {
               let guardMsg = '';
               if (hasActiveGuard) {
@@ -1160,7 +1409,7 @@ client.on('messageCreate', async message => {
                       targetUser.guard = false;
                       guardMsg = '\n🛡️💥 **انتهت طاقة الحارس وهرب بعد تصديه للهجوم!** (يجب شراء حارس جديد)';
                   } else {
-                      guardMsg = `\n🛡️ **تصدى الحارس للسرقة!** متبقي له ({targetUser.guardShields}) صدات دفاعية.`;
+                      guardMsg = `\n🛡️ **تصدى الحارس للسرقة!** متبقي له (${targetUser.guardShields}) صدات دفاعية.`;
                   }
                   await saveEconomyUser(guildId, target.id, targetUser);
               }
@@ -1168,7 +1417,7 @@ client.on('messageCreate', async message => {
               const fine = hasActiveGuard ? 800 : 300;
               user.balance = Math.max(0, user.balance - fine);
               await saveEconomyUser(guildId, userId, user);
-              return message.channel.send(`🚨 **فشلت السرقة!** غرمته الشرطة **{fine}**! 🚔💀{guardMsg}`);
+              return message.channel.send(`🚨 **فشلت السرقة!** غرمته الشرطة **$${fine}**! 🚔💀${guardMsg}`);
           }
       }
 
@@ -1183,21 +1432,21 @@ client.on('messageCreate', async message => {
           user.lastGambling = now;
           
           const roll = Math.random();
-          if (roll < 0.40) { user.balance -= amt; message.reply(`😢 خسرت رهنتك وراحت عليك **{amt.toLocaleString()}**!`); }
-          else if (roll < 0.85) { user.balance += amt; message.reply(`🎰 **كفووو!** فزت وضاعفت فلوسك وكسبت **{amt.toLocaleString()}**! 🎉`); }
-          else { user.balance += amt * 3; message.channel.send(`👑 **ضربت الحظ الكبرى!** كسبت أضعاف مضاعفة بقيمة **{(amt*3).toLocaleString()}** يا {message.author}! 🔥`); }
+          if (roll < 0.40) { user.balance -= amt; message.reply(`😢 خسرت رهنتك وراحت عليك **$${amt.toLocaleString()}**!`); }
+          else if (roll < 0.85) { user.balance += amt; message.reply(`🎰 **كفووو!** فزت وضاعفت فلوسك وكسبت **$${amt.toLocaleString()}**! 🎉`); }
+          else { user.balance += amt * 3; message.channel.send(`👑 **ضربت الحظ الكبرى!** كسبت أضعاف مضاعفة بقيمة **$${(amt*3).toLocaleString()}** يا ${message.author}! 🔥`); }
           await saveEconomyUser(guildId, userId, user);
       }
 
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك لا يكفي!');
+          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
           user.balance -= 3000;
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
           if (won > 0) user.balance += won;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`📦 فتحت الصندوق السري وطلع لك: **{won.toLocaleString()}**!`);
+          return message.reply(`📦 فتحت الصندوق السري وطلع لك: **$${won.toLocaleString()}**!`);
       }
 
       if (message.content === '!مهامي') {
@@ -1220,10 +1469,11 @@ client.on('messageCreate', async message => {
           s.balance -= amt; await saveEconomyUser(guildId, userId, s);
           let r = await getEconomyUser(guildId, target.id);
           r.balance += amt; await saveEconomyUser(guildId, target.id, r);
-          return message.channel.send(`✅ تم تحويل **{amt.toLocaleString()}** بنجاح إلى {target}!`);
+          return message.channel.send(`✅ تم تحويل **$${amt.toLocaleString()}** بنجاح إلى ${target}!`);
       }
   }
 
+  // الألعاب والفعاليات ولوحة الصدارة الكاملة
   if (allowedChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!فعالية' || message.content === '!لعبة' || message.content === '!العب') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة في هذه الروم!');
@@ -1261,11 +1511,11 @@ client.on('messageCreate', async message => {
           const totalPages = 4;
 
           const generateEmbed = (pageNum) => {
-              const embed = new EmbedBuilder().setColor('#FFD700').setFooter({ text: `صفحة {pageNum} من {totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
-              if (pageNum === 1) embed.setTitle('👑 لوحة صدارة النقاط').setDescription(topPoints.length ? topPoints.map((d, i) => `${i+1}. <@{d.userId}>: \`{d.points} نقطة\``).join('\n') : 'لا توجد بيانات.');
-              else if (pageNum === 2) embed.setTitle('💎 لوحة صدارة الأثرياء').setDescription(topRich.length ? topRich.map((d, i) => `${i+1}. <@{d.userId}>: \`{d.balance.toLocaleString()}\``).join('\n') : 'لا توجد بيانات.');
-              else if (pageNum === 3) embed.setTitle('⚡ لوحة أسرع اللاعبين').setDescription(topSpeed.length ? topSpeed.map((d, i) => `${i+1}. <@{d.userId}>: \`{d.bestTime} ثانية\``).join('\n') : 'لا توجد سجلات.');
-              else if (pageNum === 4) embed.setTitle('🚀 لوحة مستويات التلفيل').setDescription(topLevel.length ? topLevel.map((d, i) => `${i+1}. <@{d.userId}>: \`Level {d.level}\``).join('\n') : 'لا توجد بيانات.');
+              const embed = new EmbedBuilder().setColor('#FFD700').setFooter({ text: `صفحة ${pageNum} من ${totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
+              if (pageNum === 1) embed.setTitle('👑 لوحة صدارة النقاط').setDescription(topPoints.length ? topPoints.map((d, i) => `${i+1}. <@${d.userId}>: \`${d.points} نقطة\``).join('\n') : 'لا توجد بيانات.');
+              else if (pageNum === 2) embed.setTitle('💎 لوحة صدارة الأثرياء').setDescription(topRich.length ? topRich.map((d, i) => `${i+1}. <@${d.userId}>: \`$${d.balance.toLocaleString()}\``).join('\n') : 'لا توجد بيانات.');
+              else if (pageNum === 3) embed.setTitle('⚡ لوحة أسرع اللاعبين').setDescription(topSpeed.length ? topSpeed.map((d, i) => `${i+1}. <@${d.userId}>: \`${d.bestTime} ثانية\``).join('\n') : 'لا توجد سجلات.');
+              else if (pageNum === 4) embed.setTitle('🚀 لوحة مستويات التلفيل').setDescription(topLevel.length ? topLevel.map((d, i) => `${i+1}. <@${d.userId}>: \`Level ${d.level}\``).join('\n') : 'لا توجد بيانات.');
               return embed;
           };
 
@@ -1323,8 +1573,8 @@ client.on('messageCreate', async message => {
           activeGames.set(message.channel.id, 'roulette');
           setTimeout(() => {
               activeGames.delete(message.channel.id);
-              if (Math.floor(Math.random() * 6) + 1 === 1) message.channel.send(`💥 **بووووم!** {message.author} خسر 💀.`);
-              else { message.channel.send(`😅 المسدس فاضي! كسبت **10 نقاط** يا {message.author}.`); addPoints(guildId, userId, message.author.displayName, message.channel); }
+              if (Math.floor(Math.random() * 6) + 1 === 1) message.channel.send(`💥 **بووووم!** ${message.author} خسر 💀.`);
+              else { message.channel.send(`😅 المسدس فاضي! كسبت **10 نقاط** يا ${message.author}.`); addPoints(guildId, userId, message.author.displayName, message.channel); }
           }, 3000);
       }
 
@@ -1335,6 +1585,7 @@ client.on('messageCreate', async message => {
   }
 });
 
+// معالج التفاعلات والأزرار والشركات والمودال
 client.on('interactionCreate', async interaction => {
     if (interaction.isButton()) {
         const guildId = interaction.guild.id;
@@ -1343,9 +1594,9 @@ client.on('interactionCreate', async interaction => {
         if (interaction.customId === 'open_buy_menu') {
             const user = await getEconomyUser(guildId, userId);
             const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
-            const options = sortedMarket.map((item) => ({ label: `${item.name} (${item.price.toLocaleString()})`, value: `buy_${item.id}`, emoji: item.emoji || '💼' }));
+            const options = sortedMarket.map((item) => ({ label: `${item.name} ($${item.price.toLocaleString()})`, value: `buy_${item.id}`, emoji: item.emoji || '💼' }));
             const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('market_buy_select').setPlaceholder('🛒 اختر عقاراً للشراء...').addOptions(options));
-            return interaction.reply({ content: `🛍️ رصيدك: \`{user.balance.toLocaleString()}\``, components: [row], ephemeral: true });
+            return interaction.reply({ content: `🛍️ رصيدك: \`$${user.balance.toLocaleString()}\``, components: [row], ephemeral: true });
         }
 
         if (interaction.customId === 'open_sell_menu') {
@@ -1358,9 +1609,9 @@ client.on('interactionCreate', async interaction => {
                 const item = marketItems.find(i => i.id === propId);
                 const sellP = Math.floor(item.price * 0.90);
                 return {
-                    label: `${item.name} (سعر البيع: {sellP.toLocaleString()})`,
-                    description: `العقار رقم {idx + 1} في محفظتك`,
-                    value: `sell_prop_{idx}`,
+                    label: `${item.name} (سعر البيع: $${sellP.toLocaleString()})`,
+                    description: `العقار رقم ${idx + 1} في محفظتك`,
+                    value: `sell_prop_${idx}`,
                     emoji: item.emoji || '🏠'
                 };
             });
@@ -1399,10 +1650,10 @@ client.on('interactionCreate', async interaction => {
                 if (stock && qty > 0) {
                     const val = stock.price * qty;
                     totalVal += val;
-                    text += `• {stock.emoji} {stock.name}: \`x{qty}\` (القيمة: $\`{val.toLocaleString()}\`)\n`;
+                    text += `• ${stock.emoji} ${stock.name}: \`x${qty}\` (القيمة: $\`${val.toLocaleString()}\`)\n`;
                 }
             }
-            text += `\n💎 **إجمالي المحفظة:** $\`{totalVal.toLocaleString()}\``;
+            text += `\n💎 **إجمالي المحفظة:** $\`${totalVal.toLocaleString()}\``;
             return interaction.reply({ content: text, ephemeral: true });
         }
 
@@ -1415,6 +1666,7 @@ client.on('interactionCreate', async interaction => {
             return interaction.showModal(modal);
         }
 
+        // أزرار لوحة الشركات (!شركة)
         if (interaction.customId === 'corp_donate_btn') {
             const modal = new ModalBuilder().setCustomId('corp_donate_modal').setTitle('💸 تبرع لدعم رأس مال الشركة');
             const amountInput = new TextInputBuilder().setCustomId('donate_amount').setLabel('أدخل مبلغ التبرع (بالدولار)').setStyle(TextInputStyle.Short).setRequired(true);
@@ -1426,8 +1678,8 @@ client.on('interactionCreate', async interaction => {
             const corp = await guildsColl.findOne({ guildId, members: userId });
             if (!corp) return interaction.reply({ content: '❌ أنت لست في شركة!', ephemeral: true });
 
-            const memberList = corp.members.map(id => `<@{id}>`).join('\n');
-            const embed = new EmbedBuilder().setColor('#3498DB').setTitle(`👥 أعضاء شركة: {corp.name}`).setDescription(memberList);
+            const memberList = corp.members.map(id => `<@${id}>`).join('\n');
+            const embed = new EmbedBuilder().setColor('#3498DB').setTitle(`👥 أعضاء شركة: ${corp.name}`).setDescription(memberList);
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
@@ -1439,14 +1691,14 @@ client.on('interactionCreate', async interaction => {
             if (corp.assets && corp.assets.length > 0) {
                 assetList = corp.assets.map(aId => {
                     const item = corpAssetsMarket.find(a => a.id === aId);
-                    return item ? `• {item.emoji} **{item.name}** (ربح ساعي: \`{item.profit.toLocaleString()}\`)` : '';
+                    return item ? `• ${item.emoji} **${item.name}** (ربح ساعي: \`$${item.profit.toLocaleString()}\`)` : '';
                 }).filter(Boolean).join('\n');
             }
 
             const embed = new EmbedBuilder()
                 .setColor('#2ECC71')
-                .setTitle(`🏭 أصول ومشاريع شركة: {corp.name}`)
-                .setDescription(`📊 **الأصول المملوكة حالياً:**\n{assetList}\n\n💡 أرباح هذه المشاريع تضاف تلقائياً لرأس مال الشركة كل ساعة!`);
+                .setTitle(`🏭 أصول ومشاريع شركة: ${corp.name}`)
+                .setDescription(`📊 **الأصول المملوكة حالياً:**\n${assetList}\n\n💡 أرباح هذه المشاريع تضاف تلقائياً لرأس مال الشركة كل ساعة!`);
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
@@ -1457,7 +1709,7 @@ client.on('interactionCreate', async interaction => {
             if (corp.ownerId === userId) return interaction.reply({ content: '⚠️ أنت مؤسس الشركة ولا يمكنك مغادرتها!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $pull: { members: userId } });
-            return interaction.update({ content: `✅ لقد غادرت شركة **{corp.name}** بنجاح.`, embeds: [], components: [] });
+            return interaction.update({ content: `✅ لقد غادرت شركة **${corp.name}** بنجاح.`, embeds: [], components: [] });
         }
 
         if (interaction.customId === 'corp_invite_btn') {
@@ -1489,23 +1741,6 @@ client.on('interactionCreate', async interaction => {
             modal.addComponents(new ActionRowBuilder().addComponents(nameInput));
             return interaction.showModal(modal);
         }
-
-        if (interaction.customId === 'start_survey_btn') {
-            // الاستجابة الفورية لزر الاستبيان لتجنب انتهاء المهلة (3 ثواني)
-            const row = new ActionRowBuilder().addComponents(
-                new StringSelectMenuBuilder()
-                    .setCustomId('survey_q1')
-                    .setPlaceholder('🎮 1. كيف تقيّم تنوع ألعاب البوت وتفاعلها؟')
-                    .addOptions([
-                        { label: '⭐⭐⭐⭐⭐ ممتازة ومولعة', value: 'q1_5' },
-                        { label: '⭐⭐⭐⭐ جيدة', value: 'q1_4' },
-                        { label: '⭐⭐⭐ مقبولة', value: 'q1_3' },
-                        { label: '⭐⭐ ضعيفة', value: 'q1_2' },
-                        { label: '⭐ سيئة ومملة', value: 'q1_1' }
-                    ])
-            );
-            return interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
-        }
     }
 
     if (interaction.isModalSubmit()) {
@@ -1527,7 +1762,7 @@ client.on('interactionCreate', async interaction => {
             user.stocks[symbol] = (user.stocks[symbol] || 0) + amount;
             await saveEconomyUser(guildId, userId, user);
 
-            return interaction.reply({ content: `✅ اشتريت \`{amount}\` سهم من {stock.name} بـ \`{totalCost.toLocaleString()}\``, ephemeral: true });
+            return interaction.reply({ content: `✅ اشتريت \`${amount}\` سهم من ${stock.name} بـ \`$${totalCost.toLocaleString()}\``, ephemeral: true });
         }
 
         if (interaction.customId === 'stock_sell_modal') {
@@ -1546,7 +1781,7 @@ client.on('interactionCreate', async interaction => {
             user.balance += totalEarned;
             await saveEconomyUser(guildId, userId, user);
 
-            return interaction.reply({ content: `🤝 بعت \`{amount}\` سهم من {stock.name} واستلمت \`{totalEarned.toLocaleString()}\``, ephemeral: true });
+            return interaction.reply({ content: `🤝 بعت \`${amount}\` سهم من ${stock.name} واستلمت \`$${totalEarned.toLocaleString()}\``, ephemeral: true });
         }
 
         if (interaction.customId === 'corp_donate_modal') {
@@ -1563,7 +1798,7 @@ client.on('interactionCreate', async interaction => {
             await saveEconomyUser(guildId, userId, user);
             await guildsColl.updateOne({ _id: corp._id }, { $inc: { capital: amount } });
 
-            return interaction.reply({ content: `✅ تم التبرع بـ \`{amount.toLocaleString()}\` لدعم رأس مال شركة **{corp.name}** بنجاح! 📈🔥`, ephemeral: true });
+            return interaction.reply({ content: `✅ تم التبرع بـ \`$${amount.toLocaleString()}\` لدعم رأس مال شركة **${corp.name}** بنجاح! 📈🔥`, ephemeral: true });
         }
 
         if (interaction.customId === 'corp_invite_modal') {
@@ -1574,7 +1809,7 @@ client.on('interactionCreate', async interaction => {
             if (corp.members.length >= 5) return interaction.reply({ content: '❌ وصلت الشركة للحد الأقصى (5 أعضاء)!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $push: { members: targetId } });
-            return interaction.reply({ content: `✅ تمت إضافة العضو (<@{targetId}>) بنجاح إلى شركة **{corp.name}**! 🤝🏢`, ephemeral: true });
+            return interaction.reply({ content: `✅ تمت إضافة العضو (<@${targetId}>) بنجاح إلى شركة **${corp.name}**! 🤝🏢`, ephemeral: true });
         }
 
         if (interaction.customId === 'corp_logo_modal') {
@@ -1583,7 +1818,7 @@ client.on('interactionCreate', async interaction => {
             if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $set: { image: logoUrl } });
-            return interaction.reply({ content: `✅ تم تحديث شعار وصورة شركة **{corp.name}** بنجاح! 🖼️✨`, ephemeral: true });
+            return interaction.reply({ content: `✅ تم تحديث شعار وصورة شركة **${corp.name}** بنجاح! 🖼️✨`, ephemeral: true });
         }
 
         if (interaction.customId === 'corp_rename_modal') {
@@ -1595,24 +1830,7 @@ client.on('interactionCreate', async interaction => {
             if (existing) return interaction.reply({ content: '❌ اسم الشركة الجديد مستخدم مسبقاً!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $set: { name: newName } });
-            return interaction.reply({ content: `✅ تم تعديل اسم الشركة بنجاح إلى: **{corp.logo} {newName}** 🏢✨`, ephemeral: true });
-        }
-
-        if (interaction.customId === 'survey_suggestion_modal') {
-            const suggestionText = interaction.fields.getTextInputValue('user_suggestion_text').trim();
-
-            if (surveyColl) {
-                await surveyColl.updateOne(
-                    { guildId, userId },
-                    { $set: { suggestion: suggestionText, completedAt: Date.now() } },
-                    { upsert: true }
-                );
-            }
-
-            return interaction.reply({
-                content: `🎉 **شكراً لك يا {interaction.user.displayName}!**\nتم اكتمال الاستبيان وحفظ إجاباتك واقتراحك بنجاح. يعطيك العافية على دعمك المستمر لـ 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞! 🚀❤️`,
-                ephemeral: true
-            });
+            return interaction.reply({ content: `✅ تم تعديل اسم الشركة بنجاح إلى: **${corp.logo} ${newName}** 🏢✨`, ephemeral: true });
         }
     }
 
@@ -1630,7 +1848,7 @@ client.on('interactionCreate', async interaction => {
         user.balance -= item.price;
         user.properties.push(selectedId);
         await saveEconomyUser(guildId, userId, user);
-        await interaction.update({ content: `🎉 شريت **{item.name}** بـ \`{item.price.toLocaleString()}\`!`, components: [] });
+        await interaction.update({ content: `🎉 شريت **${item.name}** بـ \`$${item.price.toLocaleString()}\`!`, components: [] });
     }
 
     if (interaction.customId === 'market_sell_select') {
@@ -1650,7 +1868,7 @@ client.on('interactionCreate', async interaction => {
         await saveEconomyUser(guildId, userId, user);
 
         return interaction.update({
-            content: `🤝 **تمت عملية البيع بنجاح!**\n• العقار المباع: {item.emoji} **{item.name}**\n• المبلغ المستلم: \`{sellP.toLocaleString()}\` (بعد خصم 10% رسوم سوق) 💵✨`,
+            content: `🤝 **تمت عملية البيع بنجاح!**\n• العقار المباع: ${item.emoji} **${item.name}**\n• المبلغ المستلم: \`$${sellP.toLocaleString()}\` (بعد خصم 10% رسوم سوق) 💵✨`,
             components: []
         });
     }
@@ -1667,7 +1885,7 @@ client.on('interactionCreate', async interaction => {
         }
 
         if ((corp.capital || 0) < assetItem.price) {
-            return interaction.reply({ content: `💸 رأس مال الشركة الحالي ($\`{(corp.capital || 0).toLocaleString()}\`) لا يكفي لشراء هذا المشروع (\`{assetItem.price.toLocaleString()}\`)!`, ephemeral: true });
+            return interaction.reply({ content: `💸 رأس مال الشركة الحالي ($\`${(corp.capital || 0).toLocaleString()}\`) لا يكفي لشراء هذا المشروع (\`$${assetItem.price.toLocaleString()}\`)!`, ephemeral: true });
         }
 
         await guildsColl.updateOne(
@@ -1679,7 +1897,7 @@ client.on('interactionCreate', async interaction => {
         );
 
         return interaction.update({
-            content: `🎉 **تم شراء المشروع بنجاح لصالح شركة {corp.name}!**\n• المشروع المشتري: {assetItem.emoji} **{assetItem.name}**\n• التكلفة الخصومة من رأس المال: \`{assetItem.price.toLocaleString()}\`\n• الربح الساعي المضاف: \`{assetItem.profit.toLocaleString()}\` 📈🔥`,
+            content: `🎉 **تم شراء المشروع بنجاح لصالح شركة ${corp.name}!**\n• المشروع المشتري: ${assetItem.emoji} **${assetItem.name}**\n• التكلفة الخصومة من رأس المال: \`$${assetItem.price.toLocaleString()}\`\n• الربح الساعي المضاف: \`$${assetItem.profit.toLocaleString()}\` 📈🔥`,
             components: []
         });
     }
@@ -1691,155 +1909,12 @@ client.on('interactionCreate', async interaction => {
         const targetJob = jobsList[jobKey];
         let pUser = await getPointsUser(guildId, userId, interaction.user.displayName);
 
-        if (pUser.level < targetJob.level) return interaction.reply({ content: `⛔ يتطلب Level {targetJob.level}`, ephemeral: true });
+        if (pUser.level < targetJob.level) return interaction.reply({ content: `⛔ يتطلب Level ${targetJob.level}`, ephemeral: true });
 
         let user = await getEconomyUser(guildId, userId);
         user.job = targetJob.name;
         await saveEconomyUser(guildId, userId, user);
-        await interaction.update({ content: `🎉 تم تعيينك في وظيفة **{user.job}** بنجاح!`, components: [] });
-    }
-
-    const val = interaction.values[0];
-
-    if (val.startsWith('q1_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q2')
-                .setPlaceholder('⚡ 2. هل ألعاب السرعة وردة الفعل ممتعة وتستاهل النقاط؟')
-                .addOptions([
-                    { label: 'نعم، ممتعة جداً', value: 'q2_yes' },
-                    { label: 'لا، غير مهتم بها', value: 'q2_no' },
-                    { label: 'تحتاج تعديل وتحسين', value: 'q2_edit' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 2 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q2_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q3')
-                .setPlaceholder('🛠️ 3. هل تواجه أخطاء أو تعليق (Lag) أثناء اللعب؟')
-                .addOptions([
-                    { label: 'نعم دائماً', value: 'q3_always' },
-                    { label: 'أحياناً', value: 'q3_sometimes' },
-                    { label: 'أبداً ما واجهت', value: 'q3_never' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 3 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q3_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q4')
-                .setPlaceholder('💵 4. كيف تجد نظام الرواتب والوظائف الحالية؟')
-                .addOptions([
-                    { label: 'ممتازة وعادلة', value: 'q4_fair' },
-                    { label: 'الراتب قليل ويحتاج زيادة', value: 'q4_low' },
-                    { label: 'الراتب عالي جداً', value: 'q4_high' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 4 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q4_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q5')
-                .setPlaceholder('📈 5. ما رأيك في نظام سوق العقارات والبيع والشراء؟')
-                .addOptions([
-                    { label: 'حماسي ومنافس بقوة', value: 'q5_great' },
-                    { label: 'عادي جداً', value: 'q5_normal' },
-                    { label: 'معقد أو غير مفهوم', value: 'q5_hard' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 5 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q5_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q6')
-                .setPlaceholder('🛡️ 6. ما رأيك في نظام "الحارس الشخصي" وصدات السرقات؟')
-                .addOptions([
-                    { label: 'نعم، مفيد ويحمي أملاكي', value: 'q6_yes' },
-                    { label: 'لا، لم أستخدمه', value: 'q6_no' },
-                    { label: 'يحتاج تعديل على طاقته', value: 'q6_edit' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 6 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q6_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q7')
-                .setPlaceholder('🏢 7. ما رأيك في نظام الشركات والمشاريع والأرباح الساعية؟')
-                .addOptions([
-                    { label: 'رهيب ويخلق هيمنة للهوامير', value: 'q7_great' },
-                    { label: 'لم أشارك فيه بعد', value: 'q7_no' },
-                    { label: 'لا يهمني', value: 'q7_meh' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 7 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q7_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q8')
-                .setPlaceholder('💼 8. هل نظام القروض والديون يضيف جو أكشن؟')
-                .addOptions([
-                    { label: 'جبار وواقعي جداً', value: 'q8_yes' },
-                    { label: 'ماله داعي', value: 'q8_no' },
-                    { label: 'لا أعرفه', value: 'q8_idk' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 8 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q8_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q9')
-                .setPlaceholder('📊 9. كيف تقيّم نظام الأسهم العالمية والتذبذب؟')
-                .addOptions([
-                    { label: 'ممتاز وممتع للتداول', value: 'q9_great' },
-                    { label: 'معقد وما أفهم له', value: 'q9_hard' },
-                    { label: 'يحتاج تنويع أسهم أكثر', value: 'q9_more' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 9 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q9_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q10')
-                .setPlaceholder('🚀 10. هل تتفاعل مع أحداث الطفرة والانهيار الكبرى؟')
-                .addOptions([
-                    { label: 'دائماً أتابعها وأستغلها', value: 'q10_always' },
-                    { label: 'على صدفة', value: 'q10_sometimes' },
-                    { label: 'لا تهمني', value: 'q10_no' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 10 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q10_')) {
-        const modal = new ModalBuilder()
-            .setCustomId('survey_suggestion_modal')
-            .setTitle('💡 اقتراحاتك لتطوير السيرفر');
-
-        const suggestionInput = new TextInputBuilder()
-            .setCustomId('user_suggestion_text')
-            .setLabel('وش هي أكثر ميزة، لعبة، أو فكرة ودك نضيفها في التحديث القادم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞؟ (اكتبها هنا بكل حرية)')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(false);
-
-addComponents(new ActionRowBuilder().addComponents(suggestionInput));
-        return interaction.showModal(modal);
+        await interaction.update({ content: `🎉 تم تعيينك في وظيفة **${user.job}** بنجاح!`, components: [] });
     }
 });
 
