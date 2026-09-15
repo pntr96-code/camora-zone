@@ -300,7 +300,7 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     await pointsColl.updateOne({ guildId: guildId, userId: userId }, { $set: doc }, { upsert: true });
 }
 
-// أ pools الألعاب النصية والكلاسيكية الكاملة
+// الألعاب النصية والكلاسيكية الكاملة
 const historyTracker = { emoji: [], meaning: [], scramble: [], reverse: [], trivia: [], capital: [], writing: [] };
 
 function getUniqueRandomItem(pool, historyKey, propertyName = null) {
@@ -1378,7 +1378,7 @@ client.on('messageCreate', async message => {
           else if (r === 7) startGuessGame(message.channel, guildId);
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
-          else if (r === 10) startRPSBotGame(message, guildId);
+          else if (r === 10) startRPSBotGame(message.channel, guildId);
           else if (r === 11) startPenaltyGame(message.channel, guildId);
           else if (r === 12) startMinesGame(message.channel, guildId, userId);
           else if (r === 13) startRaceGame(message.channel, guildId, userId);
