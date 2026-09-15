@@ -1240,28 +1240,26 @@ client.on('messageCreate', async message => {
               .setTitle('📈 بورصة العقارات والأعمال')
               .setDescription(`⏳ **يتجدد السوق وتتغير الأسعار:** <t:${unixTime}:R> (<t:${unixTime}:t>)`);
 
-          // ترتيب العقارات تصاعدياً من الأرخص إلى الأغلى بناءً على السعر الحالي
+          // ترتيب العقارات تصاعدياً من الأرخص إلى الأغلى
           const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
 
           sortedMarket.forEach(i => embed.addFields({ 
-              name: `[${i.id}] ${i.emoji} ${i.name} ${i.trend}`, 
-              value: `💰 **$${i.price.toLocaleString()}** | 💸 ربح: **$${i.profit.toLocaleString()}**`, 
+              name: `${i.emoji} ${i.name} ${i.trend}`, 
+              value: `💰 السعر: \`$${i.price.toLocaleString()}\` | 💸 ربح: \`$${i.profit.toLocaleString()}\``, 
               inline: true 
           }));
 
-          const buyButtonRow = new ActionRowBuilder().addComponents(
-              new ButtonBuilder()
-                  .setCustomId('open_buy_menu')
-                  .setLabel('🛒 شراء عقار')
-                  .setStyle(ButtonStyle.Success)
+          // زر الشراء وزر البيع جنباً إلى جنب
+          const actionRow = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('open_buy_menu').setLabel('🛒 شراء عقار').setStyle(ButtonStyle.Success),
+              new ButtonBuilder().setCustomId('open_sell_menu').setLabel('🤝 بيع عقار').setStyle(ButtonStyle.Danger)
           );
 
-          return message.channel.send({ embeds: [embed], components: [buyButtonRow] });
+          return message.channel.send({ embeds: [embed], components: [actionRow] });
       }
 
       if (message.content === '!شراء') {
           const user = await getEconomyUser(guildId, userId);
-          // ترتيب خيارات الشراء تصاعدياً من الأرخص إلى الأغلى
           const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
 
           const options = sortedMarket.map((item) => ({
@@ -1279,7 +1277,7 @@ client.on('messageCreate', async message => {
           );
 
           return message.channel.send({
-              content: `🛍️ **متجر وسوق العقارات والأعمال (مرتب من الأرخص للأغلى)**\nرصيدك الحالي: \`$${user.balance.toLocaleString()}\`\nاختر من القائمة أدناه للشراء فورا:`,
+              content: `🛍️ **متجر وسوق العقارات والأعمال**\nرصيدك الحالي: \`$${user.balance.toLocaleString()}\``,
               components: [row]
           });
       }
@@ -1577,8 +1575,40 @@ client.on('interactionCreate', async interaction => {
             const user = await getEconomyUser(guildId, userId);
             const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
             const options = sortedMarket.map((item) => ({ label: `${item.name} ($${item.price.toLocaleString()})`, value: `buy_${item.id}`, emoji: item.emoji || '💼' }));
-            const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('market_buy_select').setPlaceholder('🛒 اختر عقاراً...').addOptions(options));
+            const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('market_buy_select').setPlaceholder('🛒 اختر عقاراً للشراء...').addOptions(options));
             return interaction.reply({ content: `🛍️ رصيدك: \`$${user.balance.toLocaleString()}\``, components: [row], ephemeral: true });
+        }
+
+        if (interaction.customId === 'open_sell_menu') {
+            let user = await getEconomyUser(guildId, userId);
+            if (!user.properties || user.properties.length === 0) {
+                return interaction.reply({ content: '❌ ليس لديك أي عقارات أو أملاك لبيعها!', ephemeral: true });
+            }
+
+            // تجميع أملاك المستخدم مع فهارسها الحقيقية
+            const options = user.properties.map((propId, idx) => {
+                const item = marketItems.find(i => i.id === propId);
+                const sellP = Math.floor(item.price * 0.90);
+                return {
+                    label: `${item.name} (سعر البيع: $${sellP.toLocaleString()})`,
+                    description: `العقار رقم ${idx + 1} في محفظتك`,
+                    value: `sell_prop_${idx}`,
+                    emoji: item.emoji || '🏠'
+                };
+            });
+
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('market_sell_select')
+                    .setPlaceholder('🤝 اختر العقار الذي تريد بيعه...')
+                    .addOptions(options)
+            );
+
+            return interaction.reply({
+                content: `🤝 **قائمة بيع العقارات والأملاك** (خصم 10% رسوم سوق):\nاختر العقار المراد بيعه من القائمة أدناه:`,
+                components: [row],
+                ephemeral: true
+            });
         }
 
         if (interaction.customId === 'stock_buy_menu') {
@@ -1800,6 +1830,28 @@ client.on('interactionCreate', async interaction => {
         user.properties.push(selectedId);
         await saveEconomyUser(guildId, userId, user);
         await interaction.update({ content: `🎉 شريت **${item.name}** بـ \`$${item.price.toLocaleString()}\`!`, components: [] });
+    }
+
+    if (interaction.customId === 'market_sell_select') {
+        const guildId = interaction.guild.id;
+        const userId = interaction.user.id;
+        const idx = parseInt(interaction.values[0].replace('sell_prop_', ''));
+        let user = await getEconomyUser(guildId, userId);
+
+        if (isNaN(idx) || idx < 0 || idx >= user.properties.length) {
+            return interaction.reply({ content: '❌ حدث خطأ، هذا العقار غير موجود في محفظتك.', ephemeral: true });
+        }
+
+        const item = marketItems.find(i => i.id === user.properties[idx]);
+        const sellP = Math.floor(item.price * 0.90);
+        user.properties.splice(idx, 1);
+        user.balance += sellP;
+        await saveEconomyUser(guildId, userId, user);
+
+        return interaction.update({
+            content: `🤝 **تمت عملية البيع بنجاح!**\n• العقار المباع: ${item.emoji} **${item.name}**\n• المبلغ المستلم: \`$${sellP.toLocaleString()}\` (بعد خصم 10% رسوم سوق) 💵✨`,
+            components: []
+        });
     }
 
     if (interaction.customId === 'corp_buy_asset_select') {
