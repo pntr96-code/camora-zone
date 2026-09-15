@@ -1231,54 +1231,94 @@ client.on('messageCreate', async message => {
           });
       }
 
-    if (message.content === '!املاكي') {
+if (message.content === '!املاكي') {
           const user = await getEconomyUser(guildId, userId);
           if (!user.properties || user.properties.length === 0) {
               return message.reply('مفلس! ما عندك عقارات مسجلة.');
           }
 
-          // تجميع العقارات المتكررة لعدم تجاوز حد ديسكورد وعرضها بشكل أنيق
+          // تجميع العقارات وكميتها لكل نوع
           const propertyCounts = {};
           user.properties.forEach(pid => {
               propertyCounts[pid] = (propertyCounts[pid] || 0) + 1;
           });
 
-          const embed = new EmbedBuilder()
-              .setColor('#00FF00')
-              .setTitle(`🏠 محفظة وعقارات: ${message.author.displayName}`)
-              .setDescription('إليك جميع أملاكك وعقاراتك المسجلة وأرباحها الدورية:');
-
-          let totalValue = 0;
-          let totalProfit = 0;
-
-          // تحويل العقارات المجمعة إلى حقول (بحد أقصى 25 حقل كحماية تامة)
-          const uniqueIds = Object.keys(propertyCounts);
-          const slicedIds = uniqueIds.slice(0, 25); // حماية ضد تجاوز الـ 25 حقل
-
-          slicedIds.forEach((pid, idx) => {
-              const count = propertyCounts[pid];
+          // تحويلها إلى مصفوفة وترتيبها تلقائياً من الأغلى إلى الأرخص (حسب السعر الحالي)
+          let sortedProperties = Object.keys(propertyCounts).map(pid => {
               const item = marketItems.find(i => i.id === parseInt(pid));
-              if (item) {
-                  const itemTotalVal = item.price * count;
-                  const itemTotalProf = item.profit * count;
-                  totalValue += itemTotalVal;
-                  totalProfit += itemTotalProf;
+              const count = propertyCounts[pid];
+              return {
+                  ...item,
+                  count,
+                  totalPrice: item.price * count,
+                  totalProfit: item.profit * count
+              };
+          }).filter(item => item !== undefined);
 
-                  embed.addFields({ 
-                      name: `${idx + 1}. ${item.emoji} ${item.name} ${count > 1 ? `(x${count})` : ''}`, 
-                      value: `💰 القيمة الإجمالية: \`$${itemTotalVal.toLocaleString()}\`\n💸 أرباحها بالراتب: \`$${itemTotalProf.toLocaleString()}\``, 
-                      inline: false 
+          sortedProperties.sort((a, b) => b.totalPrice - a.totalPrice);
+
+          // حساب الإجماليات الشاملة لكل عقارات المستخدم
+          let grandTotalValue = sortedProperties.reduce((acc, curr) => acc + curr.totalPrice, 0);
+          let grandTotalProfit = sortedProperties.reduce((acc, curr) => acc + curr.totalProfit, 0);
+          let totalCountProperties = user.properties.length;
+
+          // تقسيم العناصر لصفحات (كل صفحة تعرض 5 عقارات عشان تكون رايقة للعين)
+          const itemsPerPage = 5;
+          const totalPages = Math.ceil(sortedProperties.length / itemsPerPage);
+          let page = 1;
+
+          const generateEmbed = (pageNum) => {
+              const start = (pageNum - 1) * itemsPerPage;
+              const pageItems = sortedProperties.slice(start, start + itemsPerPage);
+
+              const embed = new EmbedBuilder()
+                  .setColor('#00FF00')
+                  .setTitle(`🏠 محفظة وعقارات: ${message.author.displayName}`)
+                  .setDescription(`📊 **ملخص المحفظة الشامل:**\n• إجمالي العقارات: \`${totalCountProperties} عقار\`\n• المبلغ الكامل للقيمة: \`$${grandTotalValue.toLocaleString()}\`\n• إجمالي الربح بالراتب: \`$${grandTotalProfit.toLocaleString()}\`\n\n---`)
+                  .setFooter({ text: `صفحة ${pageNum} من ${totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
+
+              pageItems.forEach((item, idx) => {
+                  const globalIdx = start + idx + 1;
+                  embed.addFields({
+                      name: `${globalIdx}. ${item.emoji} ${item.name} ${item.count > 1 ? `(العدد: x${item.count})` : ''}`,
+                      value: `💰 القيمة: \`$${item.totalPrice.toLocaleString()}\` | 💸 الربح: \`$${item.totalProfit.toLocaleString()}\``,
+                      inline: false
                   });
-              }
+              });
+
+              return embed;
+          };
+
+          const getButtons = (pageNum) => {
+              return new ActionRowBuilder().addComponents(
+                  new ButtonBuilder().setCustomId('prop_prev').setLabel('⬅️ السابق').setStyle(ButtonStyle.Primary).setDisabled(pageNum === 1),
+                  new ButtonBuilder().setCustomId('prop_next').setLabel('التالي ➡️').setStyle(ButtonStyle.Primary).setDisabled(pageNum === totalPages)
+              );
+          };
+
+          const msg = await message.channel.send({ 
+              embeds: [generateEmbed(page)], 
+              components: totalPages > 1 ? [getButtons(page)] : [] 
           });
 
-          embed.addFields({
-              name: '📊 الملخص المالي للأملاك',
-              value: `💎 **إجمالي قيمة العقارات:** \`$${totalValue.toLocaleString()}\`\n🚀 **إجمالي أرباح الراتب:** \`$${totalProfit.toLocaleString()}\``,
-              inline: false
+          if (totalPages <= 1) return;
+
+          const collector = msg.createMessageComponentCollector({ time: 60000 });
+
+          collector.on('collect', async i => {
+              if (i.user.id !== userId) return i.reply({ content: '❌ هذه المحفظة ليست لك!', ephemeral: true });
+              await i.deferUpdate().catch(()=>{});
+
+              if (i.customId === 'prop_prev' && page > 1) page--;
+              else if (i.customId === 'prop_next' && page < totalPages) page++;
+
+              await msg.edit({ embeds: [generateEmbed(page)], components: [getButtons(page)] });
           });
 
-          return message.channel.send({ embeds: [embed] });
+          collector.on('end', () => {
+              msg.edit({ components: [] }).catch(()=>{});
+          });
+          return;
       }
 
       if (message.content.startsWith('!بيع ')) {
