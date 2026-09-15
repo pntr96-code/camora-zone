@@ -300,7 +300,7 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     await pointsColl.updateOne({ guildId: guildId, userId: userId }, { $set: doc }, { upsert: true });
 }
 
-// الألعاب النصية والكلاسيكية الكاملة
+// أ pools الألعاب النصية والكلاسيكية الكاملة
 const historyTracker = { emoji: [], meaning: [], scramble: [], reverse: [], trivia: [], capital: [], writing: [] };
 
 function getUniqueRandomItem(pool, historyKey, propertyName = null) {
@@ -895,13 +895,20 @@ client.on('messageCreate', async message => {
 
           if (corp.image) embed.setThumbnail(corp.image);
 
-          const row = new ActionRowBuilder().addComponents(
+          // تنظيم الأزرار في صفين (Rows) لضمان ظهور كل الخيارات بوضوح
+          const row1 = new ActionRowBuilder().addComponents(
               new ButtonBuilder().setCustomId('corp_donate_btn').setLabel('💸 تبرع برأس المال').setStyle(ButtonStyle.Success),
               new ButtonBuilder().setCustomId('corp_members_btn').setLabel('👥 قائمة الأعضاء').setStyle(ButtonStyle.Primary),
               new ButtonBuilder().setCustomId('corp_leave_btn').setLabel('🚪 مغادرة الشركة').setStyle(ButtonStyle.Danger)
           );
 
-          return message.channel.send({ embeds: [embed], components: [row] });
+          const row2 = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('corp_invite_btn').setLabel('➕ دعوة عضو').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('corp_logo_btn').setLabel('🖼️ تغيير الشعار').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('corp_rename_btn').setLabel('✏️ تعديل الاسم').setStyle(ButtonStyle.Secondary)
+          );
+
+          return message.channel.send({ embeds: [embed], components: [row1, row2] });
       }
 
       if (message.content.startsWith('!دعوة-شركة')) {
@@ -1524,7 +1531,7 @@ client.on('interactionCreate', async interaction => {
             return interaction.showModal(modal);
         }
 
-        // أزرار لوحة الشركات (!شركة)
+        // أزرار لوحة الشركات المتكاملة (!شركة)
         if (interaction.customId === 'corp_donate_btn') {
             const modal = new ModalBuilder().setCustomId('corp_donate_modal').setTitle('💸 تبرع لدعم رأس مال الشركة');
             const amountInput = new TextInputBuilder().setCustomId('donate_amount').setLabel('أدخل مبلغ التبرع (بالدولار)').setStyle(TextInputStyle.Short).setRequired(true);
@@ -1548,6 +1555,36 @@ client.on('interactionCreate', async interaction => {
 
             await guildsColl.updateOne({ _id: corp._id }, { $pull: { members: userId } });
             return interaction.update({ content: `✅ لقد غادرت شركة **${corp.name}** بنجاح.`, embeds: [], components: [] });
+        }
+
+        if (interaction.customId === 'corp_invite_btn') {
+            let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+            if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
+
+            const modal = new ModalBuilder().setCustomId('corp_invite_modal').setTitle('➕ دعوة عضو جديد للشركة');
+            const memberInput = new TextInputBuilder().setCustomId('invite_user_id').setLabel('أدخل آيدي (ID) العضو المراد دعوته').setStyle(TextInputStyle.Short).setRequired(true);
+            modal.addComponents(new ActionRowBuilder().addComponents(memberInput));
+            return interaction.showModal(modal);
+        }
+
+        if (interaction.customId === 'corp_logo_btn') {
+            let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+            if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
+
+            const modal = new ModalBuilder().setCustomId('corp_logo_modal').setTitle('🖼️ تغيير شعار/صورة الشركة');
+            const logoInput = new TextInputBuilder().setCustomId('new_logo_url').setLabel('أدخل رابط الصورة أو الـ GIF المباشر').setStyle(TextInputStyle.Short).setRequired(true);
+            modal.addComponents(new ActionRowBuilder().addComponents(logoInput));
+            return interaction.showModal(modal);
+        }
+
+        if (interaction.customId === 'corp_rename_btn') {
+            let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+            if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
+
+            const modal = new ModalBuilder().setCustomId('corp_rename_modal').setTitle('✏️ تعديل اسم الشركة');
+            const nameInput = new TextInputBuilder().setCustomId('new_corp_name').setLabel('أدخل اسم الشركة الجديد').setStyle(TextInputStyle.Short).setRequired(true);
+            modal.addComponents(new ActionRowBuilder().addComponents(nameInput));
+            return interaction.showModal(modal);
         }
     }
 
@@ -1607,6 +1644,38 @@ client.on('interactionCreate', async interaction => {
             await guildsColl.updateOne({ _id: corp._id }, { $inc: { capital: amount } });
 
             return interaction.reply({ content: `✅ تم التبرع بـ \`$${amount.toLocaleString()}\` لدعم رأس مال شركة **${corp.name}** بنجاح! 📈🔥`, ephemeral: true });
+        }
+
+        if (interaction.customId === 'corp_invite_modal') {
+            const targetId = interaction.fields.getTextInputValue('invite_user_id').trim();
+            let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+            if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
+            if (corp.members.includes(targetId)) return.reply({ content: '⚠️ هذا العضو موجود في شركتك مسبقاً!', ephemeral: true });
+            if (corp.members.length >= 5) return interaction.reply({ content: '❌ وصلت الشركة للحد الأقصى (5 أعضاء)!', ephemeral: true });
+
+            await guildsColl.updateOne({ _id: corp._id }, { $push: { members: targetId } });
+            return interaction.reply({ content: `✅ تمت إضافة العضو (<@${targetId}>) بنجاح إلى شركة **${corp.name}**! 🤝🏢`, ephemeral: true });
+        }
+
+        if (interaction.customId === 'corp_logo_modal') {
+            const logoUrl = interaction.fields.getTextInputValue('new_logo_url').trim();
+            let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+            if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
+
+            await guildsColl.updateOne({ _id: corp._id }, { $set: { image: logoUrl } });
+            return interaction.reply({ content: `✅ تم تحديث شعار وصورة شركة **${corp.name}** بنجاح! 🖼️✨`, ephemeral: true });
+        }
+
+        if (interaction.customId === 'corp_rename_modal') {
+            const newName = interaction.fields.getTextInputValue('new_corp_name').trim();
+            let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+            if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
+
+            let existing = await guildsColl.findOne({ guildId, name: newName });
+            if (existing) return interaction.reply({ content: '❌ اسم الشركة الجديد مستخدم مسبقاً!', ephemeral: true });
+
+            await guildsColl.updateOne({ _id: corp._id }, { $set: { name: newName } });
+            return interaction.reply({ content: `✅ تم تعديل اسم الشركة بنجاح إلى: **${corp.logo} ${newName}** 🏢✨`, ephemeral: true });
         }
     }
 
