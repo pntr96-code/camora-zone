@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { GoogleGenAI } = require('@google/genai');
 const { MongoClient } = require('mongodb');
 
@@ -51,12 +51,20 @@ const lastStockMessages = new Map(); // لحفظ آخر رسالة تنبيه ل
 let marketNextUpdate = Date.now() + (5 * 60 * 1000);
 let stockNextUpdate = Date.now() + (15 * 60 * 1000); // تحديث الأسهم القادم بعد 15 دقيقة
 
+// قائمة الأسهم الموسعة (12 شركة وعملة رقمية عالمية)
 let stockMarket = [
     { id: 'aapl', name: 'أبل (Apple)', price: 350, base: 350, trend: '➖', emoji: '🍏' },
     { id: 'tsla', name: 'تسلا (Tesla)', price: 620, base: 620, trend: '➖', emoji: '⚡' },
     { id: 'aramco', name: 'أرامكو السعودية', price: 180, base: 180, trend: '➖', emoji: '🛢️' },
-    { id: 'btc', name: 'عملة البيتكوين', price: 2500, base: 2500, trend: '➖', emoji: '🪙' },
-    { id: 'nvidia', name: 'إنفيديا (Nvidia)', price: 900, base: 900, trend: '➖', emoji: '💻' }
+    { id: 'btc', name: 'البيتكوين (Bitcoin)', price: 2500, base: 2500, trend: '➖', emoji: '🪙' },
+    { id: 'nvidia', name: 'إنفيديا (Nvidia)', price: 900, base: 900, trend: '➖', emoji: '💻' },
+    { id: 'goog', name: 'جوجل (Google)', price: 450, base: 450, trend: '➖', emoji: '🔍' },
+    { id: 'amzn', name: 'أمازون (Amazon)', price: 510, base: 510, trend: '➖', emoji: '📦' },
+    { id: 'msft', name: 'مايكروسوفت (Microsoft)', price: 780, base: 780, trend: '➖', emoji: '🪟' },
+    { id: 'eth', name: 'الإيثيريوم (Ethereum)', price: 1200, base: 1200, trend: '➖', emoji: '💎' },
+    { id: 'meta', name: 'ميتا (Meta)', price: 310, base: 310, trend: '➖', emoji: '🌐' },
+    { id: 'NFLX', name: 'نتفليكس (Netflix)', price: 290, base: 290, trend: '➖', emoji: '🎬' },
+    { id: 'SOL', name: 'سولانا (Solana)', price: 150, base: 150, trend: '➖', emoji: '☀️' }
 ];
 
 // تحديث أسهم السوق العالمي تلقائياً كل 15 دقيقة مع حذف التنبيه القديم وإرسال جديد
@@ -65,7 +73,7 @@ setInterval(async () => {
         const oldP = stock.price;
         const change = (Math.random() * 0.40) - 0.18; 
         stock.price = Math.max(20, Math.floor(stock.price * (1 + change)));
-        
+         
         if (stock.price > oldP) stock.trend = '📈';
         else if (stock.price < oldP) stock.trend = '📉';
         else stock.trend = '➖';
@@ -135,7 +143,7 @@ let marketItems = [
     { id: 10, name: 'استراحة بالرماح', type: 'عقار', basePrice: 100000, price: 100000, profit: 10000, emoji: '🏕️', trend: '➖' },
     { id: 11, name: 'اجدان ووك', type: 'مشروع كبير', basePrice: 1250000, price: 1250000, profit: 125000, emoji: '🏙️', trend: '➖' },
     { id: 12, name: 'فرنش شايز كيان', type: 'مشروع صغير', basePrice: 7500, price: 7500, profit: 750, emoji: '🥤', trend: '➖' },
-    { id: 13, name: 'مطعم فلفل', type: 'مشروع كبير', basePrice: 2500000, price: 2500000, profit: 250000, emoji: '🌶️', trend: '➖' },
+    { id: 13, name: 'مطعم فلفل', type: 'مشروع كبير', basePrice: 2500000, price: 2500000, profit: 250050, emoji: '🌶️', trend: '➖' },
     { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '🥪', trend: '➖' }
 ];
 
@@ -145,9 +153,9 @@ setInterval(async () => {
         const oldPrice = item.price;
         const randomPercent = (Math.random() * 0.60) - 0.25; 
         let newPrice = Math.floor(item.basePrice * (1 + randomPercent));
-        
+         
         if (newPrice < Math.floor(item.basePrice * 0.4)) newPrice = Math.floor(item.basePrice * 0.4);
-        
+         
         item.price = newPrice;
         item.profit = Math.floor(item.price * 0.10);
 
@@ -250,7 +258,7 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     doc.xp += 15;
 
     let xpNeeded = (doc.level * doc.level) * 150;
-    
+     
     if (doc.xp >= xpNeeded) {
         doc.level += 1;
         doc.xp = 0;
@@ -377,7 +385,7 @@ function sendGamesMenu(channel) {
 
     channel.send({ embeds: [embed], components: [row1, row2, row3] }).then(msg => {
         const coll = msg.createMessageComponentCollector({ time: 300000 });
-        
+         
         coll.on('collect', async i => {
             const action = i.customId;
 
@@ -762,7 +770,7 @@ function startVaultGame(channel, guildId, userId) {
 function startMemoryGame(message, guildId) {
     const channel = message.channel;
     const contentLower = message.content.toLowerCase();
-    
+     
     let difficulty = 'سهل';
     if (contentLower.includes('صعب')) difficulty = 'صعب';
     else if (contentLower.includes('متوسط')) difficulty = 'متوسط';
@@ -861,7 +869,7 @@ function launchRPSPvPGame(channel, guildId, challenger, opponent) {
 
     channel.send({ content: `⚔️ **[تحدي حجر ورقة مقص الثنائي]**\nبين ${challenger} و ${opponent}\nكل لاعب يختار حركته بسرية عبر الأزرار:`, components: [row] }).then(msg => {
         const coll = msg.createMessageComponentCollector({ time: 20000 });
-        
+         
         coll.on('collect', async i => {
             if (i.user.id !== challenger.id && i.user.id !== opponent.id) {
                 return i.reply({ content: '❌ هذه اللعبة ليست لك!', ephemeral: true });
@@ -1155,7 +1163,7 @@ client.on('messageCreate', async message => {
           );
           return message.channel.send({ embeds: [embed] });
       }
-      
+       
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
           return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | وظيفتك: **${user.job}**`);
@@ -1269,7 +1277,7 @@ client.on('messageCreate', async message => {
       // --- أمر السوق (مع أسهم الحركة وتايمر التجديد وزر الشراء المباشر) ---
       if (message.content === '!سوق') {
           const unixTime = Math.floor(marketNextUpdate / 1000);
-          
+           
           const embed = new EmbedBuilder()
               .setColor('#0099ff')
               .setTitle('📈 بورصة العقارات والأعمال')
@@ -1293,7 +1301,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!شراء') {
           const user = await getEconomyUser(guildId, userId);
-          
+           
           const options = marketItems.map((item) => ({
               label: `${item.name} (${item.type})`,
               description: `السعر: $${item.price.toLocaleString()} | الربح: $${item.profit.toLocaleString()}`,
@@ -1443,9 +1451,9 @@ client.on('messageCreate', async message => {
       if (message.content.startsWith('!حظ')) {
           const amt = parseInt(message.content.split(' ')[1]);
           if (isNaN(amt) || amt <= 50) return message.reply('❌ أدخل مبلغ مراهنة صحيح (أقل مبلغ 50): `!حظ [المبلغ]`');
-          
+           
           let user = await getEconomyUser(guildId, userId);
-          
+           
           const now = Date.now();
           const cooldown = 2.5 * 60 * 1000; // دقيقتين ونصف
           if (user.lastGambling && (now - user.lastGambling < cooldown)) {
@@ -1456,14 +1464,14 @@ client.on('messageCreate', async message => {
           }
 
           if (user.balance < amt) return message.reply('💸 رصيدك الكاش ما يكفي للمبلغ اللي تبيه!');
-          
+           
           user.lastGambling = now;
-          
+           
           const roll = Math.random();
           if (roll < 0.40) { user.balance -= amt; message.reply(`😢 خسرت رهنتك وراحت عليك **$${amt.toLocaleString()}**!`); }
           else if (roll < 0.85) { user.balance += amt; message.reply(`🎰 **كفووو!** فزت وضاعفت فلوسك وكسبت **$${amt.toLocaleString()}**! 🎉`); }
           else { user.balance += amt * 3; message.channel.send(`👑 **ضربت الحظ الكبرى!** كسبت أضعاف مضاعفة بقيمة **$${(amt*3).toLocaleString()}** يا ${message.author}! 🔥`); }
-          
+           
           await saveEconomyUser(guildId, userId, user);
       }
 
@@ -1646,28 +1654,30 @@ client.on('interactionCreate', async interaction => {
             });
         }
 
-        // 1. زر شراء أسهم (يفتح قائمة الأسهم المتاحة للشراء)
+        // 1. زر شراء أسهم (يفتح نافذة منبثقة Modal لتحديد الرمز والكمية)
         if (interaction.customId === 'stock_buy_menu') {
-            const user = await getEconomyUser(guildId, userId);
-            const options = stockMarket.map(s => ({
-                label: `${s.name} (السعر: $${s.price.toLocaleString()})`,
-                description: `الرمز: ${s.id} | ${s.trend}`,
-                value: `buy_stock_${s.id}`,
-                emoji: s.emoji || '📈'
-            }));
+            const modal = new ModalBuilder()
+                .setCustomId('stock_buy_modal')
+                .setTitle('🛒 شراء أسهم عالمية');
 
-            const row = new ActionRowBuilder().addComponents(
-                new StringSelectMenuBuilder()
-                    .setCustomId('stock_buy_select')
-                    .setPlaceholder('🛒 اختر السهم الذي تريد شراءه...')
-                    .addOptions(options)
+            const stockSymbolInput = new TextInputBuilder()
+                .setCustomId('stock_symbol')
+                .setLabel('رمز السهم (مثال: aapl, tsla, btc, nvidia...)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            const stockAmountInput = new TextInputBuilder()
+                .setCustomId('stock_amount')
+                .setLabel('أدخل الكمية المطلوبة')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(stockSymbolInput),
+                new ActionRowBuilder().addComponents(stockAmountInput)
             );
 
-            return interaction.reply({
-                content: `🛍️ **سوق تداول الأسهم**\nرصيدك الحالي: \`$${user.balance.toLocaleString()}\`\nاختر السهم لشراء سهم واحد فورا:`,
-                components: [row],
-                ephemeral: true
-            });
+            return interaction.showModal(modal);
         }
 
         // 2. زر عرض محفظة الأسهم
@@ -1691,7 +1701,7 @@ client.on('interactionCreate', async interaction => {
                     const currentVal = stock.price * qty;
                     totalPortfolioValue += currentVal;
                     embed.addFields({
-                        name: `${stock.emoji} ${stock.name}`,
+                        name: `${stock.emoji} ${stock.name} (\`${stock.id}\`)`,
                         value: `📦 الكمية: \`x${qty}\` سهم\n💵 القيمة الحالية: \`$${currentVal.toLocaleString()}\``,
                         inline: false
                     });
@@ -1699,7 +1709,7 @@ client.on('interactionCreate', async interaction => {
             }
 
             embed.addFields({
-                name: '💎 إجمالي قيمة المحفظة',
+                name: '💎 إجمالي قيمة المحفظة الاستثمارية',
                 value: `\`$${totalPortfolioValue.toLocaleString()}\``,
                 inline: false
             });
@@ -1707,48 +1717,101 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        // 3. زر بيع الأسهم (يفتح قائمة الأسهم المملوكة للبيع)
+        // 3. زر بيع الأسهم (يفتح نافذة منبثقة Modal للبيع)
         if (interaction.customId === 'stock_sell_menu') {
-            let user = await getEconomyUser(guildId, userId);
-            if (!user.stocks || Object.keys(user.stocks).length === 0) {
-                return interaction.reply({ content: '❌ ليس لديك أي أسهم لبيعها!', ephemeral: true });
-            }
+            const modal = new ModalBuilder()
+                .setCustomId('stock_sell_modal')
+                .setTitle('🤝 بيع أسهم عالمية');
 
-            const options = [];
-            for (const [sId, qty] of Object.entries(user.stocks)) {
-                if (qty <= 0) continue;
-                const stock = stockMarket.find(s => s.id === sId);
-                if (stock) {
-                    options.push({
-                        label: `بيع من ${stock.name} (الممتلك: ${qty})`,
-                        description: `سعر السهم الواحد: $${stock.price.toLocaleString()}`,
-                        value: `sell_stock_${sId}`,
-                        emoji: stock.emoji || '🤝'
-                    });
-                }
-            }
+            const stockSymbolInput = new TextInputBuilder()
+                .setCustomId('stock_symbol')
+                .setLabel('أدخل رمز السهم المراد بيعه')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
 
-            if (options.length === 0) {
-                return interaction.reply({ content: '❌ ليس لديك أسهم متاحة للبيع.', ephemeral: true });
-            }
+            const stockAmountInput = new TextInputBuilder()
+                .setCustomId('stock_amount')
+                .setLabel('أدخل كمية الأسهم للبيع')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
 
-            const row = new ActionRowBuilder().addComponents(
-                new StringSelectMenuBuilder()
-                    .setCustomId('stock_sell_select')
-                    .setPlaceholder('🤝 اختر السهم الذي تريد بيعه...')
-                    .addOptions(options)
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(stockSymbolInput),
+                new ActionRowBuilder().addComponents(stockAmountInput)
             );
 
+            return interaction.showModal(modal);
+        }
+    }
+
+    // معالجة النافذة المنبثقة (Modal Submits) للشراء والبيع
+    if (interaction.isModalSubmit()) {
+        const guildId = interaction.guild.id;
+        const userId = interaction.user.id;
+
+        if (interaction.customId === 'stock_buy_modal') {
+            const symbol = interaction.fields.getTextInputValue('stock_symbol').toLowerCase().trim();
+            const amount = parseInt(interaction.fields.getTextInputValue('stock_amount'));
+
+            if (isNaN(amount) || amount <= 0) {
+                return interaction.reply({ content: '❌ يرجى إدخال كمية صحيحة.', ephemeral: true });
+            }
+
+            const stock = stockMarket.find(s => s.id === symbol);
+            if (!stock) {
+                return interaction.reply({ content: '❌ رمز السهم غير صحيح! تأكد من الرموز في أمر `!اسهم`.', ephemeral: true });
+            }
+
+            let user = await getEconomyUser(guildId, userId);
+            const totalCost = stock.price * amount;
+
+            if (user.balance < totalCost) {
+                return interaction.reply({ content: `💸 رصيدك الحالي ($${user.balance.toLocaleString()}) لا يكفي لشراء ${amount} أسهم بقيمة إجمالية ($${totalCost.toLocaleString()})!`, ephemeral: true });
+            }
+
+            user.balance -= totalCost;
+            if (!user.stocks) user.stocks = {};
+            user.stocks[symbol] = (user.stocks[symbol] || 0) + amount;
+
+            await saveEconomyUser(guildId, userId, user);
+
             return interaction.reply({
-                content: `🤝 **نافذة بيع الأسهم**\nاختر السهم لبيع سهم واحد منها وفوراً:`,
-                components: [row],
+                content: `✅ **تمت عملية الشراء بنجاح!**\n• اشتريت: \`${amount}\` سهم من ${stock.emoji} ${stock.name}\n• التكلفة الإجمالية: \`$${totalCost.toLocaleString()}\`\n• رصيدك الحالي: \`$${user.balance.toLocaleString()}\``,
+                ephemeral: true
+            });
+        }
+
+        if (interaction.customId === 'stock_sell_modal') {
+            const symbol = interaction.fields.getTextInputValue('stock_symbol').toLowerCase().trim();
+            const amount = parseInt(interaction.fields.getTextInputValue('stock_amount'));
+
+            if (isNaN(amount) || amount <= 0) {
+                return interaction.reply({ content: '❌ يرجى إدخال كمية صحيحة.', ephemeral: true });
+            }
+
+            let user = await getEconomyUser(guildId, userId);
+            if (!user.stocks || !user.stocks[symbol] || user.stocks[symbol] < amount) {
+                return interaction.reply({ content: '❌ لا تمتلك هذا العدد من الأسهم لبيعها!', ephemeral: true });
+            }
+
+            const stock = stockMarket.find(s => s.id === symbol);
+            const totalEarned = stock.price * amount;
+
+            user.stocks[symbol] -= amount;
+            if (user.stocks[symbol] <= 0) delete user.stocks[symbol];
+            user.balance += totalEarned;
+
+            await saveEconomyUser(guildId, userId, user);
+
+            return interaction.reply({
+                content: `🤝 **تمت عملية البيع بنجاح!**\n• بعت: \`${amount}\` سهم من ${stock.emoji} ${stock.name}\n• العائد المضاف: \`$${totalEarned.toLocaleString()}\`\n• رصيدك الحالي: \`$${user.balance.toLocaleString()}\``,
                 ephemeral: true
             });
         }
     }
 
     if (!interaction.isStringSelectMenu()) return;
-    
+     
     // نظام شراء العقارات عبر القائمة المنسدلة
     if (interaction.customId === 'market_buy_select') {
         const guildId = interaction.guild.id;
@@ -1778,7 +1841,7 @@ client.on('interactionCreate', async interaction => {
         const guildId = interaction.guild.id;
         const userId = interaction.user.id;
         const jobKey = interaction.values[0].replace('job_', '');
-        
+         
         const targetJob = jobsList[jobKey];
         if (!targetJob) return interaction.reply({ content: '❌ الوظيفة غير موجودة!', ephemeral: true });
 
@@ -1793,56 +1856,6 @@ client.on('interactionCreate', async interaction => {
 
         await interaction.update({
             content: `🎉 مبروك يا ${interaction.user}! تم ترقيتك رسمياً وتعيينك في وظيفة **${user.job}** بنجاح! 🎖️🚀`,
-            components: []
-        });
-    }
-
-    // شراء أسهم عبر القائمة المنسدلة
-    if (interaction.customId === 'stock_buy_select') {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
-        const stockId = interaction.values[0].replace('buy_stock_', '');
-        const stock = stockMarket.find(s => s.id === stockId);
-        if (!stock) return interaction.reply({ content: '❌ السهم غير موجود!', ephemeral: true });
-
-        let user = await getEconomyUser(guildId, userId);
-        if (user.balance < stock.price) {
-            return interaction.reply({ content: `💸 رصيدك الحالي ($${user.balance.toLocaleString()}) لا يكفي لشراء سهم من **${stock.name}** بسعر ($${stock.price.toLocaleString()})!`, ephemeral: true });
-        }
-
-        user.balance -= stock.price;
-        if (!user.stocks) user.stocks = {};
-        user.stocks[stockId] = (user.stocks[stockId] || 0) + 1;
-
-        await saveEconomyUser(guildId, userId, user);
-
-        await interaction.update({
-            content: `✅ **تم بنجاح!** اشتريت سهم واحد من **${stock.emoji} ${stock.name}** مقابل \`$${stock.price.toLocaleString()}\`. 🚀\n💳 **رصيدك الحالي:** \`$${user.balance.toLocaleString()}\``,
-            components: []
-        });
-    }
-
-    // بيع أسهم عبر القائمة المنسدلة
-    if (interaction.customId === 'stock_sell_select') {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
-        const stockId = interaction.values[0].replace('sell_stock_', '');
-        let user = await getEconomyUser(guildId, userId);
-
-        if (!user.stocks || !user.stocks[stockId] || user.stocks[stockId] <= 0) {
-            return interaction.reply({ content: '❌ لا تمتلك هذا السهم لبيعه!', ephemeral: true });
-        }
-
-        const stock = stockMarket.find(s => s.id === stockId);
-        
-        user.stocks[stockId] -= 1;
-        if (user.stocks[stockId] <= 0) delete user.stocks[stockId];
-        user.balance += stock.price;
-
-        await saveEconomyUser(guildId, userId, user);
-
-        await interaction.update({
-            content: `🤝 **تم البيع بنجاح!** بعت سهم واحد من **${stock.emoji} ${stock.name}** واستلمت \`$${stock.price.toLocaleString()}\` كاش! 💰\n💳 **رصيدك الحالي:** \`$${user.balance.toLocaleString()}\``,
             components: []
         });
     }
