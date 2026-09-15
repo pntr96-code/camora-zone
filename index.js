@@ -1446,6 +1446,8 @@ client.on('interactionCreate', async interaction => {
         }
 
         if (interaction.customId === 'start_survey_btn') {
+            await interaction.deferReply({ ephemeral: true });
+
             const row = new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId('survey_q1')
@@ -1458,7 +1460,7 @@ client.on('interactionCreate', async interaction => {
                         { label: '⭐ سيئة ومملة', value: 'q1_1' }
                     ])
             );
-            return interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
+            return interaction.followUp({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
         }
     }
 
