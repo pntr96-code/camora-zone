@@ -1327,7 +1327,7 @@ client.on('messageCreate', async message => {
           let user = await getEconomyUser(guildId, userId);
           
           const now = Date.now();
-          const cooldown = 5 * 60 * 1000; // 5 دقائق
+          const cooldown = 2.5 * 60 * 1000; // 5 دقائق
           if (user.lastGambling && (now - user.lastGambling < cooldown)) {
               const remainingMs = cooldown - (now - user.lastGambling);
               const m = Math.floor(remainingMs / 60000);
