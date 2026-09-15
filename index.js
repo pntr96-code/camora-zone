@@ -511,7 +511,7 @@ client.on('messageCreate', async message => {
               .setTitle('📢 إعلان هام وتطويري في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
               .setDescription(
                   'أهلاً بك يا بطل في مجتمعنا! 🎮🔥\n\n' +
-                  'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! ' +
+                  'إذا لسا ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! ' +
                   'نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
                   '📋 **شاركنا رأيك عبر استبياننا السريع (10 أسئلة ممتعة + مساحة لاقتراحاتك):**\n' +
                   'اضغط على الزر أدناه لبدء الاستبيان على الخاص مباشرة ولا تنسَ تعطيني رأيك بكل صراحة! 💡'
@@ -522,6 +522,9 @@ client.on('messageCreate', async message => {
           const row = new ActionRowBuilder().addComponents(
               new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
           );
+
+          // إرسال رد فوري في الروم بأن عملية الإرسال بدأت بالخلفية
+          await message.channel.send(`⏳ **جاري إرسال إعلان الاستبيان على الخاص لجميع الأعضاء.. يرجى الانتظار قليلاً.**`);
 
           await message.guild.members.fetch();
           let sentCount = 0;
@@ -1152,7 +1155,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
+          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك لا يكفي!');
           user.balance -= 3000;
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
