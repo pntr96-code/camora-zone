@@ -455,7 +455,7 @@ function startScrambleGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     const word = getUniqueRandomItem(scrambleMasterPool, 'scramble');
     const scrambled = word.split('').sort(() => 0.5 - Math.random()).join(' ');
-    channel.send(`🧩 **[فكك]** رتب الحروف التالية:\n\n\`${scrambled}\``).then(() => {
+    channel.send(`🧩 **[فكك]** رتب الحروف التالية:\n\n\`{scrambled}\``).then(() => {
         const startTime = Date.now();
         const filter = m => !m.author.bot && m.content.trim().toLowerCase() === word.toLowerCase();
         const collector = channel.createMessageCollector({ filter, time: 25000, max: 1 });
@@ -464,10 +464,10 @@ function startScrambleGame(channel, guildId) {
             activeGames.delete(channel.id);
             const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(2);
             m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! رتبت الكلمة في **${timeElapsed} ثانية** وكسبت **10 نقاط**! 🌟`);
+            m.reply(`🎉 كفو ${m.author}! رتبت الكلمة في **{timeElapsed} ثانية** وكسبت **10 نقاط**! 🌟`);
             addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(timeElapsed));
         });
-        collector.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الكلمة كانت: **${word}**`); } });
+        collector.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الكلمة كانت: **{word}**`); } });
     });
 }
 
@@ -491,7 +491,7 @@ client.on('messageCreate', async message => {
           await message.delete().catch(() => {});
           const fetched = await message.channel.messages.fetch({ limit: count });
           await message.channel.bulkDelete(fetched, true);
-          const confirmMsg = await message.channel.send(`🧹 تم حذف **${fetched.size}** رسالة بنجاح!`);
+          const confirmMsg = await message.channel.send(`🧹 تم حذف **{fetched.size}** رسالة بنجاح!`);
           setTimeout(() => confirmMsg.delete().catch(() => {}), 4000);
       } catch (err) {}
       return;
@@ -562,7 +562,6 @@ client.on('messageCreate', async message => {
           await message.guild.members.fetch();
           let sentCount = 0;
 
-          // تشغيل الإرسال بالخلفية بدون إيقاف استجابة البوت
           setTimeout(async () => {
               for (const member of message.guild.members.cache.values()) {
                   if (member.user.bot) continue;
@@ -571,7 +570,7 @@ client.on('messageCreate', async message => {
                       sentCount++;
                   } catch (e) {}
               }
-              await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الاستبيان على الخاص لـ **${sentCount}** عضو في السيرفر بنجاح! 🚀`).catch(()=>{});
+              await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الاستبيان على الخاص لـ **{sentCount}** عضو في السيرفر بنجاح! 🚀`).catch(()=>{});
           }, 100);
 
           return;
@@ -592,12 +591,12 @@ client.on('messageCreate', async message => {
       try {
           const totalResponses = await surveyColl.countDocuments({ guildId });
           const allSurveys = await surveyColl.find({ guildId }).toArray();
-          const suggestions = allSurveys.filter(s => s.suggestion && s.suggestion.trim() !== '').map(s => `• <@${s.userId}>: "${s.suggestion}"`).join('\n') || 'لا توجد اقتراحات كتابية حتى الآن.';
+          const suggestions = allSurveys.filter(s => s.suggestion && s.suggestion.trim() !== '').map(s => `• <@{s.userId}>: "{s.suggestion}"`).join('\n') || 'لا توجد اقتراحات كتابية حتى الآن.';
 
           const embed = new EmbedBuilder()
               .setColor('#F1C40F')
               .setTitle('📊 تقارير ونتائج إعلان الاستبيان الشامل')
-              .setDescription(`📈 **إجمالي اللاعبين المشاركين:** \`${totalResponses} لاعب\`\n\n---`)
+              .setDescription(`📈 **إجمالي اللاعبين المشاركين:** \`{totalResponses} لاعب\`\n\n---`)
               .addFields(
                   { name: '💡 الاقتراحات والأفكار المقترحة من اللاعبين', value: suggestions.length > 1024 ? suggestions.substring(0, 1020) + '...' : suggestions, inline: false }
               )
@@ -622,12 +621,12 @@ client.on('messageCreate', async message => {
           const embed = new EmbedBuilder()
               .setColor('#9b59b6')
               .setTitle('📊 بورصة الأسهم العالمية والأصول الرقمية')
-              .setDescription(`⏳ **يتجدد السوق وتتغير أسعار الأسهم:** <t:${unixTime}:R> (<t:${unixTime}:t>)\n\nاختر من الأزرار أدناه لإدارة استثماراتك ومحفظتك بكل سهولة:`);
+              .setDescription(`⏳ **يتجدد السوق وتتغير أسعار الأسهم:** <t:{unixTime}:R> (<t:{unixTime}:t>)\n\nاختر من الأزرار أدناه لإدارة استثماراتك ومحفظتك بكل سهولة:`);
 
           stockMarket.forEach(s => {
               embed.addFields({
-                  name: `${s.emoji} ${s.name} (\`${s.id}\`) ${s.trend}`,
-                  value: `💵 السعر الحالي: \`$${s.price.toLocaleString()}\``,
+                  name: `${s.emoji} {s.name} (\`{s.id}\`) {s.trend}`,
+                  value: `💵 السعر الحالي: \`${s.price.toLocaleString()}\``,
                   inline: true
               });
           });
@@ -667,7 +666,7 @@ client.on('messageCreate', async message => {
 
           let user = await getEconomyUser(guildId, userId);
           const creationCost = 25000;
-          if (user.balance < creationCost) return message.reply(`💸 يتطلب تأسيس شركة \`$${creationCost.toLocaleString()}\`!`);
+          if (user.balance < creationCost) return message.reply(`💸 يتطلب تأسيس شركة \`{creationCost.toLocaleString()}\`!`);
 
           let existingCorp = await guildsColl.findOne({ guildId, name: corpName });
           if (existingCorp) return message.reply('❌ اسم الشركة مستخدم مسبقاً!');
@@ -678,7 +677,7 @@ client.on('messageCreate', async message => {
           const newCorp = { guildId, name: corpName, logo: corpTag, ownerId: userId, members: [userId], capital: creationCost, assets: [], createdAt: Date.now() };
           await guildsColl.insertOne(newCorp);
 
-          return message.channel.send({ content: `🏢 **مبروك!** تم تأسيس شركة **${corpTag} ${corpName}** بنجاح! 🚀` });
+          return message.channel.send({ content: `🏢 **مبروك!** تم تأسيس شركة **{corpTag} {corpName}** بنجاح! 🚀` });
       }
 
       if (message.content === '!شركة' || message.content === '!شركتي') {
@@ -687,13 +686,13 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder()
               .setColor('#f1c40f')
-              .setTitle(`🏢 إدارة شركة: ${corp.logo} ${corp.name}`)
+              .setTitle(`🏢 إدارة شركة: {corp.logo} {corp.name}`)
               .setDescription('مرحباً بك في لوحة تحكم شركتك التجارية. استخدم الأزرار أدناه لإدارة الهيئة:')
               .addFields(
-                  { name: '👑 المؤسس', value: `<@${corp.ownerId}>`, inline: true },
-                  { name: '💰 رأس المال', value: `\`$${(corp.capital || 0).toLocaleString()}\``, inline: true },
-                  { name: '👥 عدد الأعضاء', value: `\`${corp.members.length} أعضاء\``, inline: true },
-                  { name: '🏭 الأصول والمشاريع', value: `\`${corp.assets ? corp.assets.length : 0} مشاريع مملوكة\``, inline: true }
+                  { name: '👑 المؤسس', value: `<@{corp.ownerId}>`, inline: true },
+                  { name: '💰 رأس المال', value: `\`{(corp.capital || 0).toLocaleString()}\``, inline: true },
+                  { name: '👥 عدد الأعضاء', value: `\`{corp.members.length} أعضاء\``, inline: true },
+                  { name: '🏭 الأصول والمشاريع', value: `\`{corp.assets ? corp.assets.length : 0} مشاريع مملوكة\``, inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الشركات والهوامير' })
               .setTimestamp();
@@ -722,21 +721,21 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder()
               .setColor('#3498DB')
-              .setTitle(`🏭 سوق مشاريع وأصول شركة: ${corp.name}`)
-              .setDescription(`💰 **رأس مال الشركة الحالي:** \`$${(corp.capital || 0).toLocaleString()}\`\n\nاختر من القائمة أدناه لشراء مشاريع تدر أرباحاً دورية على رأس مال شركتي:`);
+              .setTitle(`🏭 سوق مشاريع وأصول شركة: {corp.name}`)
+              .setDescription(`💰 **رأس مال الشركة الحالي:** \`{(corp.capital || 0).toLocaleString()}\`\n\nاختر من القائمة أدناه لشراء مشاريع تدر أرباحاً دورية على رأس مال شركتي:`);
 
           corpAssetsMarket.forEach(asset => {
               embed.addFields({
-                  name: `${asset.emoji} ${asset.name}`,
-                  value: `💵 التكلفة: \`$${asset.price.toLocaleString()}\` | 📈 الربح الساعي: \`$${asset.profit.toLocaleString()}\``,
+                  name: `${asset.emoji} {asset.name}`,
+                  value: `💵 التكلفة: \`{asset.price.toLocaleString()}\` | 📈 الربح الساعي: \`{asset.profit.toLocaleString()}\``,
                   inline: false
               });
           });
 
           const options = corpAssetsMarket.map(asset => ({
-              label: `${asset.name} ($${asset.price.toLocaleString()})`,
-              description: `الربح الساعي: $${asset.profit.toLocaleString()}`,
-              value: `buy_asset_${asset.id}`,
+              label: `${asset.name} (${asset.price.toLocaleString()})`,
+              description: `الربح الساعي: ${asset.profit.toLocaleString()}`,
+              value: `buy_asset_{asset.id}`,
               emoji: asset.emoji
           }));
 
@@ -760,7 +759,7 @@ client.on('messageCreate', async message => {
           if (corp.members.length >= 5) return message.reply('❌ وصلت الشركة للحد الأقصى (5 أعضاء)!');
 
           await guildsColl.updateOne({ _id: corp._id }, { $push: { members: target.id } });
-          return message.channel.send(`✅ **تمت إضافة العضو ${target} بنجاح إلى شركة ${corp.name}!** 🤝🏢`);
+          return message.channel.send(`✅ **تمت إضافة العضو {target} بنجاح إلى شركة {corp.name}!** 🤝🏢`);
       }
 
       if (message.content.startsWith('!شعار-شركة')) {
@@ -773,7 +772,7 @@ client.on('messageCreate', async message => {
           if (!corp) return message.reply('❌ تغيير شعار وصورة الشركة مخصص لمؤسس الشركة (المالك) فقط!');
 
           await guildsColl.updateOne({ _id: corp._id }, { $set: { image: args } });
-          return message.reply(`✅ **تم تحديث شعار وصورة شركة ${corp.name} بنجاح!** 🖼️✨`);
+          return message.reply(`✅ **تم تحديث شعار وصورة شركة {corp.name} بنجاح!** 🖼️✨`);
       }
 
       if (message.content.startsWith('!تعديل-اسم-الشركة')) {
@@ -787,7 +786,7 @@ client.on('messageCreate', async message => {
           if (existing) return message.reply('❌ اسم الشركة الجديد مستخدم مسبقاً!');
 
           await guildsColl.updateOne({ _id: corp._id }, { $set: { name: newName } });
-          return message.reply(`✅ **تم تعديل اسم الشركة بنجاح إلى:** **${corp.logo} ${newName}** 🏢✨`);
+          return message.reply(`✅ **تم تعديل اسم الشركة بنجاح إلى:** **{corp.logo} {newName}** 🏢✨`);
       }
 
       if (message.content === '!ترتيب-الشركات') {
@@ -796,7 +795,7 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder().setColor('#3498DB').setTitle('🏆 لوحة صدارة الهيئات والشركات');
           corps.forEach((c, index) => {
-              embed.addFields({ name: `${index + 1}. ${c.logo} **${c.name}**`, value: `👑 المالك: <@${c.ownerId}>\n💰 رأس المال: \`$${(c.capital || 0).toLocaleString()}\``, inline: false });
+              embed.addFields({ name: `${index + 1}. {c.logo} **{c.name}**`, value: `👑 المالك: <@{c.ownerId}>\n💰 رأس المال: \`{(c.capital || 0).toLocaleString()}\``, inline: false });
           });
           return message.channel.send({ embeds: [embed] });
       }
@@ -807,7 +806,7 @@ client.on('messageCreate', async message => {
           if (isNaN(loanAmt) || loanAmt <= 0) return message.reply('❌ الاستخدام الصحيح: `!قرض [المبلغ]`');
 
           let user = await getEconomyUser(guildId, userId);
-          if (user.loan > 0) return message.reply(`❌ لديك قرض غير مسدد بقيمة \`$${user.loan.toLocaleString()}\`!`);
+          if (user.loan > 0) return message.reply(`❌ لديك قرض غير مسدد بقيمة \`{user.loan.toLocaleString()}\`!`);
 
           const totalDebt = Math.floor(loanAmt * 1.15);
           user.balance += loanAmt;
@@ -815,13 +814,13 @@ client.on('messageCreate', async message => {
           user.loanDueDate = Date.now() + (24 * 60 * 60 * 1000);
           await saveEconomyUser(guildId, userId, user);
 
-          return message.reply(`✅ تم إيداع **$${loanAmt.toLocaleString()}** بحسابك.\n📌 إجمالي واجب السداد (مع فائدة 15%): \`$${totalDebt.toLocaleString()}\``);
+          return message.reply(`✅ تم إيداع **{loanAmt.toLocaleString()}** بحسابك.\n📌 إجمالي واجب السداد (مع فائدة 15%): \`{totalDebt.toLocaleString()}\``);
       }
 
       if (message.content === '!سداد') {
           let user = await getEconomyUser(guildId, userId);
           if (!user.loan || user.loan <= 0) return message.reply('✅ ليس عليك أي ديون مستحقة!');
-          if (user.balance < user.loan) return message.reply(`💸 رصيدك لا يكفي لسداد القرض ($${user.loan.toLocaleString()})!`);
+          if (user.balance < user.loan) return message.reply(`💸 رصيدك لا يكفي لسداد القرض ({user.loan.toLocaleString()})!`);
 
           user.balance -= user.loan;
           user.loan = 0;
@@ -836,7 +835,7 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder().setColor('#e74c3c').setTitle('🚨 لوحة المتعثرين والمديونين');
           debtors.forEach((d, idx) => {
-              embed.addFields({ name: `${idx + 1}. <@${d.userId}>`, value: `📉 الدين: \`$${d.loan.toLocaleString()}\``, inline: false });
+              embed.addFields({ name: `${idx + 1}. <@{d.userId}>`, value: `📉 الدين: \`{d.loan.toLocaleString()}\``, inline: false });
           });
           return message.channel.send({ embeds: [embed] });
       }
@@ -845,9 +844,9 @@ client.on('messageCreate', async message => {
           let user = await getEconomyUser(guildId, userId);
           const cost = 15000;
           if (user.guard && user.guardShields > 0) {
-              return message.reply(`🛡️ لديك حارس شخصي مفعل حالياً ومتبقي له **${user.guardShields} صدات** دفاعية!`);
+              return message.reply(`🛡️ لديك حارس شخصي مفعل حالياً ومتبقي له **{user.guardShields} صدات** دفاعية!`);
           }
-          if (user.balance < cost) return message.reply(`💸 التكلفة \`$${cost.toLocaleString()}\` ورصيدك لا يكفي!`);
+          if (user.balance < cost) return message.reply(`💸 التكلفة \`{cost.toLocaleString()}\` ورصيدك لا يكفي!`);
 
           user.balance -= cost;
           user.guard = true;
@@ -869,9 +868,9 @@ client.on('messageCreate', async message => {
           await saveEconomyUser(guildId, userId, leader);
 
           const teamMembers = [message.author, ...mentions.values()];
-          const teamMentions = teamMembers.map(m => `<@${m.id}>`).join('، ');
+          const teamMentions = teamMembers.map(m => `<@{m.id}>`).join('، ');
 
-          const embed = new EmbedBuilder().setColor('#e74c3c').setTitle('🚨 تخطيط وتجهيز لسرقة البنك المركزي (Heist)!').setDescription(`عصابة ${teamMentions} تقتحم البنك المركزي الآن!\n\n⚡ اضغط الزر السريع أدناه للنجاح خلال 15 ثانية!`);
+          const embed = new EmbedBuilder().setColor('#e74c3c').setTitle('🚨 تخطيط وتجهيز لسرقة البنك المركزي (Heist)!').setDescription(`عصابة {teamMentions} تقتحم البنك المركزي الآن!\n\n⚡ اضغط الزر السريع أدناه للنجاح خلال 15 ثانية!`);
           const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('heist_hack').setLabel('💻 اختراق الخزنة').setStyle(ButtonStyle.Success));
 
           const msg = await message.channel.send({ embeds: [embed], components: [row] });
@@ -888,21 +887,21 @@ client.on('messageCreate', async message => {
                       mEco.balance += share;
                       await saveEconomyUser(guildId, member.id, mEco);
                   }
-                  await msg.edit({ content: `💰 **نجحت العصابة (${teamMentions}) في سرقة البنك المركزي!** حصيلة كل فرد: \`$${share.toLocaleString()}\` 🚀`, components: [] }).catch(()=>{});
+                  await msg.edit({ content: `💰 **نجحت العصابة ({teamMentions}) في سرقة البنك المركزي!** حصيلة كل فرد: \`{share.toLocaleString()}\` 🚀`, components: [] }).catch(()=>{});
               } else {
                   for (const member of teamMembers) {
                       let mEco = await getEconomyUser(guildId, member.id);
                       mEco.balance = Math.max(0, mEco.balance - 15000);
                       await saveEconomyUser(guildId, member.id, mEco);
                   }
-                  await msg.edit({ content: `🚨 **فشلت العملية وتم القبض على العصابة (${teamMentions})!** غرامة 15,000$ لكل فرد 🚔💀`, components: [] }).catch(()=>{});
+                  await msg.edit({ content: `🚨 **فشلت العملية وتم القبض على العصابة ({teamMentions})!** غرامة 15,000$ لكل فرد 🚔💀`, components: [] }).catch(()=>{});
               }
           });
       }
 
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
-          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **${user.guard && user.guardShields > 0 ? `🛡️ مفعل (${user.guardShields} صدات)` : '❌'}** | وظيفتك: **${user.job}**`);
+          return message.reply(`💳 رصيدك: **{user.balance.toLocaleString()}** | القرض: **{(user.loan || 0).toLocaleString()}** | الحارس: **{user.guard && user.guardShields > 0 ? `🛡️ مفعل ({user.guardShields} صدات)` : '❌'}** | وظيفتك: **{user.job}**`);
       }
 
       if (message.content === '!راتب' || message.content === 'راتب') {
@@ -919,7 +918,7 @@ client.on('messageCreate', async message => {
                   const m = Math.floor(remainingMs / 60000);
                   const s = Math.floor((remainingMs % 60000) / 1000);
                   processingUsers.delete(userId);
-                  return message.reply(`⏳ يابن الحلال! باقي **${m} دقيقة و ${s} ثانية** على راتبك القادم.`);
+                  return message.reply(`⏳ يابن الحلال! باقي **{m} دقيقة و {s} ثانية** على راتبك القادم.`);
               }
 
               let baseSalary = 500;
@@ -944,7 +943,7 @@ client.on('messageCreate', async message => {
               await saveEconomyUser(guildId, userId, user);
               processingUsers.delete(userId);
 
-              return message.reply(`💵 تم إيداع راتب وظيفتك (${user.job}) بقيمة **$${baseSalary.toLocaleString()}** + أرباح عقارك وأملاكك بقيمة **$${totalProfit.toLocaleString()}**.\n💰 **إجمالي المبلغ المودع:** \`$${totalReceived.toLocaleString()}\` 🚀`);
+              return message.reply(`💵 تم إيداع راتب وظيفتك ({user.job}) بقيمة **{baseSalary.toLocaleString()}** + أرباح عقارك وأملاكك بقيمة **{totalProfit.toLocaleString()}**.\n💰 **إجمالي المبلغ المودع:** \`{totalReceived.toLocaleString()}\` 🚀`);
           } catch (err) {
               processingUsers.delete(userId);
               console.error(err);
@@ -962,15 +961,15 @@ client.on('messageCreate', async message => {
 
           const profileEmbed = new EmbedBuilder()
               .setColor('#9B59B6')
-              .setTitle(`👤 الهوية الشخصية: ${targetName}`)
+              .setTitle(`👤 الهوية الشخصية: {targetName}`)
               .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
               .addFields(
-                  { name: '💳 الرصيد المالي', value: `\`$${ecoData.balance.toLocaleString()}\``, inline: true },
-                  { name: '👔 الوظيفة الحالية', value: `\`${ecoData.job}\``, inline: true },
-                  { name: '⭐ رصيد النقاط', value: `\`${~~ptsData.points} نقطة\``, inline: true },
-                  { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
-                  { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
-                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
+                  { name: '💳 الرصيد المالي', value: `\`{ecoData.balance.toLocaleString()}\``, inline: true },
+                  { name: '👔 الوظيفة الحالية', value: `\`{ecoData.job}\``, inline: true },
+                  { name: '⭐ رصيد النقاط', value: `\`{${~~ptsData.points} نقطة\``, inline: true },
+                  { name: '🚀 المستوى (Level)', value: `\`Level {ptsData.level}\` (XP: {ptsData.xp} / {xpNeeded})`, inline: false },
+                  { name: '🏠 عدد العقارات والأملاك', value: `\`{ecoData.properties.length} عقار\``, inline: true },
+                  { name: '🔥 عدد الرسائل والتفاعل', value: `\`{ptsData.messagesCount} رسالة\``, inline: true }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام الهوية والإنجازات' })
               .setTimestamp();
@@ -986,9 +985,9 @@ client.on('messageCreate', async message => {
               const j = jobsList[key];
               const isUnlocked = pUser.level >= j.level;
               return {
-                  label: `${j.name} (راتب: $${j.salary.toLocaleString()})`,
-                  description: isUnlocked ? `✨ متاحة! تتطلب Level ${j.level}` : `🔒 مغلقة! تتطلب Level ${j.level}`,
-                  value: `job_${key}`
+                  label: `${j.name} (راتب: ${j.salary.toLocaleString()})`,
+                  description: isUnlocked ? `✨ متاحة! تتطلب Level {j.level}` : `🔒 مغلقة! تتطلب Level {j.level}`,
+                  value: `job_{key}`
               };
           });
 
@@ -1002,7 +1001,7 @@ client.on('messageCreate', async message => {
           const embed = new EmbedBuilder()
               .setColor('#3498DB')
               .setTitle('👔 سلّم الوظائف واختيار المهنة')
-              .setDescription(`مستواك الحالي: \`Level ${pUser.level}\`\nوظيفتك الحالية: \`${user.job}\`\n\nاختر وظيفتك المطلوبة من القائمة أدناه للترقية الفورية بضغطة زر:`);
+              .setDescription(`مستواك الحالي: \`Level {pUser.level}\`\nوظيفتك الحالية: \`{user.job}\`\n\nاختر وظيفتك المطلوبة من القائمة أدناه للترقية الفورية بضغطة زر:`);
 
           return message.channel.send({ embeds: [embed], components: [row] });
       }
@@ -1012,13 +1011,13 @@ client.on('messageCreate', async message => {
           const embed = new EmbedBuilder()
               .setColor('#0099ff')
               .setTitle('📈 بورصة العقارات والأعمال')
-              .setDescription(`⏳ **يتجدد السوق وتتغير الأسعار:** <t:${unixTime}:R> (<t:${unixTime}:t>)`);
+              .setDescription(`⏳ **يتجدد السوق وتتغير الأسعار:** <t:{unixTime}:R> (<t:{unixTime}:t>)`);
 
           const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
 
           sortedMarket.forEach(i => embed.addFields({ 
-              name: `${i.emoji} ${i.name} ${i.trend}`, 
-              value: `💰 السعر: \`$${i.price.toLocaleString()}\` | 💸 ربح: \`$${i.profit.toLocaleString()}\``, 
+              name: `${i.emoji} {i.name} {i.trend}`, 
+              value: `💰 السعر: \`{i.price.toLocaleString()}\` | 💸 ربح: \`{i.profit.toLocaleString()}\``, 
               inline: true 
           }));
 
@@ -1035,9 +1034,9 @@ client.on('messageCreate', async message => {
           const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
 
           const options = sortedMarket.map((item) => ({
-              label: `${item.name} ($${item.price.toLocaleString()})`,
-              description: `الربح: $${item.profit.toLocaleString()}`,
-              value: `buy_${item.id}`,
+              label: `${item.name} (${item.price.toLocaleString()})`,
+              description: `الربح: ${item.profit.toLocaleString()}`,
+              value: `buy_{item.id}`,
               emoji: item.emoji || '💼'
           }));
 
@@ -1049,7 +1048,7 @@ client.on('messageCreate', async message => {
           );
 
           return message.channel.send({
-              content: `🛍️ **متجر وسوق العقارات والأعمال**\nرصيدك الحالي: \`$${user.balance.toLocaleString()}\``,
+              content: `🛍️ **متجر وسوق العقارات والأعمال**\nرصيدك الحالي: \`{user.balance.toLocaleString()}\``,
               components: [row]
           });
       }
@@ -1082,15 +1081,15 @@ client.on('messageCreate', async message => {
 
               const embed = new EmbedBuilder()
                   .setColor('#00FF00')
-                  .setTitle(`🏠 محفظة وعقارات: ${message.author.displayName}`)
-                  .setDescription(`📊 **ملخص المحفظة الشامل:**\n• إجمالي العقارات: \`${totalCountProperties} عقار\`\n• المبلغ الكامل للقيمة: \`$${grandTotalValue.toLocaleString()}\`\n• إجمالي الربح بالراتب: \`$${grandTotalProfit.toLocaleString()}\`\n\n---`)
-                  .setFooter({ text: `صفحة ${pageNum} من ${totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
+                  .setTitle(`🏠 محفظة وعقارات: {message.author.displayName}`)
+                  .setDescription(`📊 **ملخص المحفظة الشامل:**\n• إجمالي العقارات: \`{totalCountProperties} عقار\`\n• المبلغ الكامل للقيمة: \`{grandTotalValue.toLocaleString()}\`\n• إجمالي الربح بالراتب: \`{grandTotalProfit.toLocaleString()}\`\n\n---`)
+                  .setFooter({ text: `صفحة {pageNum} من {totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
 
               pageItems.forEach((item, idx) => {
                   const globalIdx = start + idx + 1;
                   embed.addFields({
-                      name: `${globalIdx}. ${item.emoji} ${item.name} ${item.count > 1 ? `(العدد: x${item.count})` : ''}`,
-                      value: `💰 القيمة: \`$${item.totalPrice.toLocaleString()}\` | 💸 الربح: \`$${item.totalProfit.toLocaleString()}\``,
+                      name: `${globalIdx}. {item.emoji} {item.name} {item.count > 1 ? `(العدد: x{item.count})` : ''}`,
+                      value: `💰 القيمة: \`{item.totalPrice.toLocaleString()}\` | 💸 الربح: \`{item.totalProfit.toLocaleString()}\``,
                       inline: false
                   });
               });
@@ -1128,7 +1127,7 @@ client.on('messageCreate', async message => {
           const sellP = Math.floor(item.price * 0.90);
           user.properties.splice(idx, 1); user.balance += sellP;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`🤝 بعت **${item.name}** بـ **$${sellP.toLocaleString()}** (بعد خصم 10% رسوم).`);
+          return message.reply(`🤝 بعت **{item.name}** بـ **{sellP.toLocaleString()}** (بعد خصم 10% رسوم).`);
       }
 
       if (message.content.startsWith('!سرقة')) {
@@ -1152,7 +1151,7 @@ client.on('messageCreate', async message => {
               targetUser.balance -= stolen; user.balance += stolen;
               await saveEconomyUser(guildId, target.id, targetUser);
               await saveEconomyUser(guildId, userId, user);
-              return message.channel.send(`🦹‍♂️ **عملية ناجحة!** سرق ${message.author} مبلغ **$${stolen.toLocaleString()}** من ${target}! 💰🔥`);
+              return message.channel.send(`🦹‍♂️ **عملية ناجحة!** سرق {message.author} مبلغ **{stolen.toLocaleString()}** من {target}! 💰🔥`);
           } else {
               let guardMsg = '';
               if (hasActiveGuard) {
@@ -1161,7 +1160,7 @@ client.on('messageCreate', async message => {
                       targetUser.guard = false;
                       guardMsg = '\n🛡️💥 **انتهت طاقة الحارس وهرب بعد تصديه للهجوم!** (يجب شراء حارس جديد)';
                   } else {
-                      guardMsg = `\n🛡️ **تصدى الحارس للسرقة!** متبقي له (${targetUser.guardShields}) صدات دفاعية.`;
+                      guardMsg = `\n🛡️ **تصدى الحارس للسرقة!** متبقي له ({targetUser.guardShields}) صدات دفاعية.`;
                   }
                   await saveEconomyUser(guildId, target.id, targetUser);
               }
@@ -1169,7 +1168,7 @@ client.on('messageCreate', async message => {
               const fine = hasActiveGuard ? 800 : 300;
               user.balance = Math.max(0, user.balance - fine);
               await saveEconomyUser(guildId, userId, user);
-              return message.channel.send(`🚨 **فشلت السرقة!** غرمته الشرطة **$${fine}**! 🚔💀${guardMsg}`);
+              return message.channel.send(`🚨 **فشلت السرقة!** غرمته الشرطة **{fine}**! 🚔💀{guardMsg}`);
           }
       }
 
@@ -1184,9 +1183,9 @@ client.on('messageCreate', async message => {
           user.lastGambling = now;
           
           const roll = Math.random();
-          if (roll < 0.40) { user.balance -= amt; message.reply(`😢 خسرت رهنتك وراحت عليك **$${amt.toLocaleString()}**!`); }
-          else if (roll < 0.85) { user.balance += amt; message.reply(`🎰 **كفووو!** فزت وضاعفت فلوسك وكسبت **$${amt.toLocaleString()}**! 🎉`); }
-          else { user.balance += amt * 3; message.channel.send(`👑 **ضربت الحظ الكبرى!** كسبت أضعاف مضاعفة بقيمة **$${(amt*3).toLocaleString()}** يا ${message.author}! 🔥`); }
+          if (roll < 0.40) { user.balance -= amt; message.reply(`😢 خسرت رهنتك وراحت عليك **{amt.toLocaleString()}**!`); }
+          else if (roll < 0.85) { user.balance += amt; message.reply(`🎰 **كفووو!** فزت وضاعفت فلوسك وكسبت **{amt.toLocaleString()}**! 🎉`); }
+          else { user.balance += amt * 3; message.channel.send(`👑 **ضربت الحظ الكبرى!** كسبت أضعاف مضاعفة بقيمة **{(amt*3).toLocaleString()}** يا {message.author}! 🔥`); }
           await saveEconomyUser(guildId, userId, user);
       }
 
@@ -1198,7 +1197,7 @@ client.on('messageCreate', async message => {
           const won = prizes[Math.floor(Math.random() * prizes.length)];
           if (won > 0) user.balance += won;
           await saveEconomyUser(guildId, userId, user);
-          return message.reply(`📦 فتحت الصندوق السري وطلع لك: **$${won.toLocaleString()}**!`);
+          return message.reply(`📦 فتحت الصندوق السري وطلع لك: **{won.toLocaleString()}**!`);
       }
 
       if (message.content === '!مهامي') {
@@ -1221,7 +1220,7 @@ client.on('messageCreate', async message => {
           s.balance -= amt; await saveEconomyUser(guildId, userId, s);
           let r = await getEconomyUser(guildId, target.id);
           r.balance += amt; await saveEconomyUser(guildId, target.id, r);
-          return message.channel.send(`✅ تم تحويل **$${amt.toLocaleString()}** بنجاح إلى ${target}!`);
+          return message.channel.send(`✅ تم تحويل **{amt.toLocaleString()}** بنجاح إلى {target}!`);
       }
   }
 
@@ -1262,11 +1261,11 @@ client.on('messageCreate', async message => {
           const totalPages = 4;
 
           const generateEmbed = (pageNum) => {
-              const embed = new EmbedBuilder().setColor('#FFD700').setFooter({ text: `صفحة ${pageNum} من ${totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
-              if (pageNum === 1) embed.setTitle('👑 لوحة صدارة النقاط').setDescription(topPoints.length ? topPoints.map((d, i) => `${i+1}. <@${d.userId}>: \`${d.points} نقطة\``).join('\n') : 'لا توجد بيانات.');
-              else if (pageNum === 2) embed.setTitle('💎 لوحة صدارة الأثرياء').setDescription(topRich.length ? topRich.map((d, i) => `${i+1}. <@${d.userId}>: \`$${d.balance.toLocaleString()}\``).join('\n') : 'لا توجد بيانات.');
-              else if (pageNum === 3) embed.setTitle('⚡ لوحة أسرع اللاعبين').setDescription(topSpeed.length ? topSpeed.map((d, i) => `${i+1}. <@${d.userId}>: \`${d.bestTime} ثانية\``).join('\n') : 'لا توجد سجلات.');
-              else if (pageNum === 4) embed.setTitle('🚀 لوحة مستويات التلفيل').setDescription(topLevel.length ? topLevel.map((d, i) => `${i+1}. <@${d.userId}>: \`Level ${d.level}\``).join('\n') : 'لا توجد بيانات.');
+              const embed = new EmbedBuilder().setColor('#FFD700').setFooter({ text: `صفحة {pageNum} من {totalPages} • 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞` });
+              if (pageNum === 1) embed.setTitle('👑 لوحة صدارة النقاط').setDescription(topPoints.length ? topPoints.map((d, i) => `${i+1}. <@{d.userId}>: \`{d.points} نقطة\``).join('\n') : 'لا توجد بيانات.');
+              else if (pageNum === 2) embed.setTitle('💎 لوحة صدارة الأثرياء').setDescription(topRich.length ? topRich.map((d, i) => `${i+1}. <@{d.userId}>: \`{d.balance.toLocaleString()}\``).join('\n') : 'لا توجد بيانات.');
+              else if (pageNum === 3) embed.setTitle('⚡ لوحة أسرع اللاعبين').setDescription(topSpeed.length ? topSpeed.map((d, i) => `${i+1}. <@{d.userId}>: \`{d.bestTime} ثانية\``).join('\n') : 'لا توجد سجلات.');
+              else if (pageNum === 4) embed.setTitle('🚀 لوحة مستويات التلفيل').setDescription(topLevel.length ? topLevel.map((d, i) => `${i+1}. <@{d.userId}>: \`Level {d.level}\``).join('\n') : 'لا توجد بيانات.');
               return embed;
           };
 
@@ -1324,8 +1323,8 @@ client.on('messageCreate', async message => {
           activeGames.set(message.channel.id, 'roulette');
           setTimeout(() => {
               activeGames.delete(message.channel.id);
-              if (Math.floor(Math.random() * 6) + 1 === 1) message.channel.send(`💥 **بووووم!** ${message.author} خسر 💀.`);
-              else { message.channel.send(`😅 المسدس فاضي! كسبت **10 نقاط** يا ${message.author}.`); addPoints(guildId, userId, message.author.displayName, message.channel); }
+              if (Math.floor(Math.random() * 6) + 1 === 1) message.channel.send(`💥 **بووووم!** {message.author} خسر 💀.`);
+              else { message.channel.send(`😅 المسدس فاضي! كسبت **10 نقاط** يا {message.author}.`); addPoints(guildId, userId, message.author.displayName, message.channel); }
           }, 3000);
       }
 
@@ -1344,9 +1343,9 @@ client.on('interactionCreate', async interaction => {
         if (interaction.customId === 'open_buy_menu') {
             const user = await getEconomyUser(guildId, userId);
             const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
-            const options = sortedMarket.map((item) => ({ label: `${item.name} ($${item.price.toLocaleString()})`, value: `buy_${item.id}`, emoji: item.emoji || '💼' }));
+            const options = sortedMarket.map((item) => ({ label: `${item.name} (${item.price.toLocaleString()})`, value: `buy_${item.id}`, emoji: item.emoji || '💼' }));
             const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('market_buy_select').setPlaceholder('🛒 اختر عقاراً للشراء...').addOptions(options));
-            return interaction.reply({ content: `🛍️ رصيدك: \`$${user.balance.toLocaleString()}\``, components: [row], ephemeral: true });
+            return interaction.reply({ content: `🛍️ رصيدك: \`{user.balance.toLocaleString()}\``, components: [row], ephemeral: true });
         }
 
         if (interaction.customId === 'open_sell_menu') {
@@ -1359,9 +1358,9 @@ client.on('interactionCreate', async interaction => {
                 const item = marketItems.find(i => i.id === propId);
                 const sellP = Math.floor(item.price * 0.90);
                 return {
-                    label: `${item.name} (سعر البيع: $${sellP.toLocaleString()})`,
-                    description: `العقار رقم ${idx + 1} في محفظتك`,
-                    value: `sell_prop_${idx}`,
+                    label: `${item.name} (سعر البيع: {sellP.toLocaleString()})`,
+                    description: `العقار رقم {idx + 1} في محفظتك`,
+                    value: `sell_prop_{idx}`,
                     emoji: item.emoji || '🏠'
                 };
             });
@@ -1400,10 +1399,10 @@ client.on('interactionCreate', async interaction => {
                 if (stock && qty > 0) {
                     const val = stock.price * qty;
                     totalVal += val;
-                    text += `• ${stock.emoji} ${stock.name}: \`x${qty}\` (القيمة: $\`${val.toLocaleString()}\`)\n`;
+                    text += `• {stock.emoji} {stock.name}: \`x{qty}\` (القيمة: $\`{val.toLocaleString()}\`)\n`;
                 }
             }
-            text += `\n💎 **إجمالي المحفظة:** $\`${totalVal.toLocaleString()}\``;
+            text += `\n💎 **إجمالي المحفظة:** $\`{totalVal.toLocaleString()}\``;
             return interaction.reply({ content: text, ephemeral: true });
         }
 
@@ -1427,8 +1426,8 @@ client.on('interactionCreate', async interaction => {
             const corp = await guildsColl.findOne({ guildId, members: userId });
             if (!corp) return interaction.reply({ content: '❌ أنت لست في شركة!', ephemeral: true });
 
-            const memberList = corp.members.map(id => `<@${id}>`).join('\n');
-            const embed = new EmbedBuilder().setColor('#3498DB').setTitle(`👥 أعضاء شركة: ${corp.name}`).setDescription(memberList);
+            const memberList = corp.members.map(id => `<@{id}>`).join('\n');
+            const embed = new EmbedBuilder().setColor('#3498DB').setTitle(`👥 أعضاء شركة: {corp.name}`).setDescription(memberList);
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
@@ -1440,14 +1439,14 @@ client.on('interactionCreate', async interaction => {
             if (corp.assets && corp.assets.length > 0) {
                 assetList = corp.assets.map(aId => {
                     const item = corpAssetsMarket.find(a => a.id === aId);
-                    return item ? `• ${item.emoji} **${item.name}** (ربح ساعي: \`$${item.profit.toLocaleString()}\`)` : '';
+                    return item ? `• {item.emoji} **{item.name}** (ربح ساعي: \`{item.profit.toLocaleString()}\`)` : '';
                 }).filter(Boolean).join('\n');
             }
 
             const embed = new EmbedBuilder()
                 .setColor('#2ECC71')
-                .setTitle(`🏭 أصول ومشاريع شركة: ${corp.name}`)
-                .setDescription(`📊 **الأصول المملوكة حالياً:**\n${assetList}\n\n💡 أرباح هذه المشاريع تضاف تلقائياً لرأس مال الشركة كل ساعة!`);
+                .setTitle(`🏭 أصول ومشاريع شركة: {corp.name}`)
+                .setDescription(`📊 **الأصول المملوكة حالياً:**\n{assetList}\n\n💡 أرباح هذه المشاريع تضاف تلقائياً لرأس مال الشركة كل ساعة!`);
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
@@ -1458,7 +1457,7 @@ client.on('interactionCreate', async interaction => {
             if (corp.ownerId === userId) return interaction.reply({ content: '⚠️ أنت مؤسس الشركة ولا يمكنك مغادرتها!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $pull: { members: userId } });
-            return interaction.update({ content: `✅ لقد غادرت شركة **${corp.name}** بنجاح.`, embeds: [], components: [] });
+            return interaction.update({ content: `✅ لقد غادرت شركة **{corp.name}** بنجاح.`, embeds: [], components: [] });
         }
 
         if (interaction.customId === 'corp_invite_btn') {
@@ -1492,6 +1491,7 @@ client.on('interactionCreate', async interaction => {
         }
 
         if (interaction.customId === 'start_survey_btn') {
+            // الاستجابة الفورية لزر الاستبيان لتجنب انتهاء المهلة (3 ثواني)
             const row = new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId('survey_q1')
@@ -1527,7 +1527,7 @@ client.on('interactionCreate', async interaction => {
             user.stocks[symbol] = (user.stocks[symbol] || 0) + amount;
             await saveEconomyUser(guildId, userId, user);
 
-            return interaction.reply({ content: `✅ اشتريت \`${amount}\` سهم من ${stock.name} بـ \`$${totalCost.toLocaleString()}\``, ephemeral: true });
+            return interaction.reply({ content: `✅ اشتريت \`{amount}\` سهم من {stock.name} بـ \`{totalCost.toLocaleString()}\``, ephemeral: true });
         }
 
         if (interaction.customId === 'stock_sell_modal') {
@@ -1546,7 +1546,7 @@ client.on('interactionCreate', async interaction => {
             user.balance += totalEarned;
             await saveEconomyUser(guildId, userId, user);
 
-            return interaction.reply({ content: `🤝 بعت \`${amount}\` سهم من ${stock.name} واستلمت \`$${totalEarned.toLocaleString()}\``, ephemeral: true });
+            return interaction.reply({ content: `🤝 بعت \`{amount}\` سهم من {stock.name} واستلمت \`{totalEarned.toLocaleString()}\``, ephemeral: true });
         }
 
         if (interaction.customId === 'corp_donate_modal') {
@@ -1563,7 +1563,7 @@ client.on('interactionCreate', async interaction => {
             await saveEconomyUser(guildId, userId, user);
             await guildsColl.updateOne({ _id: corp._id }, { $inc: { capital: amount } });
 
-            return interaction.reply({ content: `✅ تم التبرع بـ \`$${amount.toLocaleString()}\` لدعم رأس مال شركة **${corp.name}** بنجاح! 📈🔥`, ephemeral: true });
+            return interaction.reply({ content: `✅ تم التبرع بـ \`{amount.toLocaleString()}\` لدعم رأس مال شركة **{corp.name}** بنجاح! 📈🔥`, ephemeral: true });
         }
 
         if (interaction.customId === 'corp_invite_modal') {
@@ -1574,7 +1574,7 @@ client.on('interactionCreate', async interaction => {
             if (corp.members.length >= 5) return interaction.reply({ content: '❌ وصلت الشركة للحد الأقصى (5 أعضاء)!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $push: { members: targetId } });
-            return interaction.reply({ content: `✅ تمت إضافة العضو (<@${targetId}>) بنجاح إلى شركة **${corp.name}**! 🤝🏢`, ephemeral: true });
+            return interaction.reply({ content: `✅ تمت إضافة العضو (<@{targetId}>) بنجاح إلى شركة **{corp.name}**! 🤝🏢`, ephemeral: true });
         }
 
         if (interaction.customId === 'corp_logo_modal') {
@@ -1583,7 +1583,7 @@ client.on('interactionCreate', async interaction => {
             if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $set: { image: logoUrl } });
-            return interaction.reply({ content: `✅ تم تحديث شعار وصورة شركة **${corp.name}** بنجاح! 🖼️✨`, ephemeral: true });
+            return interaction.reply({ content: `✅ تم تحديث شعار وصورة شركة **{corp.name}** بنجاح! 🖼️✨`, ephemeral: true });
         }
 
         if (interaction.customId === 'corp_rename_modal') {
@@ -1595,7 +1595,7 @@ client.on('interactionCreate', async interaction => {
             if (existing) return interaction.reply({ content: '❌ اسم الشركة الجديد مستخدم مسبقاً!', ephemeral: true });
 
             await guildsColl.updateOne({ _id: corp._id }, { $set: { name: newName } });
-            return interaction.reply({ content: `✅ تم تعديل اسم الشركة بنجاح إلى: **${corp.logo} ${newName}** 🏢✨`, ephemeral: true });
+            return interaction.reply({ content: `✅ تم تعديل اسم الشركة بنجاح إلى: **{corp.logo} {newName}** 🏢✨`, ephemeral: true });
         }
 
         if (interaction.customId === 'survey_suggestion_modal') {
@@ -1610,7 +1610,7 @@ client.on('interactionCreate', async interaction => {
             }
 
             return interaction.reply({
-                content: `🎉 **شكراً لك يا ${interaction.user.displayName}!**\nتم اكتمال الاستبيان وحفظ إجاباتك واقتراحك بنجاح. يعطيك العافية على دعمك المستمر لـ 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞! 🚀❤️`,
+                content: `🎉 **شكراً لك يا {interaction.user.displayName}!**\nتم اكتمال الاستبيان وحفظ إجاباتك واقتراحك بنجاح. يعطيك العافية على دعمك المستمر لـ 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞! 🚀❤️`,
                 ephemeral: true
             });
         }
@@ -1630,7 +1630,7 @@ client.on('interactionCreate', async interaction => {
         user.balance -= item.price;
         user.properties.push(selectedId);
         await saveEconomyUser(guildId, userId, user);
-        await interaction.update({ content: `🎉 شريت **${item.name}** بـ \`$${item.price.toLocaleString()}\`!`, components: [] });
+        await interaction.update({ content: `🎉 شريت **{item.name}** بـ \`{item.price.toLocaleString()}\`!`, components: [] });
     }
 
     if (interaction.customId === 'market_sell_select') {
@@ -1650,7 +1650,7 @@ client.on('interactionCreate', async interaction => {
         await saveEconomyUser(guildId, userId, user);
 
         return interaction.update({
-            content: `🤝 **تمت عملية البيع بنجاح!**\n• العقار المباع: ${item.emoji} **${item.name}**\n• المبلغ المستلم: \`$${sellP.toLocaleString()}\` (بعد خصم 10% رسوم سوق) 💵✨`,
+            content: `🤝 **تمت عملية البيع بنجاح!**\n• العقار المباع: {item.emoji} **{item.name}**\n• المبلغ المستلم: \`{sellP.toLocaleString()}\` (بعد خصم 10% رسوم سوق) 💵✨`,
             components: []
         });
     }
@@ -1667,7 +1667,7 @@ client.on('interactionCreate', async interaction => {
         }
 
         if ((corp.capital || 0) < assetItem.price) {
-            return interaction.reply({ content: `💸 رأس مال الشركة الحالي ($\`${(corp.capital || 0).toLocaleString()}\`) لا يكفي لشراء هذا المشروع (\`$${assetItem.price.toLocaleString()}\`)!`, ephemeral: true });
+            return interaction.reply({ content: `💸 رأس مال الشركة الحالي ($\`{(corp.capital || 0).toLocaleString()}\`) لا يكفي لشراء هذا المشروع (\`{assetItem.price.toLocaleString()}\`)!`, ephemeral: true });
         }
 
         await guildsColl.updateOne(
@@ -1679,7 +1679,7 @@ client.on('interactionCreate', async interaction => {
         );
 
         return interaction.update({
-            content: `🎉 **تم شراء المشروع بنجاح لصالح شركة ${corp.name}!**\n• المشروع المشتري: ${assetItem.emoji} **${assetItem.name}**\n• التكلفة الخصومة من رأس المال: \`$${assetItem.price.toLocaleString()}\`\n• الربح الساعي المضاف: \`$${assetItem.profit.toLocaleString()}\` 📈🔥`,
+            content: `🎉 **تم شراء المشروع بنجاح لصالح شركة {corp.name}!**\n• المشروع المشتري: {assetItem.emoji} **{assetItem.name}**\n• التكلفة الخصومة من رأس المال: \`{assetItem.price.toLocaleString()}\`\n• الربح الساعي المضاف: \`{assetItem.profit.toLocaleString()}\` 📈🔥`,
             components: []
         });
     }
@@ -1691,12 +1691,12 @@ client.on('interactionCreate', async interaction => {
         const targetJob = jobsList[jobKey];
         let pUser = await getPointsUser(guildId, userId, interaction.user.displayName);
 
-        if (pUser.level < targetJob.level) return interaction.reply({ content: `⛔ يتطلب Level ${targetJob.level}`, ephemeral: true });
+        if (pUser.level < targetJob.level) return interaction.reply({ content: `⛔ يتطلب Level {targetJob.level}`, ephemeral: true });
 
         let user = await getEconomyUser(guildId, userId);
         user.job = targetJob.name;
         await saveEconomyUser(guildId, userId, user);
-        await interaction.update({ content: `🎉 تم تعيينك في وظيفة **${user.job}** بنجاح!`, components: [] });
+        await interaction.update({ content: `🎉 تم تعيينك في وظيفة **{user.job}** بنجاح!`, components: [] });
     }
 
     const val = interaction.values[0];
@@ -1838,7 +1838,7 @@ client.on('interactionCreate', async interaction => {
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(false);
 
-        modal.addComponents(new ActionRowBuilder().addComponents(suggestionInput));
+addComponents(new ActionRowBuilder().addComponents(suggestionInput));
         return interaction.showModal(modal);
     }
 });
