@@ -12,7 +12,7 @@ const dbClient = new MongoClient(mongoUri, {
     tlsAllowInvalidCertificates: true
 });
 
-let db, pointsColl, economyColl, guildsColl;
+let db, pointsColl, economyColl, guildsColl, surveyColl;
 
 async function connectDB() {
     try {
@@ -21,6 +21,7 @@ async function connectDB() {
         pointsColl = db.collection('points');
         economyColl = db.collection('economy');
         guildsColl = db.collection('corporations'); 
+        surveyColl = db.collection('surveys'); 
         console.log('[DATABASE] Connected to MongoDB Atlas successfully! 🚀');
     } catch (e) {
         console.error('[DATABASE ERROR] Failed to connect to MongoDB:', e);
@@ -43,6 +44,7 @@ const processingUsers = new Set();
 const allowedChannels = ['1547728033580847236', '1547728346081927262', '1548010683692748821']; 
 const allowedEconomyChannels = ['1547951432186077296', '1548010683692748821']; 
 const allowedStockChannels = ['1549387597221068900', '1549387358343004220'];
+const adminSurveyChannel = '1549507504457916546'; // روم الإدارة الخاص بك
 
 const lastActivityTime = new Map();
 const lastMarketMessages = new Map();
@@ -73,12 +75,6 @@ let corpAssetsMarket = [
     { id: 104, name: 'برج تجاري استثماري', price: 600000, profit: 75000, emoji: '🏗️' }
 ];
 
-// تعريف الدالة المفقودة لمنع أخطاء الكراش
-async function checkAndDistributeAutoRoles(guild) {
-    // دالة لتوزيع الرتب التلقائية
-}
-
-// 1. نظام الطفرة والانهيار التلقائي للأسهم
 setInterval(async () => {
     const eventRoll = Math.random();
     let eventTitle = '';
@@ -137,7 +133,6 @@ setInterval(async () => {
     }
 }, 3 * 60 * 60 * 1000);
 
-// نظام توزيع أرباح أصول الشركات تلقائياً كل ساعة
 setInterval(async () => {
     if (!guildsColl) return;
     try {
@@ -155,7 +150,6 @@ setInterval(async () => {
     } catch (e) {}
 }, 60 * 60 * 1000);
 
-// 2. نظام فحص القروض والمتعثرين والحجز التلقائي
 setInterval(async () => {
     if (!economyColl) return;
     try {
@@ -215,7 +209,6 @@ let marketItems = [
     { id: 14, name: 'بوفية صلاح', type: 'مشروع صغير', basePrice: 4500, price: 4500, profit: 450, emoji: '🥪', trend: '➖' }
 ];
 
-// نظام تحديث وتذبذب وطفرة/انهيار سوق العقارات كل 5 دقائق
 setInterval(async () => {
     const propEventRoll = Math.random();
     let propEventTitle = '';
@@ -224,12 +217,12 @@ setInterval(async () => {
     let propMultiplier = 1;
 
     if (propEventRoll < 0.30) {
-        propMultiplier = 1.50; 
+        propMultiplier = 1.50;
         propEventTitle = '🚀 طفرة عقارية كبرى (Real Estate Boom)!';
         propEventDesc = '📈 **انتعاش هائل في سوق العقارات والأراضي!** ارتفعت قيمة جميع العقارات والأرباح بنسبة **50%**.';
         propColor = '#2ECC71';
     } else if (propEventRoll > 0.75) {
-        propMultiplier = 0.60; 
+        propMultiplier = 0.60;
         propEventTitle = '🏚️ ركود وهبوط عقاري مفاجئ (Real Estate Crash)!';
         propEventDesc = '📉 **أزمة سيولة تضرب سوق العقارات!** هبطت أسعار وقيم العقارات بشدة.';
         propColor = '#E74C3C';
@@ -353,6 +346,11 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     await pointsColl.updateOne({ guildId: guildId, userId: userId }, { $set: doc }, { upsert: true });
 }
 
+async function checkAndDistributeAutoRoles(guild) {
+    // دالة وهمية لتجنب خطأ عدم التعريف للرتب التلقائية
+}
+
+// دوال الألعاب الكاملة
 const historyTracker = { emoji: [], meaning: [], scramble: [], reverse: [], trivia: [], capital: [], writing: [] };
 
 function getUniqueRandomItem(pool, historyKey, propertyName = null) {
@@ -408,49 +406,7 @@ function sendGamesMenu(channel) {
         new ButtonBuilder().setCustomId('btn_boxes').setLabel('📦 صناديق').setStyle(ButtonStyle.Success)
     );
 
-    channel.send({ embeds: [embed], components: [row1, row2, row3] }).then(msg => {
-        const coll = msg.createMessageComponentCollector({ time: 300000 });
-        coll.on('collect', async i => {
-            const action = i.customId;
-            if (action === 'btn_xo') {
-                await i.reply({ content: `🎮 **[لعبة XO]**\nاختر نمط اللعب يا ${i.user}:`, components: [
-                    new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId('exec_xo_bot').setLabel('🤖 ضد البوت').setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder().setCustomId('exec_xo_pvp').setLabel('👥 مع خويك').setStyle(ButtonStyle.Success)
-                    )
-                ], ephemeral: true });
-            } else if (action === 'btn_rps') {
-                await i.reply({ content: `🎮 **[لعبة حجر ورقة مقص]**\nاختر نمط اللعب يا ${i.user}:`, components: [
-                    new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId('exec_rps_bot').setLabel('🤖 ضد البوت').setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder().setCustomId('exec_rps_pvp').setLabel('👥 مع خويك').setStyle(ButtonStyle.Success)
-                    )
-                ], ephemeral: true });
-            } else if (action === 'exec_xo_bot') {
-                await i.update({ content: '🤖 بدأت لعبة XO ضد البوت:', components: [] }).catch(()=>{});
-                launchXOGame(i.channel, i.guild.id, i.user, null);
-            } else if (action === 'exec_xo_pvp') {
-                await i.update({ content: `👥 **[لعبة XO الثنائية]**\nاكتب في الشات:\n\`!xo @اسم_خويك\``, components: [] }).catch(()=>{});
-            } else if (action === 'exec_rps_bot') {
-                await i.update({ content: '🤖 بدأ تحدي حجر ورقة مقص ضد البوت:', components: [] }).catch(()=>{});
-                startRPSBotGame({ channel: i.channel, author: i.user }, i.guild.id);
-            } else if (action === 'exec_rps_pvp') {
-                await i.update({ content: `👥 **[تحدي حجر ورقة مقص الثنائي]**\nاكتب في الشات:\n\`!حجر @اسم_خويك\``, components: [] }).catch(()=>{});
-            } else {
-                await i.deferUpdate().catch(()=>{});
-                if (action === 'btn_bomb') startBombGame(i.channel, i.guild.id);
-                else if (action === 'btn_scramble') startScrambleGame(i.channel, i.guild.id);
-                else if (action === 'btn_reverse') startReverseGame(i.channel, i.guild.id);
-                else if (action === 'btn_emoji') startEmojiGame(i.channel, i.guild.id);
-                else if (action === 'btn_trivia') startTriviaGame(i.channel, i.guild.id);
-                else if (action === 'btn_penalty') startPenaltyGame({ channel: i.channel, author: i.user }, i.guild.id);
-                else if (action === 'btn_mines') startMinesGame(i.channel, i.guild.id, i.user.id);
-                else if (action === 'btn_race') startRaceGame(i.channel, i.guild.id, i.user.id);
-                else if (action === 'btn_vault') startVaultGame(i.channel, i.guild.id, i.user.id);
-                else if (action === 'btn_boxes') startBoxesGame(i.channel, i.guild.id, i.user.id);
-            }
-        });
-    });
+    channel.send({ embeds: [embed], components: [row1, row2, row3] });
 }
 
 function startEmojiGame(channel, guildId) {
@@ -469,83 +425,6 @@ function startEmojiGame(channel, guildId) {
             addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
         });
         coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${chosen.ans}**`); } });
-    });
-}
-
-function startMeaningGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const chosen = getUniqueRandomItem(meaningMasterPool, 'meaning', 'word');
-    channel.send(`📖 **[معاني الكلمات]** ما معنى كلمة **"${chosen.word}"**؟`).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(chosen.desc.toLowerCase());
-        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
-        activeGames.set(channel.id, coll);
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! عرفت المعنى في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! المعنى الصحيح هو: **${chosen.desc}**`); } });
-    });
-}
-
-function startGuessGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const target = Math.floor(Math.random() * 100) + 1;
-    channel.send(`🎯 **[تخمين الأرقام]** خمن الرقم الصحيح بين **1 و 100** (معك 25 ثانية):`).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && parseInt(m.content.trim()) === target;
-        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
-        activeGames.set(channel.id, coll);
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎯');
-            m.reply(`🎯 كفو ${m.author}! خمنت الرقم الصحيح **${target}** في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الرقم الصحيح كان: **${target}**`); } });
-    });
-}
-
-function startReverseGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const word = getUniqueRandomItem(scrambleMasterPool, 'reverse');
-    const reversed = word.split('').reverse().join('');
-    channel.send(`🔄 **[عكس الكلمة]** اكتب الكلمة التالية بالشكل الصحيح:\n\n\`${reversed}\``).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase() === word.toLowerCase();
-        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
-        activeGames.set(channel.id, coll);
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! عدلت الكلمة في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الكلمة كانت: **${word}**`); } });
-    });
-}
-
-function startTriviaGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const qObj = getUniqueRandomItem(triviaMasterPool, 'trivia', 'q');
-    channel.send(`🧠 **[سؤال ذكاء]**\n\n${qObj.q}`).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase().includes(qObj.ans.toLowerCase());
-        const coll = channel.createMessageCollector({ filter, time: 25000, max: 1 });
-        activeGames.set(channel.id, coll);
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! الإجابة صحيحة في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${qObj.ans}**`); } });
     });
 }
 
@@ -596,196 +475,9 @@ function startScrambleGame(channel, guildId) {
     });
 }
 
-function startMathGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const n1 = Math.floor(Math.random() * 50) + 10;
-    const n2 = Math.floor(Math.random() * 50) + 10;
-    const ans = (n1 + n2).toString();
-    channel.send(`🔢 **[رياضيات]** كم ناتج الحساب التالي:\n\n\`${n1} + ${n2}\``).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim() === ans;
-        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
-        activeGames.set(channel.id, coll);
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! جاوبت في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${ans}**`); } });
-    });
-}
-
-function startCapitalGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const chosen = getUniqueRandomItem(capitalMasterPool, 'capital', 'c');
-    channel.send(`🌍 **[عواصم]** ما هي عاصمة **${chosen.c}**؟`).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim().toLowerCase() === chosen.cap.toLowerCase();
-        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
-        activeGames.set(channel.id, coll);
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! العاصمة صحيحة في **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! العاصمة كانت: **${chosen.cap}**`); } });
-    });
-}
-
-function startButtonGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    activeGames.set(channel.id, 'button');
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('fc').setLabel('⚡ اضغطني!').setStyle(ButtonStyle.Success));
-    channel.send({ content: `🔥 **[أسرع ضغطة]** أسرع شخص يضغط الزر!`, components: [row] }).then(msg => {
-        const start = Date.now();
-        const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
-        coll.on('collect', async i => {
-            await i.deferUpdate().catch(()=>{});
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            await msg.edit({ content: `🏆 كفو ${i.user}! في **${t} ثانية** وكسبت **10 نقاط**!`, components: [] }).catch(()=>{});
-            addPoints(guildId, i.user.id, i.user.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); msg.edit({ content: `😴 محد ضغط الزر وانتهى الوقت!`, components: [] }).catch(()=>{}); } });
-    });
-}
-
-function startWritingGame(channel, guildId) {
-    if (activeGames.has(channel.id)) return;
-    const sentence = getUniqueRandomItem(['تحدي السرعة في كتابة الجملة', 'برمجة البوتات تتطلب صبرا وتركيزا', 'المحترف لا ييأس أبدا مهما كانت الصعاب', 'الذكاء الاصطناعي يغير مستقبل العالم التقني', 'تطوير الألعاب والبرمجيات فن ممتع', 'إمبراطورية كامورا زون ترحب بالجميع'], 'writing');
-    channel.send(`⌨️ **[أسرع كاتب]** اكتب الجملة التالية:\n\n\`${sentence}\``).then(() => {
-        const start = Date.now();
-        const filter = m => !m.author.bot && m.content.trim() === sentence;
-        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
-        activeGames.set(channel.id, coll);
-        coll.on('collect', m => {
-            activeGames.delete(channel.id);
-            const t = ((Date.now() - start) / 1000).toFixed(2);
-            m.react('🎉');
-            m.reply(`🎉 كفو ${m.author}! كتبت بـ **${t} ثانية** وكسبت **10 نقاط**!`);
-            addPoints(guildId, m.author.id, m.author.displayName, channel, parseFloat(t));
-        });
-        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت!`); } });
-    });
-}
-
-function startPenaltyGame(message, guildId) {
-    const channel = message.channel;
-    const challenger = message.author;
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('pen_left').setLabel('⬅️ يسار').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('pen_center').setLabel('⬆️ وسط').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId('pen_right').setLabel('➡️ يمين').setStyle(ButtonStyle.Danger)
-    );
-    channel.send({ content: `⚽ **[تحدي ركلات الترجيح]**\n${challenger} يستعد لتسديد الكورة! اختر زاوية التسديد:`, components: [row] }).then(msg => {
-        const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
-        coll.on('collect', async i => {
-            if (i.user.id !== challenger.id) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
-            await i.deferUpdate().catch(()=>{});
-            const botGoalie = ['left', 'center', 'right'][Math.floor(Math.random() * 3)];
-            const userChoice = i.customId.replace('pen_', '');
-            let res = userChoice === botGoalie ? `🥅 **تصدى لها الحارس!**` : `⚽💥 **قووووول!** كسبت **10 نقاط**!`;
-            if (userChoice !== botGoalie) addPoints(guildId, challenger.id, challenger.displayName, channel);
-            await msg.edit({ content: res, components: [] }).catch(()=>{});
-        });
-    });
-}
-
-function startMinesGame(channel, guildId, userId) {
-    if (activeGames.has(channel.id)) return;
-    activeGames.set(channel.id, 'mines');
-    const mineIndex = Math.floor(Math.random() * 9);
-    const rows = [];
-    for (let r = 0; r < 3; r++) {
-        const rowComps = [];
-        for (let c = 0; c < 3; c++) {
-            const idx = r * 3 + c;
-            rowComps.push(new ButtonBuilder().setCustomId(`mine_${idx}_${idx === mineIndex ? 'boom' : 'safe'}`).setLabel(`مربع ${idx + 1}`).setStyle(ButtonStyle.Secondary));
-        }
-        rows.push(new ActionRowBuilder().addComponents(rowComps));
-    }
-    channel.send({ content: `💣 **[تحدي حقل الألغام]**\nاضغط مربعات آمنة واجمع الأرباح، واحذر من اللغم!`, components: rows }).then(msg => {
-        const coll = msg.createMessageComponentCollector({ time: 30000 });
-        coll.on('collect', async i => {
-            if (i.user.id !== userId) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
-            await i.deferUpdate().catch(()=>{});
-            if (i.customId.includes('boom')) {
-                activeGames.delete(channel.id);
-                coll.stop();
-                return msg.edit({ content: `💥 **انفجر اللغم!** راحت عليك الأرباح 💀`, components: [] }).catch(()=>{});
-            } else {
-                i.followUp({ content: `✨ مربع آمن! استمر بالتقدم.`, ephemeral: true }).catch(()=>{});
-            }
-        });
-    });
-}
-
-function startRaceGame(channel, guildId, userId) {
-    if (activeGames.has(channel.id)) return;
-    activeGames.set(channel.id, 'race');
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('race_btn').setLabel('🏎️ انطلق بأقصى سرعة!').setStyle(ButtonStyle.Success));
-    channel.send({ content: `🏁 **[سباق السرعة التفاعلي]**\nأسرع شخص يضغط على زر الانطلاق 5 مرات يفوز!`, components: [row] }).then(msg => {
-        let progress = new Map();
-        const coll = msg.createMessageComponentCollector({ time: 15000 });
-        coll.on('collect', async i => {
-            await i.deferUpdate().catch(()=>{});
-            let count = (progress.get(i.user.id) || 0) + 1;
-            progress.set(i.user.id, count);
-            if (count >= 5) {
-                coll.stop();
-                activeGames.delete(channel.id);
-                let eco = await getEconomyUser(guildId, i.user.id);
-                eco.balance += 5000;
-                await saveEconomyUser(guildId, i.user.id, eco);
-                addPoints(guildId, i.user.id, i.user.displayName, channel);
-                return msg.edit({ content: `🏎️🏆 **فاز بالسباق ${i.user}!** وكسب **$5,000 كاش** و **10 نقاط**! 🔥`, components: [] }).catch(()=>{});
-            }
-            i.followUp({ content: `⚡ تقدمت في السباق (${count}/5)`, ephemeral: true }).catch(()=>{});
-        });
-    });
-}
-
-function startVaultGame(channel, guildId, userId) {
-    if (activeGames.has(channel.id)) return;
-    activeGames.set(channel.id, 'vault');
-    const correctCode = Math.floor(Math.random() * 6) + 1;
-    const row = new ActionRowBuilder();
-    for (let i = 1; i <= 6; i++) {
-        row.addComponents(new ButtonBuilder().setCustomId(`vault_${i}`).setLabel(`رقم ${i}`).setStyle(ButtonStyle.Primary));
-    }
-    channel.send({ content: `🏦 **[تحدي كسر خزنة البنك]**\nاختر الرقم الصحيح (بين 1 و 6):`, components: [row] }).then(msg => {
-        const coll = msg.createMessageComponentCollector({ time: 15000, max: 1 });
-        coll.on('collect', async i => {
-            if (i.user.id !== userId) return i.reply({ content: '❌ ليست لك!', ephemeral: true });
-            await i.deferUpdate().catch(()=>{});
-            activeGames.delete(channel.id);
-            const chosenNum = parseInt(i.customId.replace('vault_', ''));
-            if (chosenNum === correctCode) {
-                let eco = await getEconomyUser(guildId, userId);
-                eco.balance += 15000;
-                await saveEconomyUser(guildId, userId, eco);
-                addPoints(guildId, userId, i.user.displayName, channel);
-                await msg.edit({ content: `🔓👑 **تم فتح الخزنة بنجاح يا ${i.user}!** فزت بـ **$15,000 كاش** و **10 نقاط**! 🔥`, components: [] }).catch(()=>{});
-            } else {
-                await msg.edit({ content: `🔒 **إنذار البنك!** الرقم الصحيح كان (${correctCode}). هاردلك! 🚨💀`, components: [] }).catch(()=>{});
-            }
-        });
-    });
-}
-
 client.once('clientReady', () => {
   console.log(`[BOT STATUS] Camora Zone is Online & Secured with MongoDB Atlas! 🚀`);
   client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
-
-  setInterval(() => {
-      client.guilds.cache.forEach(guild => {
-          checkAndDistributeAutoRoles(guild);
-      });
-  }, 10 * 60 * 1000);
 });
 
 client.on('messageCreate', async message => {
@@ -809,48 +501,116 @@ client.on('messageCreate', async message => {
       return;
   }
 
-  if (message.content.startsWith('!اعلان-تحديث')) {
-      if (!message.member.permissions.has('ManageMessages')) {
-          return message.reply('❌ عذراً، هذا الأمر مخصص للإدارة فقط!');
-      }
-
-      const args = message.content.replace('!اعلان-تحديث', '').trim().split(' ');
-      const targetChannelId = args[0];
-      const gameName = args[1];
-      const gameCommand = args[2];
-
-      if (!targetChannelId || !gameName || !gameCommand) {
-          return message.reply('❌ الاستخدام الصحيح:\n`!اعلان-تحديث [آيدي_الروم] [اسم_اللعبة] [أمر_التشغيل]`\nمثال: `!اعلان-تحديث 123456789 حقل_الألغام !ألغام`');
+  // --- أمر تجربة الاستبيان على نفسك وحدك ---
+  if (message.content === '!تجربة-استبيان') {
+      if (message.channel.id !== adminSurveyChannel) {
+          return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
       }
 
       try {
-          const targetChannel = await client.channels.fetch(targetChannelId);
-          if (!targetChannel || !targetChannel.isTextBased()) {
-              return message.reply('❌ آيدي الروم غير صحيح أو أنه ليس روم كتابي!');
-          }
-
           await message.delete().catch(() => {});
 
-          const updateEmbed = new EmbedBuilder()
-              .setColor('#2ECC71')
-              .setTitle('🚀 تحديث جديد في قسم الألعاب!')
-              .setDescription(`تم تحديث وتطوير لعبة **${gameName}** وإضافة مميزات جديدة جربها الان!`)
-              .addFields(
-                  { name: '🎮 لتجربة اللعبة الآن', value: `اكتب الأمر التالي في الشات:\n\`${gameCommand}\``, inline: false },
-                  { name: '📌 الحالة', value: '`🟢 جاهزة للعب وبدون أخطاء`', inline: true }
+          const embed = new EmbedBuilder()
+              .setColor('#5865F2')
+              .setTitle('📢 إعلان هام وتطويري في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
+              .setDescription(
+                  'أهلاً بك في مجتمعنا اعرف اننا قروشناك ولكن تحملنا شوي! 🎮🔥\n\n' +
+                  'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
+                  '📋 **شاركنا رأيك عبر استبياننا السريع (10 أسئلة ممتعة + مساحة لاقتراحاتك):**\n' +
+                  'اضغط على الزر أدناه لبدء الاستبيان على الخاص مباشرة ولا تنسَ تعطيني رأيك بكل صراحة! 💡'
               )
-              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تحديثات السيرفر' })
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تطوير السيرفر وتقييم اللاعبين' })
               .setTimestamp();
 
-          await targetChannel.send({ 
-              content: '🔔 **تنبيه تحديث لعبة جديدة!**', 
-              embeds: [updateEmbed] 
-          });
+          const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
+          );
 
-          return message.author.send(`✅ تم إرسال إعلان تحديث لعبة (${gameName}) إلى الروم <#${targetChannelId}> بنجاح!`).catch(() => {});
+          await message.author.send({ embeds: [embed], components: [row] });
+          return message.channel.send(`✅ **أرسلت لك رسالة التجربة على الخاص يا أحمد!** شيك على محادثتك مع البوت. 🚀`).then(msg => {
+              setTimeout(() => msg.delete().catch(()=>{}), 5000);
+          });
       } catch (err) {
           console.error(err);
-          return message.reply('❌ حدث خطأ أثناء محاولة إرسال الإعلان، تأكد من آيدي الروم وصلاحيات البوت.');
+          return message.reply('❌ ما قدرت أرسل لك رسالة على الخاص، تأكد أن رسائلك الخاصة مفتوحة من البوت.');
+      }
+  }
+
+  // --- إعلان استطلاع الرأي الشامل (لكل الأعضاء) ---
+  if (message.content === '!ارسل-استبيان') {
+      if (message.channel.id !== adminSurveyChannel) {
+          return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
+      }
+
+      try {
+          await message.delete().catch(() => {});
+
+          const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان الاستبيان على الخاص للأعضاء بالخلفية..**');
+
+          const embed = new EmbedBuilder()
+              .setColor('#5865F2')
+              .setTitle('📢 إعلان هام وتطويري في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
+              .setDescription(
+                  'أهلاً بك في مجتمعنا اعرف اننا قروشناك ولكن تحملنا شوي! 🎮🔥\n\n' +
+                  'إذا توك ما جربت ألعاب السيرفر، نظام الاقتصاد، العقارات، والأسهم.. فاتك الكثير! نحن نعمل حالياً على **تطوير تحديث ضخم** لسيرفرنا، ورأيك أنت تحديداً يهمنا جداً سواء كنت مجرب الألعاب أو جديد معنا.\n\n' +
+                  '📋 **شاركنا رأيك عبر استبياننا السريع (10 أسئلة ممتعة + مساحة لاقتراحاتك):**\n' +
+                  'اضغط على الزر أدناه لبدء الاستبيان على الخاص مباشرة ولا تنسَ تعطيني رأيك بكل صراحة! 💡'
+              )
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نظام تطوير السيرفر وتقييم اللاعبين' })
+              .setTimestamp();
+
+          const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
+          );
+
+          await message.guild.members.fetch();
+          let sentCount = 0;
+
+          setTimeout(async () => {
+              for (const member of message.guild.members.cache.values()) {
+                  if (member.user.bot) continue;
+                  try {
+                      await member.send({ embeds: [embed], components: [row] });
+                      sentCount++;
+                  } catch (e) {}
+              }
+              await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الاستبيان على الخاص لـ **${sentCount}** عضو في السيرفر بنجاح! 🚀`).catch(()=>{});
+          }, 100);
+
+          return;
+      } catch (err) {
+          console.error(err);
+          return message.reply('❌ حدث خطأ أثناء إرسال إعلان الاستبيان.');
+      }
+  }
+
+  // --- أمر عرض نتائج الاستبيان والاقتراحات الكتابية (مخصص لرومك الخاص فقط) ---
+  if (message.content === '!نتائج-الاستبيان' || message.content === '!الاستبيان') {
+      if (message.channel.id !== adminSurveyChannel) {
+          return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
+      }
+
+      if (!surveyColl) return message.reply('❌ قاعدة البيانات غير متصلة.');
+
+      try {
+          const totalResponses = await surveyColl.countDocuments({ guildId });
+          const allSurveys = await surveyColl.find({ guildId }).toArray();
+          const suggestions = allSurveys.filter(s => s.suggestion && s.suggestion.trim() !== '').map(s => `• <@${s.userId}>: "${s.suggestion}"`).join('\n') || 'لا توجد اقتراحات كتابية حتى الآن.';
+
+          const embed = new EmbedBuilder()
+              .setColor('#F1C40F')
+              .setTitle('📊 تقارير ونتائج إعلان الاستبيان الشامل')
+              .setDescription(`📈 **إجمالي اللاعبين المشاركين:** \`${totalResponses} لاعب\`\n\n---`)
+              .addFields(
+                  { name: '💡 الاقتراحات والأفكار المقترحة من اللاعبين', value: suggestions.length > 1024 ? suggestions.substring(0, 1020) + '...' : suggestions, inline: false }
+              )
+              .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • لوحة إدارة الاستبيان' })
+              .setTimestamp();
+
+          return message.channel.send({ embeds: [embed] });
+      } catch (err) {
+          console.error(err);
+          return message.reply('❌ حدث خطأ أثناء جلب نتائج الاستبيان.');
       }
   }
 
@@ -1435,7 +1195,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
+          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك لا يكفي!');
           user.balance -= 3000;
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
@@ -1733,6 +1493,23 @@ client.on('interactionCreate', async interaction => {
             modal.addComponents(new ActionRowBuilder().addComponents(nameInput));
             return interaction.showModal(modal);
         }
+
+        if (interaction.customId === 'start_survey_btn') {
+            // الاستجابة الفورية لزر الاستبيان لتجنب انتهاء المهلة (3 ثواني)
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q1')
+                    .setPlaceholder('🎮 1. كيف تقيّم تنوع ألعاب البوت وتفاعلها؟')
+                    .addOptions([
+                        { label: '⭐⭐⭐⭐⭐ ممتازة ومولعة', value: 'q1_5' },
+                        { label: '⭐⭐⭐⭐ جيدة', value: 'q1_4' },
+                        { label: '⭐⭐⭐ مقبولة', value: 'q1_3' },
+                        { label: '⭐⭐ ضعيفة', value: 'q1_2' },
+                        { label: '⭐ سيئة ومملة', value: 'q1_1' }
+                    ])
+            );
+            return interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
+        }
     }
 
     if (interaction.isModalSubmit()) {
@@ -1824,6 +1601,23 @@ client.on('interactionCreate', async interaction => {
             await guildsColl.updateOne({ _id: corp._id }, { $set: { name: newName } });
             return interaction.reply({ content: `✅ تم تعديل اسم الشركة بنجاح إلى: **${corp.logo} ${newName}** 🏢✨`, ephemeral: true });
         }
+
+        if (interaction.customId === 'survey_suggestion_modal') {
+            const suggestionText = interaction.fields.getTextInputValue('user_suggestion_text').trim();
+
+            if (surveyColl) {
+                await surveyColl.updateOne(
+                    { guildId, userId },
+                    { $set: { suggestion: suggestionText, completedAt: Date.now() } },
+                    { upsert: true }
+                );
+            }
+
+            return interaction.reply({
+                content: `🎉 **شكراً لك يا ${interaction.user.displayName}!**\nتم اكتمال الاستبيان وحفظ إجاباتك واقتراحك بنجاح. يعطيك العافية على دعمك المستمر لـ 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞! 🚀❤️`,
+                ephemeral: true
+            });
+        }
     }
 
     if (!interaction.isStringSelectMenu()) return;
@@ -1907,6 +1701,149 @@ client.on('interactionCreate', async interaction => {
         user.job = targetJob.name;
         await saveEconomyUser(guildId, userId, user);
         await interaction.update({ content: `🎉 تم تعيينك في وظيفة **${user.job}** بنجاح!`, components: [] });
+    }
+
+    const val = interaction.values[0];
+
+    if (val.startsWith('q1_')) {
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('survey_q2')
+                .setPlaceholder('⚡ 2. هل ألعاب السرعة وردة الفعل ممتعة وتستاهل النقاط؟')
+                .addOptions([
+                    { label: 'نعم، ممتعة جداً', value: 'q2_yes' },
+                    { label: 'لا، غير مهتم بها', value: 'q2_no' },
+                    { label: 'تحتاج تعديل وتحسين', value: 'q2_edit' }
+                ])
+        );
+        return interaction.update({ content: `📋 **(السؤال 2 من 10):**`, components: [row] });
+    }
+
+    if (val.startsWith('q2_')) {
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('survey_q3')
+                .setPlaceholder('🛠️ 3. هل تواجه أخطاء أو تعليق (Lag) أثناء اللعب؟')
+                .addOptions([
+                    { label: 'نعم دائماً', value: 'q3_always' },
+                    { label: 'أحياناً', value: 'q3_sometimes' },
+                    { label: 'أبداً ما واجهت', value: 'q3_never' }
+                ])
+        );
+        return interaction.update({ content: `📋 **(السؤال 3 من 10):**`, components: [row] });
+    }
+
+    if (val.startsWith('q3_')) {
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('survey_q4')
+                .setPlaceholder('💵 4. كيف تجد نظام الرواتب والوظائف الحالية؟')
+                .addOptions([
+                    { label: 'ممتازة وعادلة', value: 'q4_fair' },
+                    { label: 'الراتب قليل ويحتاج زيادة', value: 'q4_low' },
+                    { label: 'الراتب عالي جداً', value: 'q4_high' }
+                ])
+        );
+        return interaction.update({ content: `📋 **(السؤال 4 من 10):**`, components: [row] });
+    }
+
+    if (val.startsWith('q4_')) {
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('survey_q5')
+                .setPlaceholder('📈 5. ما رأيك في نظام سوق العقارات والبيع والشراء؟')
+                .addOptions([
+                    { label: 'حماسي ومنافس بقوة', value: 'q5_great' },
+                    { label: 'عادي جداً', value: 'q5_normal' },
+                    { label: 'معقد أو غير مفهوم', value: 'q5_hard' }
+                ])
+        );
+        return interaction.update({ content: `📋 **(السؤال 5 من 10):**`, components: [row] });
+    }
+
+    if (val.startsWith('q5_')) {
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('survey_q6')
+                .setPlaceholder('🛡️ 6. ما رأيك في نظام "الحارس الشخصي" وصدات السرقات؟')
+                .addOptions([
+                    { label: 'نعم، مفيد ويحمي أملاكي', value: 'q6_yes' },
+                    { label: 'لا، لم أستخدمه', value: 'q6_no' },
+                    { label: 'يحتاج تعديل على طاقته', value: 'q6_edit' }
+                ])
+        );
+        return interaction.update({ content: `📋 **(السؤال 6 من 10):**`, components: [row] });
+    }
+
+    if (val.startsWith('q6_')) {
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('survey_q7')
+                .setPlaceholder('🏢 7. ما رأيك في نظام الشركات والمشاريع والأرباح الساعية؟')
+                .addOptions([
+                    { label: 'رهيب ويخلق هيمنة للهوامير', value: 'q7_great' },
+                    { label: 'لم أشارك فيه بعد', value: 'q7_no' },
+                    { label: 'لا يهمني', value: 'q7_meh' }
+                ])
+        );
+        return interaction.update({ content: `📋 **(السؤال 7 من 10):**`, components: [row] });
+    }
+
+    if (val.startsWith('q7_')) {
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('survey_q8')
+                .setPlaceholder('💼 8. هل نظام القروض والديون يضيف جو أكشن؟')
+                .addOptions([
+                    { label: 'جبار وواقعي جداً', value: 'q8_yes' },
+                    { label: 'ماله داعي', value: 'q8_no' },
+                    { label: 'لا أعرفه', value: 'q8_idk' }
+                ])
+        );
+        return interaction.update({ content: `📋 **(السؤال 8 من 10):**`, components: [row] });
+    }
+
+    if (val.startsWith('q8_')) {
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('survey_q9')
+                .setPlaceholder('📊 9. كيف تقيّم نظام الأسهم العالمية والتذبذب؟')
+                .addOptions([
+                    { label: 'ممتاز وممتع للتداول', value: 'q9_great' },
+                    { label: 'معقد وما أفهم له', value: 'q9_hard' },
+                    { label: 'يحتاج تنويع أسهم أكثر', value: 'q9_more' }
+                ])
+        );
+        return interaction.update({ content: `📋 **(السؤال 9 من 10):**`, components: [row] });
+    }
+
+    if (val.startsWith('q9_')) {
+        const row = new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('survey_q10')
+                .setPlaceholder('🚀 10. هل تتفاعل مع أحداث الطفرة والانهيار الكبرى؟')
+                .addOptions([
+                    { label: 'دائماً أتابعها وأستغلها', value: 'q10_always' },
+                    { label: 'على صدفة', value: 'q10_sometimes' },
+                    { label: 'لا تهمني', value: 'q10_no' }
+                ])
+        );
+        return interaction.update({ content: `📋 **(السؤال 10 من 10):**`, components: [row] });
+    }
+
+    if (val.startsWith('q10_')) {
+        const modal = new ModalBuilder()
+            .setCustomId('survey_suggestion_modal')
+            .setTitle('💡 اقتراحاتك لتطوير السيرفر');
+
+        const suggestionInput = new TextInputBuilder()
+            .setCustomId('user_suggestion_text')
+            .setLabel('وش هي أكثر ميزة، لعبة، أو فكرة ودك نضيفها في التحديث القادم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞؟ (اكتبها هنا بكل حرية)')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(false);
+
+        modal.addComponents(new ActionRowBuilder().addComponents(suggestionInput));
+        return interaction.showModal(modal);
     }
 });
 
