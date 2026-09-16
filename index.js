@@ -482,13 +482,15 @@ client.once('clientReady', () => {
 
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
-  const guildId = message.guild.id;
+  const guildId = message.guild?.id || 'DM_CHANNEL';
   const userId = message.author.id;
 
-  lastActivityTime.set(message.channel.id, Date.now());
+  if (message.channel.type !== 1) { // 1 is DM
+      lastActivityTime.set(message.channel.id, Date.now());
+  }
 
   if (message.content.startsWith('!مسح') || message.content.startsWith('!حذف')) {
-      if (!message.member.permissions.has('ManageMessages')) return message.reply('❌ للإدارة فقط!');
+      if (!message.member?.permissions.has('ManageMessages')) return message.reply('❌ للإدارة فقط!');
       const count = parseInt(message.content.split(' ')[1]);
       if (isNaN(count) || count <= 0 || count > 100) return message.reply('❌ حدد عدد بين 1 و 100');
       try {
@@ -593,8 +595,8 @@ client.on('messageCreate', async message => {
       if (!surveyColl) return message.reply('❌ قاعدة البيانات غير متصلة.');
 
       try {
-          const totalResponses = await surveyColl.countDocuments({ guildId });
-          const allSurveys = await surveyColl.find({ guildId }).toArray();
+          const totalResponses = await surveyColl.countDocuments({});
+          const allSurveys = await surveyColl.find({}).toArray();
           const suggestions = allSurveys.filter(s => s.suggestion && s.suggestion.trim() !== '').map(s => `• <@${s.userId}>: "${s.suggestion}"`).join('\n') || 'لا توجد اقتراحات كتابية حتى الآن.';
 
           const embed = new EmbedBuilder()
@@ -1195,7 +1197,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
+          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك لا يكفي!');
           user.balance -= 3000;
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
@@ -1340,10 +1342,11 @@ client.on('messageCreate', async message => {
 });
 
 client.on('interactionCreate', async interaction => {
-    if (interaction.isButton()) {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
+    // تعريف المتغيرات بمرونة لدعم التفاعلات في الخاص (DM)
+    const guildId = interaction.guild?.id || 'DM_CHANNEL';
+    const userId = interaction.user.id;
 
+    if (interaction.isButton()) {
         if (interaction.customId === 'open_buy_menu') {
             const user = await getEconomyUser(guildId, userId);
             const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
@@ -1507,14 +1510,11 @@ client.on('interactionCreate', async interaction => {
                         { label: '⭐ سيئة ومملة', value: 'q1_1' }
                     ])
             );
-            return await interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
+            return interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
         }
     }
 
     if (interaction.isModalSubmit()) {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
-
         if (interaction.customId === 'stock_buy_modal') {
             const symbol = interaction.fields.getTextInputValue('stock_symbol').toLowerCase().trim();
             const amount = parseInt(interaction.fields.getTextInputValue('stock_amount'));
@@ -1606,14 +1606,14 @@ client.on('interactionCreate', async interaction => {
 
             if (surveyColl) {
                 await surveyColl.updateOne(
-                    { guildId, userId },
+                    { userId }, 
                     { $set: { suggestion: suggestionText, completedAt: Date.now() } },
                     { upsert: true }
                 );
             }
 
             return interaction.reply({
-                content: `🎉 **شكراً لك يا ${interaction.user.displayName}!**\nتم اكتمال الاستبيان وحفظ إجاباتك واقتراحك بنجاح. يعطيك العافية على دعمك المستمر لـ 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞! 🚀❤️`,
+                content: `🎉 **شكراً لك يا ${interaction.user.displayName || interaction.user.username}!**\nتم اكتمال الاستبيان وحفظ إجاباتك واقتراحك بنجاح. يعطيك العافية على دعمك المستمر لـ 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞! 🚀❤️`,
                 ephemeral: true
             });
         }
@@ -1622,8 +1622,6 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isStringSelectMenu()) return;
 
     if (interaction.customId === 'market_buy_select') {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
         const selectedId = parseInt(interaction.values[0].replace('buy_', ''));
         const item = marketItems.find(i => i.id === selectedId);
         let user = await getEconomyUser(guildId, userId);
@@ -1637,8 +1635,6 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.customId === 'market_sell_select') {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
         const idx = parseInt(interaction.values[0].replace('sell_prop_', ''));
         let user = await getEconomyUser(guildId, userId);
 
@@ -1659,8 +1655,6 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.customId === 'corp_buy_asset_select') {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
         const assetId = parseInt(interaction.values[0].replace('buy_asset_', ''));
         const assetItem = corpAssetsMarket.find(a => a.id === assetId);
 
@@ -1688,11 +1682,9 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.customId === 'job_select_menu') {
-        const guildId = interaction.guild.id;
-        const userId = interaction.user.id;
         const jobKey = interaction.values[0].replace('job_', '');
         const targetJob = jobsList[jobKey];
-        let pUser = await getPointsUser(guildId, userId, interaction.user.displayName);
+        let pUser = await getPointsUser(guildId, userId, interaction.user.displayName || interaction.user.username);
 
         if (pUser.level < targetJob.level) return interaction.reply({ content: `⛔ يتطلب Level ${targetJob.level}`, ephemeral: true });
 
