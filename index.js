@@ -1491,32 +1491,58 @@ client.on('interactionCreate', async interaction => {
             return interaction.showModal(modal);
         }
 
-        if (interaction.customId === 'corp_rename_btn') {
-            let corp = await guildsColl.findOne({ guildId, ownerId: userId });
-            if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
+// حفظ بيانات الاستبيان في الداتا بيس والتنقل بين الأسئلة
+        if (interaction.customId.startsWith('survey_q')) {
+            const qId = interaction.customId;
+            const val = interaction.values[0];
 
-            const modal = new ModalBuilder().setCustomId('corp_rename_modal').setTitle('✏️ تعديل اسم الشركة');
-            const nameInput = new TextInputBuilder().setCustomId('new_corp_name').setLabel('أدخل اسم الشركة الجديد').setStyle(TextInputStyle.Short).setRequired(true);
-            modal.addComponents(new ActionRowBuilder().addComponents(nameInput));
-            return interaction.showModal(modal);
-        }
+            // حفظ إجابة السؤال في قاعدة البيانات فوراً
+            await surveyColl.updateOne({ userId }, { $set: { [qId]: val, date: Date.now() } }, { upsert: true });
 
-        if (interaction.customId === 'start_survey_btn') {
-            const row = new ActionRowBuilder().addComponents(
-                new StringSelectMenuBuilder()
-                    .setCustomId('survey_q1')
-                    .setPlaceholder('🎮 1. كيف تقيّم تنوع ألعاب البوت وتفاعلها؟')
-                    .addOptions([
-                        { label: '⭐⭐⭐⭐⭐ ممتازة ومولعة', value: 'q1_5' },
-                        { label: '⭐⭐⭐⭐ جيدة', value: 'q1_4' },
-                        { label: '⭐⭐⭐ مقبولة', value: 'q1_3' },
-                        { label: '⭐⭐ ضعيفة', value: 'q1_2' },
-                        { label: '⭐ سيئة ومملة', value: 'q1_1' }
-                    ])
-            );
-            return interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
+            if (qId === 'survey_q1') {
+                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q2').setPlaceholder('⚡ 2. هل ألعاب السرعة وردة الفعل ممتعة؟').addOptions([{ label: 'نعم، ممتعة جداً', value: 'q2_yes' }, { label: 'لا، غير مهتم بها', value: 'q2_no' }, { label: 'تحتاج تعديل وتحسين', value: 'q2_edit' }]));
+                return interaction.update({ content: `📋 **(السؤال 2 من 10):**`, components: [row] });
+            }
+            if (qId === 'survey_q2') {
+                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q3').setPlaceholder('🛠️ 3. هل تواجه أخطاء أو تعليق (Lag) أثناء اللعب؟').addOptions([{ label: 'نعم دائماً', value: 'q3_always' }, { label: 'أحياناً', value: 'q3_sometimes' }, { label: 'أبداً ما واجهت', value: 'q3_never' }]));
+                return interaction.update({ content: `📋 **(السؤال 3 من 10):**`, components: [row] });
+            }
+            if (qId === 'survey_q3') {
+                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q4').setPlaceholder('💵 4. كيف تجد نظام الرواتب والوظائف الحالية؟').addOptions([{ label: 'ممتازة وعادلة', value: 'q4_fair' }, { label: 'الراتب قليل ويحتاج زيادة', value: 'q4_low' }, { label: 'الراتب عالي جداً', value: 'q4_high' }]));
+                return interaction.update({ content: `📋 **(السؤال 4 من 10):**`, components: [row] });
+            }
+            if (qId === 'survey_q4') {
+                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q5').setPlaceholder('📈 5. ما رأيك في نظام سوق العقارات والبيع والشراء؟').addOptions([{ label: 'حماسي ومنافس بقوة', value: 'q5_great' }, { label: 'عادي جداً', value: 'q5_normal' }, { label: 'معقد أو غير مفهوم', value: 'q5_hard' }]));
+                return interaction.update({ content: `📋 **(السؤال 5 من 10):**`, components: [row] });
+            }
+            if (qId === 'survey_q5') {
+                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q6').setPlaceholder('🛡️ 6. ما رأيك في نظام "الحارس الشخصي" وصدات السرقات؟').addOptions([{ label: 'نعم، مفيد ويحمي أملاكي', value: 'q6_yes' }, { label: 'لا، لم أستخدمه', value: 'q6_no' }, { label: 'يحتاج تعديل على طاقته', value: 'q6_edit' }]));
+                return interaction.update({ content: `📋 **(السؤال 6 من 10):**`, components: [row] });
+            }
+            if (qId === 'survey_q6') {
+                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q7').setPlaceholder('🏢 7. ما رأيك في نظام الشركات والمشاريع والأرباح الساعية؟').addOptions([{ label: 'رهيب ويخلق هيمنة للهوامير', value: 'q7_great' }, { label: 'لم أشارك فيه بعد', value: 'q7_no' }, { label: 'لا يهمني', value: 'q7_meh' }]));
+                return interaction.update({ content: `📋 **(السؤال 7 من 10):**`, components: [row] });
+            }
+            if (qId === 'survey_q7') {
+                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q8').setPlaceholder('💼 8. هل نظام القروض والديون يضيف جو أكشن؟').addOptions([{ label: 'جبار وواقعي جداً', value: 'q8_yes' }, { label: 'ماله داعي', value: 'q8_no' }, { label: 'لا أعرفه', value: 'q8_idk' }]));
+                return interaction.update({ content: `📋 **(السؤال 8 من 10):**`, components: [row] });
+            }
+            if (qId === 'survey_q8') {
+                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q9').setPlaceholder('📊 9. كيف تقيّم نظام الأسهم العالمية والتذبذب؟').addOptions([{ label: 'ممتاز وممتع للتداول', value: 'q9_great' }, { label: 'معقد وما أفهم له', value: 'q9_hard' }, { label: 'يحتاج تنويع أسهم أكثر', value: 'q9_more' }]));
+                return interaction.update({ content: `📋 **(السؤال 9 من 10):**`, components: [row] });
+            }
+            if (qId === 'survey_q9') {
+                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q10').setPlaceholder('🚀 10. هل تتفاعل مع أحداث الطفرة والانهيار الكبرى؟').addOptions([{ label: 'دائماً أتابعها وأستغلها', value: 'q10_always' }, { label: 'على صدفة', value: 'q10_sometimes' }, { label: 'لا تهمني', value: 'q10_no' }]));
+                return interaction.update({ content: `📋 **(السؤال 10 من 10):**`, components: [row] });
+            }
+            if (qId === 'survey_q10') {
+                // تم اختصار العنوان هنا عشان ديسكورد يوافق يفتح النافذة
+                const modal = new ModalBuilder().setCustomId('survey_suggestion_modal').setTitle('💡 اقتراحاتك لتطوير السيرفر');
+                const input = new TextInputBuilder().setCustomId('user_suggestion_text').setLabel('اقتراحاتك للتحديث القادم (اكتب بحرية)').setPlaceholder('وش أكثر ميزة، لعبة، أو فكرة ودك نضيفها في السيرفر؟').setStyle(TextInputStyle.Paragraph).setRequired(false);
+                modal.addComponents(new ActionRowBuilder().addComponents(input));
+                return interaction.showModal(modal);
+            }
         }
-    }
 
     if (interaction.isModalSubmit()) {
         if (interaction.customId === 'stock_buy_modal') {
