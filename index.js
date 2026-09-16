@@ -97,6 +97,11 @@ setInterval(async () => {
         eventDesc = '🔄 استمرار التذبذب الطبيعي في حركة الأسواق والأصول الرقمية.';
     }
 
+    async function checkAndDistributeAutoRoles(guild) {
+    // دالة فارغة لتجنب خطأ عدم التعريف أثناء فحص الرتب التلقائية
+}
+    
+
     stockMarket.forEach(stock => {
         const oldP = stock.price;
         const change = (Math.random() * 0.40) - 0.18; 
