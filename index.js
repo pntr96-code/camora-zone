@@ -34,7 +34,8 @@ const client = new Client({
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMessages, 
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.DirectMessages
     ] 
 });
 
@@ -482,10 +483,12 @@ client.once('clientReady', () => {
 
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
+  
+  // دعم الأوامر في الخاص عن طريق إعطائه هوية افتراضية DM_CHANNEL
   const guildId = message.guild?.id || 'DM_CHANNEL';
   const userId = message.author.id;
 
-  if (message.channel.type !== 1) { // 1 is DM
+  if (message.channel.type !== 1) { // 1 = Direct Message
       lastActivityTime.set(message.channel.id, Date.now());
   }
 
@@ -595,6 +598,7 @@ client.on('messageCreate', async message => {
       if (!surveyColl) return message.reply('❌ قاعدة البيانات غير متصلة.');
 
       try {
+          // جلب جميع الردود من قاعدة البيانات
           const totalResponses = await surveyColl.countDocuments({});
           const allSurveys = await surveyColl.find({}).toArray();
           const suggestions = allSurveys.filter(s => s.suggestion && s.suggestion.trim() !== '').map(s => `• <@${s.userId}>: "${s.suggestion}"`).join('\n') || 'لا توجد اقتراحات كتابية حتى الآن.';
@@ -1342,7 +1346,7 @@ client.on('messageCreate', async message => {
 });
 
 client.on('interactionCreate', async interaction => {
-    // تعريف المتغيرات بمرونة لدعم التفاعلات في الخاص (DM)
+    // تعريف المتغيرات بمرونة لدعم التفاعلات في الخاص (DM) بدون حدوث Crash
     const guildId = interaction.guild?.id || 'DM_CHANNEL';
     const userId = interaction.user.id;
 
@@ -1822,6 +1826,7 @@ client.on('interactionCreate', async interaction => {
         return interaction.update({ content: `📋 **(السؤال 10 من 10):**`, components: [row] });
     }
 
+    // تم حل مشكلة الـ Modal للنافذة الأخيرة (اختصار العنوان لأقل من 45 حرف)
     if (val.startsWith('q10_')) {
         const modal = new ModalBuilder()
             .setCustomId('survey_suggestion_modal')
@@ -1829,7 +1834,8 @@ client.on('interactionCreate', async interaction => {
 
         const suggestionInput = new TextInputBuilder()
             .setCustomId('user_suggestion_text')
-            .setLabel('وش هي أكثر ميزة، لعبة، أو فكرة ودك نضيفها في التحديث القادم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞؟ (اكتبها هنا بكل حرية)')
+            .setLabel('اقتراحاتك للتحديث القادم (اكتب بحرية)') 
+            .setPlaceholder('وش أكثر ميزة، لعبة، أو فكرة ودك نضيفها في السيرفر؟')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(false);
 
