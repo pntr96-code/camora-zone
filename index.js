@@ -476,6 +476,231 @@ function startScrambleGame(channel, guildId) {
     });
 }
 
+function startMathGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const a = Math.floor(Math.random() * 50) + 1;
+    const b = Math.floor(Math.random() * 50) + 1;
+    const ans = (a + b).toString();
+    channel.send(`🔢 **[رياضيات]** كم ناتج: \`${a} + ${b}\` ؟`).then(() => {
+        const filter = m => m.content === ans;
+        const coll = channel.createMessageCollector({ filter, time: 15000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => { 
+            activeGames.delete(channel.id); 
+            m.reply(`🎉 صح عليك! الجواب هو **${ans}**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel); 
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${ans}**`); } });
+    });
+}
+
+function startCapitalGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const chosen = getUniqueRandomItem(capitalMasterPool, 'capital', 'c');
+    channel.send(`🌍 **[عواصم]** وش عاصمة **${chosen.c}** ؟`).then(() => {
+        const filter = m => m.content.includes(chosen.cap);
+        const coll = channel.createMessageCollector({ filter, time: 15000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => { 
+            activeGames.delete(channel.id); 
+            m.reply(`🎉 بطل! العاصمة هي **${chosen.cap}**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel); 
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${chosen.cap}**`); } });
+    });
+}
+
+function startReverseGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const words = ['سيرفر', 'ديسكورد', 'حاسب', 'مبرمج', 'بوت', 'نظام'];
+    const word = words[Math.floor(Math.random() * words.length)];
+    const reversed = word.split('').reverse().join('');
+    channel.send(`🔄 **[عكس]** اكتب الكلمة التالية بالعكس: \`${word}\``).then(() => {
+        const filter = m => m.content === reversed;
+        const coll = channel.createMessageCollector({ filter, time: 15000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => { 
+            activeGames.delete(channel.id); 
+            m.reply(`🎉 كفو! العكس الصحيح هو **${reversed}**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel); 
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${reversed}**`); } });
+    });
+}
+
+function startTriviaGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const chosen = getUniqueRandomItem(triviaMasterPool, 'trivia', 'q');
+    channel.send(`🧠 **[ذكاء]** ${chosen.q}`).then(() => {
+        const filter = m => m.content.includes(chosen.ans);
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => { 
+            activeGames.delete(channel.id); 
+            m.reply(`🎉 ذيبان! الإجابة الصح هي **${chosen.ans}**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel); 
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الإجابة كانت: **${chosen.ans}**`); } });
+    });
+}
+
+function startGuessGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const ans = Math.floor(Math.random() * 15) + 1;
+    channel.send(`❓ **[تخمين]** خمن رقم من 1 إلى 15!`).then(() => {
+        const filter = m => parseInt(m.content) === ans;
+        const coll = channel.createMessageCollector({ filter, time: 15000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => { 
+            activeGames.delete(channel.id); 
+            m.reply(`🎉 جبتها! الرقم هو **${ans}**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel); 
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الرقم كان: **${ans}**`); } });
+    });
+}
+
+function startMeaningGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    const chosen = getUniqueRandomItem(meaningMasterPool, 'meaning', 'word');
+    channel.send(`📖 **[معنى]** وش معنى كلمة: \`${chosen.word}\`؟\n*(اكتب كلمة مفتاحية من المعنى)*`).then(() => {
+        const filter = m => m.content.includes(chosen.desc.split(' ')[0]);
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => { 
+            activeGames.delete(channel.id); 
+            m.reply(`🎉 كفو! المعنى هو: **${chosen.desc}**!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel); 
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! المعنى كان: **${chosen.desc}**`); } });
+    });
+}
+
+function startPenaltyGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'penalty');
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('left').setLabel('يسار ⬅️').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('center').setLabel('وسط ⬆️').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('right').setLabel('يمين ➡️').setStyle(ButtonStyle.Primary)
+    );
+    channel.send({ content: `⚽ **[بلنتي]** الشوتة مصيرية! اختر زاوية تشوت فيها:`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
+        coll.on('collect', i => {
+            activeGames.delete(channel.id); i.deferUpdate();
+            const goalie = ['left', 'center', 'right'][Math.floor(Math.random()*3)];
+            if(i.customId !== goalie) { 
+                msg.edit({content:`قووووووول! ⚽🔥 الحارس طار زاوية ثانية وكسبت يا ${i.user}!`, components:[]}); 
+                addPoints(guildId, i.user.id, i.user.displayName, channel); 
+            } else { 
+                msg.edit({content:`صدها الحارس! 🧤 طار معاك بالكورة وضاعت يا ${i.user}!`, components:[]}); 
+            }
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); msg.edit({ content: `⏰ ضيعت الوقت والحكم صفر الكورة!`, components: [] }).catch(()=>{}); } });
+    });
+}
+
+function startMinesGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'mines');
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('1').setLabel('🟩').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('2').setLabel('🟩').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('3').setLabel('🟩').setStyle(ButtonStyle.Secondary)
+    );
+    const bomb = Math.floor(Math.random() * 3) + 1;
+    channel.send({ content: `⚠️ **[ألغام]** واحد من هالمربعات فيه لغم، اختر مربع آمن!`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
+        coll.on('collect', i => {
+            activeGames.delete(channel.id); i.deferUpdate();
+            if(parseInt(i.customId) !== bomb) { 
+                msg.edit({content:`سليم! ✅ اخترت صح وكسبت النقاط يا ${i.user}!`, components:[]}); 
+                addPoints(guildId, i.user.id, i.user.displayName, channel); 
+            } else { 
+                msg.edit({content:`💥 بوووم! دعست اللغم يا ${i.user}!`, components:[]}); 
+            }
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); msg.edit({ content: `⏰ انتهى الوقت وما اخترت!`, components: [] }).catch(()=>{}); } });
+    });
+}
+
+function startRaceGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'race');
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('r1').setLabel('سيارة 1 🏎️').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('r2').setLabel('سيارة 2 🚙').setStyle(ButtonStyle.Primary)
+    );
+    channel.send({ content: `🏁 **[سباق]** راهن على سيارة تتوقع تفوز!`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
+        coll.on('collect', i => {
+            activeGames.delete(channel.id); i.deferUpdate();
+            const winner = Math.random() > 0.5 ? 'r1' : 'r2';
+            if(i.customId === winner) { 
+                msg.edit({content:`🏆 سيارتك فازت بالسباق! كفو يا ${i.user}`, components:[]}); 
+                addPoints(guildId, i.user.id, i.user.displayName, channel); 
+            } else { 
+                msg.edit({content:`❌ خسرت السباق، سيارتك خبطت يا ${i.user}`, components:[]}); 
+            }
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); msg.edit({ content: `⏰ انتهى الوقت!`, components: [] }).catch(()=>{}); } });
+    });
+}
+
+function startVaultGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    const code = Math.floor(100 + Math.random() * 900); // رقم من 3 خانات
+    channel.send(`🏦 **[خزنة]** الخزنة مقفلة برقم سري من 3 خانات (بين 100 و 999)! وش تتوقع الرقم؟`).then(() => {
+        const filter = m => parseInt(m.content) === code;
+        const coll = channel.createMessageCollector({ filter, time: 20000, max: 1 });
+        activeGames.set(channel.id, coll);
+        coll.on('collect', m => { 
+            activeGames.delete(channel.id); 
+            m.reply(`🔓 فتحت الخزنة! كفو يا ${m.author}!`);
+            addPoints(guildId, m.author.id, m.author.displayName, channel); 
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); channel.send(`⏰ انتهى الوقت! الرقم السري كان: **${code}**`); } });
+    });
+}
+
+function startBoxesGame(channel, guildId, userId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'boxes');
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('1').setLabel('📦').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('2').setLabel('📦').setStyle(ButtonStyle.Secondary)
+    );
+    const gold = Math.floor(Math.random() * 2) + 1;
+    channel.send({ content: `🎁 **[صناديق]** فيه كنز مخفي بصندوق واحد بس، اختار!`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
+        coll.on('collect', i => {
+            activeGames.delete(channel.id); i.deferUpdate();
+            if(parseInt(i.customId) === gold) { 
+                msg.edit({content:`💎 أسطورة! لقيت الكنز يا ${i.user}!`, components:[]}); 
+                addPoints(guildId, i.user.id, i.user.displayName, channel); 
+            } else { 
+                msg.edit({content:`🕸️ للأسف الصندوق فاضي وفيه غبار يا ${i.user}`, components:[]}); 
+            }
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); msg.edit({ content: `⏰ انتهى الوقت!`, components: [] }).catch(()=>{}); } });
+    });
+}
+
+function startButtonGame(channel, guildId) {
+    if (activeGames.has(channel.id)) return;
+    activeGames.set(channel.id, 'btn');
+    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('fast').setLabel('أسرع واحد يضغط! ⚡').setStyle(ButtonStyle.Success));
+    channel.send({ content: `🔘 **[زر]** اضغط الزر بسرعة قبل غيرك!`, components: [row] }).then(msg => {
+        const coll = msg.createMessageComponentCollector({ time: 10000, max: 1 });
+        coll.on('collect', i => { 
+            activeGames.delete(channel.id); i.deferUpdate(); 
+            msg.edit({content:`⚡ ${i.user} كان الأسرع وضغط الزر أول واحد!`, components:[]}); 
+            addPoints(guildId, i.user.id, i.user.displayName, channel); 
+        });
+        coll.on('end', (_, r) => { if (r === 'time') { activeGames.delete(channel.id); msg.edit({ content: `⏰ انتهى الوقت ومحد ضغط!`, components: [] }).catch(()=>{}); } });
+    });
+}
+
 client.once('clientReady', () => {
   console.log(`[BOT STATUS] Camora Zone is Online & Secured with MongoDB Atlas! 🚀`);
   client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
@@ -505,18 +730,39 @@ client.on('messageCreate', async message => {
       } catch (err) {}
       return;
   }
-// --- أمر الصيانة الشامل ---
+
+  // --- أمر الصيانة الشامل ---
   if (message.content === '!صيانه' || message.content === '!صيانة') {
       if (message.channel.id !== adminSurveyChannel) return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة فقط!');
       try {
           await message.delete().catch(() => {});
           const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان الصيانة لجميع رومات الألعاب والاقتصاد...**');
 
-          const embed = new EmbedBuilder().setColor('#FF8C00').setTitle('🛠️ إعلان صيانة وتطوير شامل في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀').setDescription('**أهلاً بكم يا أبطال مجتمعنا! 🎮🔥**\n\nنعتذر منكم، السيرفر والبوت حالياً في **وضع الصيانة المؤقتة** 🚧.\nالإدارة جالسة تطبخ لكم تحديثات ضخمة، ألعاب جديدة، وميزات بتولع النظام الاقتصادي! 💸\n\n⏳ **الرجاء الانتظار، بنرجع أقوى مما كنا قريباً جداً...**\n> *(جميع الأنظمة مثل الاقتصاد، الأسهم، والألعاب متوقفة مؤقتاً لحين الانتهاء)* 🛑').setThumbnail(client.user.displayAvatarURL({ dynamic: true })).setFooter({ text: 'إدارة 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • شكراً لتفهمكم وصبركم ❤️' }).setTimestamp();
+          const embed = new EmbedBuilder()
+              .setColor('#FF8C00')
+              .setTitle('🛠️ إعلان صيانة وتطوير شامل في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
+              .setDescription(
+                  '**أهلاً بكم يا أبطال مجتمعنا! 🎮🔥**\n\n' +
+                  'نعتذر منكم، السيرفر والبوت حالياً في **وضع الصيانة المؤقتة** 🚧.\n' +
+                  'الإدارة جالسة تطبخ لكم تحديثات ضخمة، ألعاب جديدة، وميزات بتولع النظام الاقتصادي! 💸\n\n' +
+                  '⏳ **الرجاء الانتظار، بنرجع أقوى مما كنا قريباً جداً...**\n' +
+                  '> *(جميع الأنظمة مثل الاقتصاد، الأسهم، والألعاب متوقفة مؤقتاً لحين الانتهاء)* 🛑'
+              )
+              .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
+              .setFooter({ text: 'إدارة 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • شكراً لتفهمكم وصبركم ❤️' })
+              .setTimestamp();
 
           const targetChannels = [...new Set([...allowedChannels, ...allowedEconomyChannels, ...allowedStockChannels])];
           let sentCount = 0;
-          for (const chId of targetChannels) { try { const channel = await client.channels.fetch(chId); if (channel) { await channel.send({ embeds: [embed] }); sentCount++; } } catch (e) {} }
+          for (const chId of targetChannels) { 
+              try { 
+                  const channel = await client.channels.fetch(chId); 
+                  if (channel) { 
+                      await channel.send({ embeds: [embed] }); 
+                      sentCount++; 
+                  } 
+              } catch (e) {} 
+          }
           await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الصيانة إلى **${sentCount}** روم بنجاح! 🛠️🚀`).catch(()=>{});
           return;
       } catch (err) { console.error(err); return message.channel.send('❌ حدث خطأ أثناء إرسال إعلان الصيانة.'); }
@@ -529,16 +775,35 @@ client.on('messageCreate', async message => {
           await message.delete().catch(() => {});
           const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان انتهاء الصيانة لجميع الرومات...**');
 
-          const embed = new EmbedBuilder().setColor('#2ECC71').setTitle('✅ تم الانتهاء من الصيانة وتحديث 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀').setDescription('**أهلاً بكم من جديد يا أبطال! 🎉🎮**\n\nأبشركم، انتهينا من الصيانة والتحديثات، والسيرفر رجع **أقوى من أول** وبكامل طاقته! 💪\nجميع الأنظمة (الاقتصاد 💸، الأسهم 📈، الألعاب 🎲، والشركات 🏢) رجعت تشتغل الآن بكل كفاءة وسرعة.\n\n🔥 **انطلقوا وكملوا لعبكم وتجارتكم، فالكم التوفيق!**').setThumbnail(client.user.displayAvatarURL({ dynamic: true })).setFooter({ text: 'إدارة 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نتمنى لكم وقتاً ممتعاً ❤️' }).setTimestamp();
+          const embed = new EmbedBuilder()
+              .setColor('#2ECC71')
+              .setTitle('✅ تم الانتهاء من الصيانة وتحديث 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀')
+              .setDescription(
+                  '**أهلاً بكم من جديد يا أبطال! 🎉🎮**\n\n' +
+                  'أبشركم، انتهينا من الصيانة والتحديثات، والسيرفر رجع **أقوى من أول** وبكامل طاقته! 💪\n' +
+                  'جميع الأنظمة (الاقتصاد 💸، الأسهم 📈، الألعاب 🎲، والشركات 🏢) رجعت تشتغل الآن بكل كفاءة وسرعة.\n\n' +
+                  '🔥 **انطلقوا وكملوا لعبكم وتجارتكم، فالكم التوفيق!**'
+              )
+              .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
+              .setFooter({ text: 'إدارة 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نتمنى لكم وقتاً ممتعاً ❤️' })
+              .setTimestamp();
 
           const targetChannels = [...new Set([...allowedChannels, ...allowedEconomyChannels, ...allowedStockChannels])];
           let sentCount = 0;
-          for (const chId of targetChannels) { try { const channel = await client.channels.fetch(chId); if (channel) { await channel.send({ embeds: [embed] }); sentCount++; } } catch (e) {} }
+          for (const chId of targetChannels) { 
+              try { 
+                  const channel = await client.channels.fetch(chId); 
+                  if (channel) { 
+                      await channel.send({ embeds: [embed] }); 
+                      sentCount++; 
+                  } 
+              } catch (e) {} 
+          }
           await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان عودة السيرفر للعمل إلى **${sentCount}** روم بنجاح! 🟢🚀`).catch(()=>{});
           return;
       } catch (err) { console.error(err); return message.channel.send('❌ حدث خطأ.'); }
   }
-    
+
   // --- أمر تجربة الاستبيان على نفسك وحدك ---
   if (message.content === '!تجربة-استبيان') {
       if (message.channel.id !== adminSurveyChannel) {
@@ -622,7 +887,7 @@ client.on('messageCreate', async message => {
       }
   }
 
-  // --- أمر عرض نتائج الاستبيان والاقتراحات الكتابية (مخصص لرومك الخاص فقط) ---
+  // --- أمر عرض نتائج الاستبيان المطور لحساب كافة الاختيارات ---
   if (message.content === '!نتائج-الاستبيان' || message.content === '!الاستبيان') {
       if (message.channel.id !== adminSurveyChannel) {
           return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
@@ -631,17 +896,30 @@ client.on('messageCreate', async message => {
       if (!surveyColl) return message.reply('❌ قاعدة البيانات غير متصلة.');
 
       try {
-          // جلب جميع الردود من قاعدة البيانات
-          const totalResponses = await surveyColl.countDocuments({});
           const allSurveys = await surveyColl.find({}).toArray();
-          const suggestions = allSurveys.filter(s => s.suggestion && s.suggestion.trim() !== '').map(s => `• <@${s.userId}>: "${s.suggestion}"`).join('\n') || 'لا توجد اقتراحات كتابية حتى الآن.';
+          const total = allSurveys.length;
+          
+          if (total === 0) return message.reply('📭 لا توجد ردود في الاستبيان حتى الآن.');
+
+          const suggestions = allSurveys.filter(s => s.suggestion && s.suggestion.trim() !== '').map(s => `• <@${s.userId}>: "${s.suggestion}"`).join('\n') || 'لا توجد اقتراحات كتابية.';
+          const count = (qKey, val) => allSurveys.filter(s => s[qKey] === val).length;
 
           const embed = new EmbedBuilder()
               .setColor('#F1C40F')
-              .setTitle('📊 تقارير ونتائج إعلان الاستبيان الشامل')
-              .setDescription(`📈 **إجمالي اللاعبين المشاركين:** \`${totalResponses} لاعب\`\n\n---`)
+              .setTitle('📊 تقارير ونتائج الاستبيان الشامل لـ 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞')
+              .setDescription(`📈 **إجمالي اللاعبين المشاركين:** \`${total} لاعب\`\n\n**تفاصيل تصويتات الأسئلة (الخيارات):**`)
               .addFields(
-                  { name: '💡 الاقتراحات والأفكار المقترحة من اللاعبين', value: suggestions.length > 1024 ? suggestions.substring(0, 1020) + '...' : suggestions, inline: false }
+                  { name: '1️⃣ تنوع ألعاب البوت', value: `ممتازة: \`${count('survey_q1', 'q1_5')}\` | جيدة: \`${count('survey_q1', 'q1_4')}\` | مقبولة: \`${count('survey_q1', 'q1_3')}\` | ضعيفة: \`${count('survey_q1', 'q1_2')}\` | سيئة: \`${count('survey_q1', 'q1_1')}\``, inline: false },
+                  { name: '2️⃣ ألعاب السرعة', value: `ممتعة جداً: \`${count('survey_q2', 'q2_yes')}\` | غير مهتم: \`${count('survey_q2', 'q2_no')}\` | تحتاج تعديل: \`${count('survey_q2', 'q2_edit')}\``, inline: false },
+                  { name: '3️⃣ تعليق (Lag)', value: `دائماً: \`${count('survey_q3', 'q3_always')}\` | أحياناً: \`${count('survey_q3', 'q3_sometimes')}\` | أبداً: \`${count('survey_q3', 'q3_never')}\``, inline: false },
+                  { name: '4️⃣ الرواتب والوظائف', value: `عادلة: \`${count('survey_q4', 'q4_fair')}\` | قليلة: \`${count('survey_q4', 'q4_low')}\` | عالية: \`${count('survey_q4', 'q4_high')}\``, inline: false },
+                  { name: '5️⃣ العقارات', value: `حماسي: \`${count('survey_q5', 'q5_great')}\` | عادي: \`${count('survey_q5', 'q5_normal')}\` | معقد: \`${count('survey_q5', 'q5_hard')}\``, inline: false },
+                  { name: '6️⃣ الحارس الشخصي', value: `مفيد: \`${count('survey_q6', 'q6_yes')}\` | لم أستخدمه: \`${count('survey_q6', 'q6_no')}\` | يحتاج تعديل: \`${count('survey_q6', 'q6_edit')}\``, inline: false },
+                  { name: '7️⃣ الشركات', value: `رهيب: \`${count('survey_q7', 'q7_great')}\` | لم أشارك: \`${count('survey_q7', 'q7_no')}\` | لا يهمني: \`${count('survey_q7', 'q7_meh')}\``, inline: false },
+                  { name: '8️⃣ القروض والديون', value: `جبار: \`${count('survey_q8', 'q8_yes')}\` | ماله داعي: \`${count('survey_q8', 'q8_no')}\` | لا أعرفه: \`${count('survey_q8', 'q8_idk')}\``, inline: false },
+                  { name: '9️⃣ الأسهم العالمية', value: `ممتاز: \`${count('survey_q9', 'q9_great')}\` | معقد: \`${count('survey_q9', 'q9_hard')}\` | يحتاج تنويع: \`${count('survey_q9', 'q9_more')}\``, inline: false },
+                  { name: '🔟 الطفرة والانهيار', value: `أستغلها: \`${count('survey_q10', 'q10_always')}\` | بالصدفة: \`${count('survey_q10', 'q10_sometimes')}\` | لا تهمني: \`${count('survey_q10', 'q10_no')}\``, inline: false },
+                  { name: '💡 الاقتراحات الكتابية والأفكار:', value: suggestions.length > 1024 ? suggestions.substring(0, 1020) + '...' : suggestions, inline: false }
               )
               .setFooter({ text: '𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • لوحة إدارة الاستبيان' })
               .setTimestamp();
@@ -1281,11 +1559,10 @@ client.on('messageCreate', async message => {
           else if (r === 7) startGuessGame(message.channel, guildId);
           else if (r === 8) startEmojiGame(message.channel, guildId);
           else if (r === 9) startMeaningGame(message.channel, guildId);
-          else if (r === 10) startRPSBotGame(message.channel, guildId);
-          else if (r === 11) startPenaltyGame(message.channel, guildId);
-          else if (r === 12) startMinesGame(message.channel, guildId, userId);
-          else if (r === 13) startRaceGame(message.channel, guildId, userId);
-          else if (r === 14) startVaultGame(message.channel, guildId, userId);
+          else if (r === 10) startPenaltyGame(message.channel, guildId);
+          else if (r === 11) startMinesGame(message.channel, guildId, userId);
+          else if (r === 12) startRaceGame(message.channel, guildId, userId);
+          else if (r === 13) startVaultGame(message.channel, guildId, userId);
           else startBoxesGame(message.channel, guildId, userId);
           return;
       }
@@ -1335,31 +1612,21 @@ client.on('messageCreate', async message => {
       }
 
       const text = message.content.toLowerCase();
-      if (text.startsWith('!حجر') || text.startsWith('حجر')) {
-          const opponent = message.mentions.users.first();
-          if (opponent && !opponent.bot && opponent.id !== userId) launchRPSPvPGame(message.channel, guildId, message.author, opponent);
-          else startRPSBotGame(message, guildId);
-          return;
-      }
-      if (text.startsWith('!xo') || text.startsWith('xo')) return startXOGame(message, guildId);
-      if (text.startsWith('!ذاكرة') || text.startsWith('ذاكرة')) return startMemoryGame(message, guildId);
-      if (text.startsWith('!بلنتي') || text.startsWith('بلنتي')) return startPenaltyGame(message, guildId);
-      if (text === '!ألغام' || text === 'ألغام') return startMinesGame(message.channel, guildId, userId);
-      if (text === '!سباق' || text === 'سباق') return startRaceGame(message.channel, guildId, userId);
-      if (text === '!خزنة' || text === 'خزنة') return startVaultGame(message.channel, guildId, userId);
-      if (text === '!صناديق' || text === 'صناديق') return startBoxesGame(message.channel, guildId, userId);
-
-      if (message.content === '!قنبلة') startBombGame(message.channel, guildId);
-      if (message.content === '!زر') startButtonGame(message.channel, guildId);
-      if (message.content === '!كتابة') startWritingGame(message.channel, guildId);
-      if (message.content === '!فكك') startScrambleGame(message.channel, guildId);
-      if (message.content === '!رياضيات') startMathGame(message.channel, guildId);
-      if (message.content === '!عواصم') startCapitalGame(message.channel, guildId);
-      if (message.content === '!عكس') startReverseGame(message.channel, guildId);
-      if (message.content === '!ذكاء') startTriviaGame(message.channel, guildId);
-      if (message.content === '!تخمين') startGuessGame(message.channel, guildId);
-      if (message.content === '!إيموجي') startEmojiGame(message.channel, guildId);
-      if (message.content === '!معنى') startMeaningGame(message.channel, guildId);
+      if (text === '!قنبلة') startBombGame(message.channel, guildId);
+      if (text === '!زر') startButtonGame(message.channel, guildId);
+      if (text === '!فكك') startScrambleGame(message.channel, guildId);
+      if (text === '!رياضيات') startMathGame(message.channel, guildId);
+      if (text === '!عواصم') startCapitalGame(message.channel, guildId);
+      if (text === '!عكس') startReverseGame(message.channel, guildId);
+      if (text === '!ذكاء') startTriviaGame(message.channel, guildId);
+      if (text === '!تخمين') startGuessGame(message.channel, guildId);
+      if (text === '!إيموجي') startEmojiGame(message.channel, guildId);
+      if (text === '!معنى') startMeaningGame(message.channel, guildId);
+      if (text === '!بلنتي') startPenaltyGame(message.channel, guildId);
+      if (text === '!ألغام') startMinesGame(message.channel, guildId, userId);
+      if (text === '!سباق') startRaceGame(message.channel, guildId, userId);
+      if (text === '!خزنة') startVaultGame(message.channel, guildId, userId);
+      if (text === '!صناديق') startBoxesGame(message.channel, guildId, userId);
 
       if (message.content === '!روليت') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ انتظر!');
@@ -1379,7 +1646,6 @@ client.on('messageCreate', async message => {
 });
 
 client.on('interactionCreate', async interaction => {
-    // تعريف المتغيرات بمرونة لدعم التفاعلات في الخاص (DM) بدون حدوث Crash
     const guildId = interaction.guild?.id || 'DM_CHANNEL';
     const userId = interaction.user.id;
 
@@ -1524,58 +1790,32 @@ client.on('interactionCreate', async interaction => {
             return interaction.showModal(modal);
         }
 
-// حفظ بيانات الاستبيان في الداتا بيس والتنقل بين الأسئلة
-        if (interaction.customId.startsWith('survey_q')) {
-            const qId = interaction.customId;
-            const val = interaction.values[0];
+        if (interaction.customId === 'corp_rename_btn') {
+            let corp = await guildsColl.findOne({ guildId, ownerId: userId });
+            if (!corp) return interaction.reply({ content: '❌ مخصص لمؤسس الشركة فقط!', ephemeral: true });
 
-            // حفظ إجابة السؤال في قاعدة البيانات فوراً
-            await surveyColl.updateOne({ userId }, { $set: { [qId]: val, date: Date.now() } }, { upsert: true });
-
-            if (qId === 'survey_q1') {
-                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q2').setPlaceholder('⚡ 2. هل ألعاب السرعة وردة الفعل ممتعة؟').addOptions([{ label: 'نعم، ممتعة جداً', value: 'q2_yes' }, { label: 'لا، غير مهتم بها', value: 'q2_no' }, { label: 'تحتاج تعديل وتحسين', value: 'q2_edit' }]));
-                return interaction.update({ content: `📋 **(السؤال 2 من 10):**`, components: [row] });
-            }
-            if (qId === 'survey_q2') {
-                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q3').setPlaceholder('🛠️ 3. هل تواجه أخطاء أو تعليق (Lag) أثناء اللعب؟').addOptions([{ label: 'نعم دائماً', value: 'q3_always' }, { label: 'أحياناً', value: 'q3_sometimes' }, { label: 'أبداً ما واجهت', value: 'q3_never' }]));
-                return interaction.update({ content: `📋 **(السؤال 3 من 10):**`, components: [row] });
-            }
-            if (qId === 'survey_q3') {
-                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q4').setPlaceholder('💵 4. كيف تجد نظام الرواتب والوظائف الحالية؟').addOptions([{ label: 'ممتازة وعادلة', value: 'q4_fair' }, { label: 'الراتب قليل ويحتاج زيادة', value: 'q4_low' }, { label: 'الراتب عالي جداً', value: 'q4_high' }]));
-                return interaction.update({ content: `📋 **(السؤال 4 من 10):**`, components: [row] });
-            }
-            if (qId === 'survey_q4') {
-                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q5').setPlaceholder('📈 5. ما رأيك في نظام سوق العقارات والبيع والشراء؟').addOptions([{ label: 'حماسي ومنافس بقوة', value: 'q5_great' }, { label: 'عادي جداً', value: 'q5_normal' }, { label: 'معقد أو غير مفهوم', value: 'q5_hard' }]));
-                return interaction.update({ content: `📋 **(السؤال 5 من 10):**`, components: [row] });
-            }
-            if (qId === 'survey_q5') {
-                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q6').setPlaceholder('🛡️ 6. ما رأيك في نظام "الحارس الشخصي" وصدات السرقات؟').addOptions([{ label: 'نعم، مفيد ويحمي أملاكي', value: 'q6_yes' }, { label: 'لا، لم أستخدمه', value: 'q6_no' }, { label: 'يحتاج تعديل على طاقته', value: 'q6_edit' }]));
-                return interaction.update({ content: `📋 **(السؤال 6 من 10):**`, components: [row] });
-            }
-            if (qId === 'survey_q6') {
-                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q7').setPlaceholder('🏢 7. ما رأيك في نظام الشركات والمشاريع والأرباح الساعية؟').addOptions([{ label: 'رهيب ويخلق هيمنة للهوامير', value: 'q7_great' }, { label: 'لم أشارك فيه بعد', value: 'q7_no' }, { label: 'لا يهمني', value: 'q7_meh' }]));
-                return interaction.update({ content: `📋 **(السؤال 7 من 10):**`, components: [row] });
-            }
-            if (qId === 'survey_q7') {
-                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q8').setPlaceholder('💼 8. هل نظام القروض والديون يضيف جو أكشن؟').addOptions([{ label: 'جبار وواقعي جداً', value: 'q8_yes' }, { label: 'ماله داعي', value: 'q8_no' }, { label: 'لا أعرفه', value: 'q8_idk' }]));
-                return interaction.update({ content: `📋 **(السؤال 8 من 10):**`, components: [row] });
-            }
-            if (qId === 'survey_q8') {
-                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q9').setPlaceholder('📊 9. كيف تقيّم نظام الأسهم العالمية والتذبذب؟').addOptions([{ label: 'ممتاز وممتع للتداول', value: 'q9_great' }, { label: 'معقد وما أفهم له', value: 'q9_hard' }, { label: 'يحتاج تنويع أسهم أكثر', value: 'q9_more' }]));
-                return interaction.update({ content: `📋 **(السؤال 9 من 10):**`, components: [row] });
-            }
-            if (qId === 'survey_q9') {
-                const row = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('survey_q10').setPlaceholder('🚀 10. هل تتفاعل مع أحداث الطفرة والانهيار الكبرى؟').addOptions([{ label: 'دائماً أتابعها وأستغلها', value: 'q10_always' }, { label: 'على صدفة', value: 'q10_sometimes' }, { label: 'لا تهمني', value: 'q10_no' }]));
-                return interaction.update({ content: `📋 **(السؤال 10 من 10):**`, components: [row] });
-            }
-            if (qId === 'survey_q10') {
-                // تم اختصار العنوان هنا عشان ديسكورد يوافق يفتح النافذة
-                const modal = new ModalBuilder().setCustomId('survey_suggestion_modal').setTitle('💡 اقتراحاتك لتطوير السيرفر');
-                const input = new TextInputBuilder().setCustomId('user_suggestion_text').setLabel('اقتراحاتك للتحديث القادم (اكتب بحرية)').setPlaceholder('وش أكثر ميزة، لعبة، أو فكرة ودك نضيفها في السيرفر؟').setStyle(TextInputStyle.Paragraph).setRequired(false);
-                modal.addComponents(new ActionRowBuilder().addComponents(input));
-                return interaction.showModal(modal);
-            }
+            const modal = new ModalBuilder().setCustomId('corp_rename_modal').setTitle('✏️ تعديل اسم الشركة');
+            const nameInput = new TextInputBuilder().setCustomId('new_corp_name').setLabel('أدخل اسم الشركة الجديد').setStyle(TextInputStyle.Short).setRequired(true);
+            modal.addComponents(new ActionRowBuilder().addComponents(nameInput));
+            return interaction.showModal(modal);
         }
+
+        if (interaction.customId === 'start_survey_btn') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q1')
+                    .setPlaceholder('🎮 1. كيف تقيّم تنوع ألعاب البوت وتفاعلها؟')
+                    .addOptions([
+                        { label: '⭐⭐⭐⭐⭐ ممتازة ومولعة', value: 'q1_5' },
+                        { label: '⭐⭐⭐⭐ جيدة', value: 'q1_4' },
+                        { label: '⭐⭐⭐ مقبولة', value: 'q1_3' },
+                        { label: '⭐⭐ ضعيفة', value: 'q1_2' },
+                        { label: '⭐ سيئة ومملة', value: 'q1_1' }
+                    ])
+            );
+            return await interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
+        }
+    }
 
     if (interaction.isModalSubmit()) {
         if (interaction.customId === 'stock_buy_modal') {
@@ -1757,149 +1997,149 @@ client.on('interactionCreate', async interaction => {
         await interaction.update({ content: `🎉 تم تعيينك في وظيفة **${user.job}** بنجاح!`, components: [] });
     }
 
-    const val = interaction.values[0];
+    if (interaction.customId.startsWith('survey_q')) {
+        const qId = interaction.customId;
+        const val = interaction.values[0];
 
-    if (val.startsWith('q1_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q2')
-                .setPlaceholder('⚡ 2. هل ألعاب السرعة وردة الفعل ممتعة وتستاهل النقاط؟')
-                .addOptions([
-                    { label: 'نعم، ممتعة جداً', value: 'q2_yes' },
-                    { label: 'لا، غير مهتم بها', value: 'q2_no' },
-                    { label: 'تحتاج تعديل وتحسين', value: 'q2_edit' }
-                ])
+        // حفظ إجابة السؤال في قاعدة البيانات فوراً
+        await surveyColl.updateOne(
+            { userId }, 
+            { $set: { [qId]: val, date: Date.now() } }, 
+            { upsert: true }
         );
-        return interaction.update({ content: `📋 **(السؤال 2 من 10):**`, components: [row] });
-    }
 
-    if (val.startsWith('q2_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q3')
-                .setPlaceholder('🛠️ 3. هل تواجه أخطاء أو تعليق (Lag) أثناء اللعب؟')
-                .addOptions([
-                    { label: 'نعم دائماً', value: 'q3_always' },
-                    { label: 'أحياناً', value: 'q3_sometimes' },
-                    { label: 'أبداً ما واجهت', value: 'q3_never' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 3 من 10):**`, components: [row] });
-    }
+        if (qId === 'survey_q1') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q2')
+                    .setPlaceholder('⚡ 2. هل ألعاب السرعة وردة الفعل ممتعة وتستاهل النقاط؟')
+                    .addOptions([
+                        { label: 'نعم، ممتعة جداً', value: 'q2_yes' },
+                        { label: 'لا، غير مهتم بها', value: 'q2_no' },
+                        { label: 'تحتاج تعديل وتحسين', value: 'q2_edit' }
+                    ])
+            );
+            return interaction.update({ content: `📋 **(السؤال 2 من 10):**`, components: [row] });
+        }
+        if (qId === 'survey_q2') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q3')
+                    .setPlaceholder('🛠️ 3. هل تواجه أخطاء أو تعليق (Lag) أثناء اللعب؟')
+                    .addOptions([
+                        { label: 'نعم دائماً', value: 'q3_always' },
+                        { label: 'أحياناً', value: 'q3_sometimes' },
+                        { label: 'أبداً ما واجهت', value: 'q3_never' }
+                    ])
+            );
+            return interaction.update({ content: `📋 **(السؤال 3 من 10):**`, components: [row] });
+        }
+        if (qId === 'survey_q3') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q4')
+                    .setPlaceholder('💵 4. كيف تجد نظام الرواتب والوظائف الحالية؟')
+                    .addOptions([
+                        { label: 'ممتازة وعادلة', value: 'q4_fair' },
+                        { label: 'الراتب قليل ويحتاج زيادة', value: 'q4_low' },
+                        { label: 'الراتب عالي جداً', value: 'q4_high' }
+                    ])
+            );
+            return interaction.update({ content: `📋 **(السؤال 4 من 10):**`, components: [row] });
+        }
+        if (qId === 'survey_q4') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q5')
+                    .setPlaceholder('📈 5. ما رأيك في نظام سوق العقارات والبيع والشراء؟')
+                    .addOptions([
+                        { label: 'حماسي ومنافس بقوة', value: 'q5_great' },
+                        { label: 'عادي جداً', value: 'q5_normal' },
+                        { label: 'معقد أو غير مفهوم', value: 'q5_hard' }
+                    ])
+            );
+            return interaction.update({ content: `📋 **(السؤال 5 من 10):**`, components: [row] });
+        }
+        if (qId === 'survey_q5') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q6')
+                    .setPlaceholder('🛡️ 6. ما رأيك في نظام "الحارس الشخصي" وصدات السرقات؟')
+                    .addOptions([
+                        { label: 'نعم، مفيد ويحمي أملاكي', value: 'q6_yes' },
+                        { label: 'لا، لم أستخدمه', value: 'q6_no' },
+                        { label: 'يحتاج تعديل على طاقته', value: 'q6_edit' }
+                    ])
+            );
+            return interaction.update({ content: `📋 **(السؤال 6 من 10):**`, components: [row] });
+        }
+        if (qId === 'survey_q6') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q7')
+                    .setPlaceholder('🏢 7. ما رأيك في نظام الشركات والمشاريع والأرباح الساعية؟')
+                    .addOptions([
+                        { label: 'رهيب ويخلق هيمنة للهوامير', value: 'q7_great' },
+                        { label: 'لم أشارك فيه بعد', value: 'q7_no' },
+                        { label: 'لا يهمني', value: 'q7_meh' }
+                    ])
+            );
+            return interaction.update({ content: `📋 **(السؤال 7 من 10):**`, components: [row] });
+        }
+        if (qId === 'survey_q7') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q8')
+                    .setPlaceholder('💼 8. هل نظام القروض والديون يضيف جو أكشن؟')
+                    .addOptions([
+                        { label: 'جبار وواقعي جداً', value: 'q8_yes' },
+                        { label: 'ماله داعي', value: 'q8_no' },
+                        { label: 'لا أعرفه', value: 'q8_idk' }
+                    ])
+            );
+            return interaction.update({ content: `📋 **(السؤال 8 من 10):**`, components: [row] });
+        }
+        if (qId === 'survey_q8') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q9')
+                    .setPlaceholder('📊 9. كيف تقيّم نظام الأسهم العالمية والتذبذب؟')
+                    .addOptions([
+                        { label: 'ممتاز وممتع للتداول', value: 'q9_great' },
+                        { label: 'معقد وما أفهم له', value: 'q9_hard' },
+                        { label: 'يحتاج تنويع أسهم أكثر', value: 'q9_more' }
+                    ])
+            );
+            return interaction.update({ content: `📋 **(السؤال 9 من 10):**`, components: [row] });
+        }
+        if (qId === 'survey_q9') {
+            const row = new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('survey_q10')
+                    .setPlaceholder('🚀 10. هل تتفاعل مع أحداث الطفرة والانهيار الكبرى؟')
+                    .addOptions([
+                        { label: 'دائماً أتابعها وأستغلها', value: 'q10_always' },
+                        { label: 'على صدفة', value: 'q10_sometimes' },
+                        { label: 'لا تهمني', value: 'q10_no' }
+                    ])
+            );
+            return interaction.update({ content: `📋 **(السؤال 10 من 10):**`, components: [row] });
+        }
+        if (qId === 'survey_q10') {
+            const modal = new ModalBuilder()
+                .setCustomId('survey_suggestion_modal')
+                .setTitle('💡 اقتراحاتك لتطوير السيرفر');
 
-    if (val.startsWith('q3_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q4')
-                .setPlaceholder('💵 4. كيف تجد نظام الرواتب والوظائف الحالية؟')
-                .addOptions([
-                    { label: 'ممتازة وعادلة', value: 'q4_fair' },
-                    { label: 'الراتب قليل ويحتاج زيادة', value: 'q4_low' },
-                    { label: 'الراتب عالي جداً', value: 'q4_high' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 4 من 10):**`, components: [row] });
-    }
+            const suggestionInput = new TextInputBuilder()
+                .setCustomId('user_suggestion_text')
+                .setLabel('اقتراحاتك للتحديث القادم (اكتب بحرية)') 
+                .setPlaceholder('وش أكثر ميزة، لعبة، أو فكرة ودك نضيفها في السيرفر؟')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(false);
 
-    if (val.startsWith('q4_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q5')
-                .setPlaceholder('📈 5. ما رأيك في نظام سوق العقارات والبيع والشراء؟')
-                .addOptions([
-                    { label: 'حماسي ومنافس بقوة', value: 'q5_great' },
-                    { label: 'عادي جداً', value: 'q5_normal' },
-                    { label: 'معقد أو غير مفهوم', value: 'q5_hard' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 5 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q5_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q6')
-                .setPlaceholder('🛡️ 6. ما رأيك في نظام "الحارس الشخصي" وصدات السرقات؟')
-                .addOptions([
-                    { label: 'نعم، مفيد ويحمي أملاكي', value: 'q6_yes' },
-                    { label: 'لا، لم أستخدمه', value: 'q6_no' },
-                    { label: 'يحتاج تعديل على طاقته', value: 'q6_edit' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 6 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q6_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q7')
-                .setPlaceholder('🏢 7. ما رأيك في نظام الشركات والمشاريع والأرباح الساعية؟')
-                .addOptions([
-                    { label: 'رهيب ويخلق هيمنة للهوامير', value: 'q7_great' },
-                    { label: 'لم أشارك فيه بعد', value: 'q7_no' },
-                    { label: 'لا يهمني', value: 'q7_meh' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 7 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q7_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q8')
-                .setPlaceholder('💼 8. هل نظام القروض والديون يضيف جو أكشن؟')
-                .addOptions([
-                    { label: 'جبار وواقعي جداً', value: 'q8_yes' },
-                    { label: 'ماله داعي', value: 'q8_no' },
-                    { label: 'لا أعرفه', value: 'q8_idk' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 8 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q8_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q9')
-                .setPlaceholder('📊 9. كيف تقيّم نظام الأسهم العالمية والتذبذب؟')
-                .addOptions([
-                    { label: 'ممتاز وممتع للتداول', value: 'q9_great' },
-                    { label: 'معقد وما أفهم له', value: 'q9_hard' },
-                    { label: 'يحتاج تنويع أسهم أكثر', value: 'q9_more' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 9 من 10):**`, components: [row] });
-    }
-
-    if (val.startsWith('q9_')) {
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('survey_q10')
-                .setPlaceholder('🚀 10. هل تتفاعل مع أحداث الطفرة والانهيار الكبرى؟')
-                .addOptions([
-                    { label: 'دائماً أتابعها وأستغلها', value: 'q10_always' },
-                    { label: 'على صدفة', value: 'q10_sometimes' },
-                    { label: 'لا تهمني', value: 'q10_no' }
-                ])
-        );
-        return interaction.update({ content: `📋 **(السؤال 10 من 10):**`, components: [row] });
-    }
-
-    // تم حل مشكلة الـ Modal للنافذة الأخيرة (اختصار العنوان لأقل من 45 حرف)
-    if (val.startsWith('q10_')) {
-        const modal = new ModalBuilder()
-            .setCustomId('survey_suggestion_modal')
-            .setTitle('💡 اقتراحاتك لتطوير السيرفر');
-
-        const suggestionInput = new TextInputBuilder()
-            .setCustomId('user_suggestion_text')
-            .setLabel('اقتراحاتك للتحديث القادم (اكتب بحرية)') 
-            .setPlaceholder('وش أكثر ميزة، لعبة، أو فكرة ودك نضيفها في السيرفر؟')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(false);
-
-        modal.addComponents(new ActionRowBuilder().addComponents(suggestionInput));
-        return interaction.showModal(modal);
+            modal.addComponents(new ActionRowBuilder().addComponents(suggestionInput));
+            return interaction.showModal(modal);
+        }
     }
 });
 
