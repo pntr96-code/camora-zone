@@ -505,7 +505,40 @@ client.on('messageCreate', async message => {
       } catch (err) {}
       return;
   }
+// --- أمر الصيانة الشامل ---
+  if (message.content === '!صيانه' || message.content === '!صيانة') {
+      if (message.channel.id !== adminSurveyChannel) return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة فقط!');
+      try {
+          await message.delete().catch(() => {});
+          const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان الصيانة لجميع رومات الألعاب والاقتصاد...**');
 
+          const embed = new EmbedBuilder().setColor('#FF8C00').setTitle('🛠️ إعلان صيانة وتطوير شامل في 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀').setDescription('**أهلاً بكم يا أبطال مجتمعنا! 🎮🔥**\n\nنعتذر منكم، السيرفر والبوت حالياً في **وضع الصيانة المؤقتة** 🚧.\nالإدارة جالسة تطبخ لكم تحديثات ضخمة، ألعاب جديدة، وميزات بتولع النظام الاقتصادي! 💸\n\n⏳ **الرجاء الانتظار، بنرجع أقوى مما كنا قريباً جداً...**\n> *(جميع الأنظمة مثل الاقتصاد، الأسهم، والألعاب متوقفة مؤقتاً لحين الانتهاء)* 🛑').setThumbnail(client.user.displayAvatarURL({ dynamic: true })).setFooter({ text: 'إدارة 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • شكراً لتفهمكم وصبركم ❤️' }).setTimestamp();
+
+          const targetChannels = [...new Set([...allowedChannels, ...allowedEconomyChannels, ...allowedStockChannels])];
+          let sentCount = 0;
+          for (const chId of targetChannels) { try { const channel = await client.channels.fetch(chId); if (channel) { await channel.send({ embeds: [embed] }); sentCount++; } } catch (e) {} }
+          await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الصيانة إلى **${sentCount}** روم بنجاح! 🛠️🚀`).catch(()=>{});
+          return;
+      } catch (err) { console.error(err); return message.channel.send('❌ حدث خطأ أثناء إرسال إعلان الصيانة.'); }
+  }
+
+  // --- أمر انتهاء الصيانة ---
+  if (message.content === '!انتهاء-الصيانه' || message.content === '!انتهاء-الصيانة') {
+      if (message.channel.id !== adminSurveyChannel) return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة فقط!');
+      try {
+          await message.delete().catch(() => {});
+          const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان انتهاء الصيانة لجميع الرومات...**');
+
+          const embed = new EmbedBuilder().setColor('#2ECC71').setTitle('✅ تم الانتهاء من الصيانة وتحديث 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🚀').setDescription('**أهلاً بكم من جديد يا أبطال! 🎉🎮**\n\nأبشركم، انتهينا من الصيانة والتحديثات، والسيرفر رجع **أقوى من أول** وبكامل طاقته! 💪\nجميع الأنظمة (الاقتصاد 💸، الأسهم 📈، الألعاب 🎲، والشركات 🏢) رجعت تشتغل الآن بكل كفاءة وسرعة.\n\n🔥 **انطلقوا وكملوا لعبكم وتجارتكم، فالكم التوفيق!**').setThumbnail(client.user.displayAvatarURL({ dynamic: true })).setFooter({ text: 'إدارة 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 • نتمنى لكم وقتاً ممتعاً ❤️' }).setTimestamp();
+
+          const targetChannels = [...new Set([...allowedChannels, ...allowedEconomyChannels, ...allowedStockChannels])];
+          let sentCount = 0;
+          for (const chId of targetChannels) { try { const channel = await client.channels.fetch(chId); if (channel) { await channel.send({ embeds: [embed] }); sentCount++; } } catch (e) {} }
+          await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان عودة السيرفر للعمل إلى **${sentCount}** روم بنجاح! 🟢🚀`).catch(()=>{});
+          return;
+      } catch (err) { console.error(err); return message.channel.send('❌ حدث خطأ.'); }
+  }
+    
   // --- أمر تجربة الاستبيان على نفسك وحدك ---
   if (message.content === '!تجربة-استبيان') {
       if (message.channel.id !== adminSurveyChannel) {
