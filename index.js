@@ -839,7 +839,7 @@ client.on('messageCreate', async message => {
       }
   }
 
-  // --- إعلان استطلاع الرأي الشامل (لكل الأعضاء) ---
+// --- إعلان استطلاع الرأي الشامل (لكل الأعضاء مع تخطي حماية ديسكورد) ---
   if (message.content === '!ارسل-استبيان') {
       if (message.channel.id !== adminSurveyChannel) {
           return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
@@ -848,7 +848,8 @@ client.on('messageCreate', async message => {
       try {
           await message.delete().catch(() => {});
 
-          const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان الاستبيان على الخاص للأعضاء بالخلفية..**');
+          // رسالة تنبيه إن العملية بتأخذ وقت
+          const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان الاستبيان على الخاص للأعضاء بالخلفية... (العملية هادئة لتجنب حظر ديسكورد)**');
 
           const embed = new EmbedBuilder()
               .setColor('#5865F2')
@@ -869,21 +870,27 @@ client.on('messageCreate', async message => {
           await message.guild.members.fetch();
           let sentCount = 0;
 
-          setTimeout(async () => {
+          // تشغيل العملية في الخلفية بذكاء
+          (async () => {
               for (const member of message.guild.members.cache.values()) {
-                  if (member.user.bot) continue;
+                  if (member.user.bot) continue; // يتخطى البوتات
                   try {
                       await member.send({ embeds: [embed], components: [row] });
                       sentCount++;
-                  } catch (e) {}
+                      // تأخير زمني 2.5 ثانية لتجنب السبام وحظر ديسكورد (Rate Limit)
+                      await new Promise(resolve => setTimeout(resolve, 2500)); 
+                  } catch (e) {
+                      // إذا الشخص مقفل الخاص، يتخطاه بدون ما يوقف العملية
+                  }
               }
+              // بعد ما يخلص السيرفر كله، يعدل رسالته ويعطيك العدد النهائي
               await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الاستبيان على الخاص لـ **${sentCount}** عضو في السيرفر بنجاح! 🚀`).catch(()=>{});
-          }, 100);
+          })();
 
           return;
       } catch (err) {
           console.error(err);
-          return message.reply('❌ حدث خطأ أثناء إرسال إعلان الاستبيان.');
+          return message.channel.send('❌ حدث خطأ أثناء إرسال إعلان الاستبيان.');
       }
   }
 
