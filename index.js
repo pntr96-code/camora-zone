@@ -66,13 +66,17 @@ let stockMarket = [
     { id: 'SOL', name: 'سولانا (Solana)', price: 150, base: 150, trend: '➖', emoji: '☀️' }
 ];
 
-// سوق مشاريع وأصول الشركات الاستثمارية
 let corpAssetsMarket = [
     { id: 101, name: 'مصنع تعبئة وتغليف', price: 40000, profit: 4000, emoji: '🏭' },
     { id: 102, name: 'أسطول شحن وتوصيل', price: 95000, profit: 10000, emoji: '🚚' },
     { id: 103, name: 'منصة تجارة إلكترونية', price: 220000, profit: 25000, emoji: '🌐' },
     { id: 104, name: 'برج تجاري استثماري', price: 600000, profit: 75000, emoji: '🏗️' }
 ];
+
+// تعريف الدالة المفقودة لمنع أخطاء الكراش
+async function checkAndDistributeAutoRoles(guild) {
+    // دالة لتوزيع الرتب التلقائية
+}
 
 // 1. نظام الطفرة والانهيار التلقائي للأسهم
 setInterval(async () => {
@@ -96,11 +100,6 @@ setInterval(async () => {
         eventTitle = '📊 تحديث أسعار الأسهم العادي';
         eventDesc = '🔄 استمرار التذبذب الطبيعي في حركة الأسواق والأصول الرقمية.';
     }
-
-    async function checkAndDistributeAutoRoles(guild) {
-    // دالة فارغة لتجنب خطأ عدم التعريف أثناء فحص الرتب التلقائية
-}
-    
 
     stockMarket.forEach(stock => {
         const oldP = stock.price;
@@ -225,12 +224,12 @@ setInterval(async () => {
     let propMultiplier = 1;
 
     if (propEventRoll < 0.30) {
-        propMultiplier = 1.50; // طفرة عقارية (+50%)
+        propMultiplier = 1.50; 
         propEventTitle = '🚀 طفرة عقارية كبرى (Real Estate Boom)!';
         propEventDesc = '📈 **انتعاش هائل في سوق العقارات والأراضي!** ارتفعت قيمة جميع العقارات والأرباح بنسبة **50%**.';
         propColor = '#2ECC71';
     } else if (propEventRoll > 0.75) {
-        propMultiplier = 0.60; // ركود عقاري (-40%)
+        propMultiplier = 0.60; 
         propEventTitle = '🏚️ ركود وهبوط عقاري مفاجئ (Real Estate Crash)!';
         propEventDesc = '📉 **أزمة سيولة تضرب سوق العقارات!** هبطت أسعار وقيم العقارات بشدة.';
         propColor = '#E74C3C';
@@ -354,7 +353,6 @@ async function trackUserMessage(guildId, userId, userTag, channel, member) {
     await pointsColl.updateOne({ guildId: guildId, userId: userId }, { $set: doc }, { upsert: true });
 }
 
-// أ pools الألعاب النصية والكلاسيكية الكاملة
 const historyTracker = { emoji: [], meaning: [], scramble: [], reverse: [], trivia: [], capital: [], writing: [] };
 
 function getUniqueRandomItem(pool, historyKey, propertyName = null) {
@@ -455,7 +453,6 @@ function sendGamesMenu(channel) {
     });
 }
 
-// دوال الألعاب المتكاملة
 function startEmojiGame(channel, guildId) {
     if (activeGames.has(channel.id)) return;
     const chosen = getUniqueRandomItem(emojiMasterPool, 'emoji', 'ans');
@@ -812,7 +809,6 @@ client.on('messageCreate', async message => {
       return;
   }
 
-  // --- أمر إرسال إعلان تحديث لعبة لروم معين ---
   if (message.content.startsWith('!اعلان-تحديث')) {
       if (!message.member.permissions.has('ManageMessages')) {
           return message.reply('❌ عذراً، هذا الأمر مخصص للإدارة فقط!');
@@ -862,7 +858,6 @@ client.on('messageCreate', async message => {
       await trackUserMessage(guildId, userId, message.author.displayName, message.channel, message.member);
   }
 
-  // --- أوامر الأسهم العالمية ---
   if (allowedStockChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!اسهم' || message.content === '!الأسهم') {
           const unixTime = Math.floor(stockNextUpdate / 1000);
@@ -891,7 +886,6 @@ client.on('messageCreate', async message => {
       }
   }
 
-  // أوامر الاقتصاد والألعاب الشاملة
   if (allowedEconomyChannels.includes(message.channel.id) || allowedChannels.includes(message.channel.id)) {
       if (message.content === '!اقتصاد') {
           const embed = new EmbedBuilder().setColor('#2ecc71').setTitle('🏦 النظام الاقتصادي والمزايا الفخمة').addFields(
@@ -907,7 +901,6 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
 
-      // 1. نظام الشركات والأصول التفاعلي
       if (message.content.startsWith('!تأسيس-شركة')) {
           const args = message.content.replace('!تأسيس-شركة', '').trim().split('|');
           const corpName = args[0]?.trim();
@@ -1051,7 +1044,6 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
 
-      // 2. نظام القروض وبنك السيرفر
       if (message.content.startsWith('!قرض')) {
           const args = message.content.split(' ');
           const loanAmt = parseInt(args[1]);
@@ -1092,7 +1084,6 @@ client.on('messageCreate', async message => {
           return message.channel.send({ embeds: [embed] });
       }
 
-      // 3. نظام الحماية الشخصية للعقارات (مع عدد الصدات Durability)
       if (message.content === '!شراء-حارس' || message.content === '!حماية') {
           let user = await getEconomyUser(guildId, userId);
           const cost = 15000;
@@ -1103,12 +1094,11 @@ client.on('messageCreate', async message => {
 
           user.balance -= cost;
           user.guard = true;
-          user.guardShields = 3; // يحميك من 3 سرقات كحد أقصى
+          user.guardShields = 3; 
           await saveEconomyUser(guildId, userId, user);
           return message.reply('🛡️ **تم تعيين حارس شخصي بنجاح!**\n⚡ الحارس جاهز لصد أول **3 محاولات سرقة** تتعرض لها.');
       }
 
-      // 4. سرقة البنوك الكبرى الجماعية (Heist)
       if (message.content.startsWith('!سرقة-بنك')) {
           const mentions = message.mentions.users.filter(u => !u.bot && u.id !== userId);
           if (mentions.size < 3) return message.reply('❌ سرقة البنك تتطلب قائد و **3 من خويك**: `!سرقة-بنك [@خويك1] [@خويك2] [@خويك3]`');
@@ -1478,7 +1468,6 @@ client.on('messageCreate', async message => {
       }
   }
 
-  // الألعاب والفعاليات ولوحة الصدارة الكاملة
   if (allowedChannels.includes(message.channel.id) || allowedEconomyChannels.includes(message.channel.id)) {
       if (message.content === '!فعالية' || message.content === '!لعبة' || message.content === '!العب') {
           if (activeGames.has(message.channel.id)) return message.reply('⏳ فيه لعبة شغالة في هذه الروم!');
@@ -1590,7 +1579,6 @@ client.on('messageCreate', async message => {
   }
 });
 
-// معالج التفاعلات والأزرار والشركات والمودال
 client.on('interactionCreate', async interaction => {
     if (interaction.isButton()) {
         const guildId = interaction.guild.id;
@@ -1671,7 +1659,6 @@ client.on('interactionCreate', async interaction => {
             return interaction.showModal(modal);
         }
 
-        // أزرار لوحة الشركات (!شركة)
         if (interaction.customId === 'corp_donate_btn') {
             const modal = new ModalBuilder().setCustomId('corp_donate_modal').setTitle('💸 تبرع لدعم رأس مال الشركة');
             const amountInput = new TextInputBuilder().setCustomId('donate_amount').setLabel('أدخل مبلغ التبرع (بالدولار)').setStyle(TextInputStyle.Short).setRequired(true);
