@@ -838,7 +838,7 @@ client.on('messageCreate', async message => {
           return message.reply('❌ ما قدرت أرسل لك رسالة على الخاص، تأكد أن رسائلك الخاصة مفتوحة من البوت.');
       }
   }
-
+    
 // --- إعلان استطلاع الرأي الشامل (لكل الأعضاء مع تخطي حماية ديسكورد) ---
   if (message.content === '!ارسل-استبيان') {
       if (message.channel.id !== adminSurveyChannel) {
@@ -848,7 +848,6 @@ client.on('messageCreate', async message => {
       try {
           await message.delete().catch(() => {});
 
-          // رسالة تنبيه إن العملية بتأخذ وقت
           const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان الاستبيان على الخاص للأعضاء بالخلفية... (العملية هادئة لتجنب حظر ديسكورد)**');
 
           const embed = new EmbedBuilder()
@@ -893,7 +892,6 @@ client.on('messageCreate', async message => {
           return message.channel.send('❌ حدث خطأ أثناء إرسال إعلان الاستبيان.');
       }
   }
-
   // --- أمر عرض نتائج الاستبيان المطور لحساب كافة الاختيارات ---
   if (message.content === '!نتائج-الاستبيان' || message.content === '!الاستبيان') {
       if (message.channel.id !== adminSurveyChannel) {
