@@ -1195,7 +1195,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!صندوق') {
           let user = await getEconomyUser(guildId, userId);
-          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك لا يكفي!');
+          if (user.balance < 3000) return message.reply('📦 سعر الصندوق السري **$3,000** ورصيدك ما يكفي!');
           user.balance -= 3000;
           const prizes = [1500, 5000, 12000, 0];
           const won = prizes[Math.floor(Math.random() * prizes.length)];
@@ -1495,7 +1495,6 @@ client.on('interactionCreate', async interaction => {
         }
 
         if (interaction.customId === 'start_survey_btn') {
-            // الاستجابة الفورية لزر الاستبيان لتجنب انتهاء المهلة (3 ثواني)
             const row = new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId('survey_q1')
@@ -1508,7 +1507,7 @@ client.on('interactionCreate', async interaction => {
                         { label: '⭐ سيئة ومملة', value: 'q1_1' }
                     ])
             );
-            return interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
+            return await interaction.reply({ content: `📋 **بدأنا الاستبيان (السؤال 1 من 10):**`, components: [row], ephemeral: true });
         }
     }
 
