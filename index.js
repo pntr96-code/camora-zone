@@ -869,20 +869,19 @@ client.on('messageCreate', async message => {
           await message.guild.members.fetch();
           let sentCount = 0;
 
-          // تشغيل العملية في الخلفية بذكاء
+          // تشغيل العملية في الخلفية بانتظام لتجنب حظر ديسكورد (Rate Limit)
           (async () => {
               for (const member of message.guild.members.cache.values()) {
                   if (member.user.bot) continue; // يتخطى البوتات
                   try {
                       await member.send({ embeds: [embed], components: [row] });
                       sentCount++;
-                      // تأخير زمني 2.5 ثانية لتجنب السبام وحظر ديسكورد (Rate Limit)
+                      // تأخير زمني 2.5 ثانية بين كل رسالة والثانية
                       await new Promise(resolve => setTimeout(resolve, 2500)); 
                   } catch (e) {
-                      // إذا الشخص مقفل الخاص، يتخطاه بدون ما يوقف العملية
+                      // يتخطى العضو إذا كان مقفل الخاص
                   }
               }
-              // بعد ما يخلص السيرفر كله، يعدل رسالته ويعطيك العدد النهائي
               await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الاستبيان على الخاص لـ **${sentCount}** عضو في السيرفر بنجاح! 🚀`).catch(()=>{});
           })();
 
@@ -892,6 +891,7 @@ client.on('messageCreate', async message => {
           return message.channel.send('❌ حدث خطأ أثناء إرسال إعلان الاستبيان.');
       }
   }
+    
   // --- أمر عرض نتائج الاستبيان المطور لحساب كافة الاختيارات ---
   if (message.content === '!نتائج-الاستبيان' || message.content === '!الاستبيان') {
       if (message.channel.id !== adminSurveyChannel) {
