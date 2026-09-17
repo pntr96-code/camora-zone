@@ -731,6 +731,38 @@ client.on('messageCreate', async message => {
       return;
   }
 
+  // --- أمر البحث عن عضو بواسطة الـ ID (مخصص لروم الإدارة فقط) ---
+  if (message.content.startsWith('!بحث-ايدي ')) {
+      if (message.channel.id !== adminSurveyChannel) {
+          return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة فقط!');
+      }
+
+      const targetId = message.content.replace('!بحث-ايدي', '').trim();
+      if (!targetId || isNaN(targetId)) {
+          return message.reply('❌ الاستخدام الصحيح: `!بحث-ايدي [الـ ID هنا]`');
+      }
+
+      try {
+          const user = await client.users.fetch(targetId);
+          if (!user) return message.reply('❌ لم يتم العثور على أي حساب بهذا الـ ID.');
+
+          const embed = new EmbedBuilder()
+              .setColor('#3498DB')
+              .setTitle(`🔍 نتيجة البحث عن المستخدم`)
+              .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+              .addFields(
+                  { name: '👤 اسم المستخدم', value: `\`${user.tag || user.username}\``, inline: true },
+                  { name: '🆔 الـ ID', value: `\`${user.id}\``, inline: true },
+                  { name: '🤖 هل هو بوت؟', value: user.bot ? 'نعم 🤖' : 'لا 👤', inline: true }
+              )
+              .setTimestamp();
+
+          return message.channel.send({ embeds: [embed] });
+      } catch (err) {
+          return message.reply('❌ حدث خطأ، إما أن الـ ID غير صحيح أو أن الحساب غير موجود / محذوف.');
+      }
+  }
+
   // --- أمر الصيانة الشامل ---
   if (message.content === '!صيانه' || message.content === '!صيانة') {
       if (message.channel.id !== adminSurveyChannel) return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة فقط!');
