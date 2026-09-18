@@ -701,7 +701,7 @@ function startButtonGame(channel, guildId) {
     });
 }
 
-// === نظام حالات البوت المتحركة (أضيفت هنا) ===
+// === نظام حالات البوت المتحركة (محدثة باللغة الإنجليزية وعدّاد الـ 6 رومات المخصصة) ===
 client.once('clientReady', () => {
     console.log(`[BOT STATUS] Camora Zone is Online & Secured with MongoDB Atlas! 🚀`);
 
@@ -709,15 +709,19 @@ client.once('clientReady', () => {
     setInterval(() => {
         const guildCount = client.guilds.cache.size;
         
-        let totalChannelsCount = 0;
-        client.guilds.cache.forEach(guild => {
-            totalChannelsCount += guild.channels.cache.size;
-        });
+        // حساب الرومات الـ 6 المخصصة فقط بناءً على الأيدي المعرفة في البوت
+        const specificChannels = [
+            ...allowedChannels,
+            ...allowedEconomyChannels,
+            ...allowedStockChannels,
+            adminSurveyChannel
+        ];
+        const uniqueChannelsCount = [...new Set(specificChannels)].length;
 
         const activities = [
-            { name: `في ${guildCount} سيرفر 🎮`, type: ActivityType.Playing },
+            { name: `in ${guildCount} servers 🎮`, type: ActivityType.Playing },
             { name: `ألعاب وقوائم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🎲`, type: ActivityType.Watching },
-            { name: `شغال في ${totalChannelsCount} روم 📡`, type: ActivityType.Watching },
+            { name: `Active in ${uniqueChannelsCount} channels 📡`, type: ActivityType.Watching },
             { name: `اكتب !العاب للبدء 🔥`, type: ActivityType.Listening }
         ];
 
@@ -735,11 +739,10 @@ client.once('clientReady', () => {
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
   
-  // دعم الأوامر في الخاص عن طريق إعطائه هوية افتراضية DM_CHANNEL
   const guildId = message.guild?.id || 'DM_CHANNEL';
   const userId = message.author.id;
 
-  if (message.channel.type !== 1) { // 1 = Direct Message
+  if (message.channel.type !== 1) { 
       lastActivityTime.set(message.channel.id, Date.now());
   }
 
@@ -757,7 +760,7 @@ client.on('messageCreate', async message => {
       return;
   }
 
-  // --- أمر البحث عن عضو بواسطة الـ ID (مخصص لروم الإدارة فقط) ---
+  // --- أمر البحث عن عضو بواسطة الـ ID ---
   if (message.content.startsWith('!بحث-ايدي ')) {
       if (message.channel.id !== adminSurveyChannel) {
           return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة فقط!');
@@ -862,7 +865,7 @@ client.on('messageCreate', async message => {
       } catch (err) { console.error(err); return message.channel.send('❌ حدث خطأ.'); }
   }
 
-  // --- أمر تجربة الاستبيان على نفسك وحدك ---
+  // --- أمر تجربة الاستبيان على نفسك ---
   if (message.content === '!تجربة-استبيان') {
       if (message.channel.id !== adminSurveyChannel) {
           return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
@@ -897,7 +900,7 @@ client.on('messageCreate', async message => {
       }
   }
     
-  // --- إعلان استطلاع الرأي الشامل (معدل ليجلب كل الأعضاء ويتخطى الـ 69) ---
+  // --- إعلان استطلاع الرأي الشامل (يجلب كل الأعضاء ويتخطى الـ 69) ---
   if (message.content === '!ارسل-استبيان') {
       if (message.channel.id !== adminSurveyChannel) {
           return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
@@ -924,22 +927,17 @@ client.on('messageCreate', async message => {
               new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
           );
 
-          // إجبار ديسكورد على جلب جميع أعضاء السيرفر وتخزينهم
           await message.guild.members.fetch({ force: true });
           let sentCount = 0;
 
-          // تشغيل العملية في الخلفية بانتظام لتجنب حظر ديسكورد (Rate Limit)
           (async () => {
               for (const member of message.guild.members.cache.values()) {
-                  if (member.user.bot) continue; // يتخطى البوتات
+                  if (member.user.bot) continue; 
                   try {
                       await member.send({ embeds: [embed], components: [row] });
                       sentCount++;
-                      // تأخير زمني 2.5 ثانية بين كل رسالة والثانية
                       await new Promise(resolve => setTimeout(resolve, 2500)); 
-                  } catch (e) {
-                      // يتخطى العضو إذا كان مقفل الخاص
-                  }
+                  } catch (e) {}
               }
               await statusMsg.edit(`✅ **تم الانتهاء!** تم إرسال إعلان الاستبيان على الخاص لـ **${sentCount}** عضو في السيرفر بنجاح! 🚀`).catch(()=>{});
           })();
@@ -951,7 +949,7 @@ client.on('messageCreate', async message => {
       }
   }
     
-  // --- أمر عرض نتائج الاستبيان المطور لحساب كافة الاختيارات ---
+  // --- أمر عرض نتائج الاستبيان ---
   if (message.content === '!نتائج-الاستبيان' || message.content === '!الاستبيان') {
       if (message.channel.id !== adminSurveyChannel) {
           return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
@@ -2064,7 +2062,6 @@ client.on('interactionCreate', async interaction => {
         const qId = interaction.customId;
         const val = interaction.values[0];
 
-        // حفظ إجابة السؤال في قاعدة البيانات فوراً
         await surveyColl.updateOne(
             { userId }, 
             { $set: { [qId]: val, date: Date.now() } }, 
