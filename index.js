@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType } = require('discord.js');
 const { GoogleGenAI } = require('@google/genai');
 const { MongoClient } = require('mongodb');
 
@@ -701,9 +701,35 @@ function startButtonGame(channel, guildId) {
     });
 }
 
+// === نظام حالات البوت المتحركة (أضيفت هنا) ===
 client.once('clientReady', () => {
-  console.log(`[BOT STATUS] Camora Zone is Online & Secured with MongoDB Atlas! 🚀`);
-  client.user.setActivity('𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞', { type: ActivityType.Playing });
+    console.log(`[BOT STATUS] Camora Zone is Online & Secured with MongoDB Atlas! 🚀`);
+
+    let activityIndex = 0;
+    setInterval(() => {
+        const guildCount = client.guilds.cache.size;
+        
+        let totalChannelsCount = 0;
+        client.guilds.cache.forEach(guild => {
+            totalChannelsCount += guild.channels.cache.size;
+        });
+
+        const activities = [
+            { name: `في ${guildCount} سيرفر 🎮`, type: ActivityType.Playing },
+            { name: `ألعاب وقوائم 𝐂𝐚𝐦𝐨𝐫𝐚 𝐙𝐨𝐧𝐞 🎲`, type: ActivityType.Watching },
+            { name: `شغال في ${totalChannelsCount} روم 📡`, type: ActivityType.Watching },
+            { name: `اكتب !العاب للبدء 🔥`, type: ActivityType.Listening }
+        ];
+
+        const currentActivity = activities[activityIndex];
+        
+        client.user.setPresence({
+            activities: [currentActivity],
+            status: 'online',
+        });
+
+        activityIndex = (activityIndex + 1) % activities.length;
+    }, 10000); // تتغير كل 10 ثوانٍ
 });
 
 client.on('messageCreate', async message => {
@@ -871,7 +897,7 @@ client.on('messageCreate', async message => {
       }
   }
     
-// --- إعلان استطلاع الرأي الشامل (لكل الأعضاء مع تخطي حماية ديسكورد) ---
+  // --- إعلان استطلاع الرأي الشامل (معدل ليجلب كل الأعضاء ويتخطى الـ 69) ---
   if (message.content === '!ارسل-استبيان') {
       if (message.channel.id !== adminSurveyChannel) {
           return message.reply('❌ هذا الأمر مخصص للاستخدام في روم الإدارة الخاص بك فقط!');
@@ -880,7 +906,7 @@ client.on('messageCreate', async message => {
       try {
           await message.delete().catch(() => {});
 
-          const statusMsg = await message.channel.send('⏳ **جاري إرسال إعلان الاستبيان على الخاص للأعضاء بالخلفية... (العملية هادئة لتجنب حظر ديسكورد)**');
+          const statusMsg = await message.channel.send('⏳ **جاري جلب أعضاء السيرفر وإرسال الاستبيان... (الرجاء الانتظار)**');
 
           const embed = new EmbedBuilder()
               .setColor('#5865F2')
@@ -898,7 +924,8 @@ client.on('messageCreate', async message => {
               new ButtonBuilder().setCustomId('start_survey_btn').setLabel('🚀 شارك في الاستبيان الآن').setStyle(ButtonStyle.Success)
           );
 
-          await message.guild.members.fetch();
+          // إجبار ديسكورد على جلب جميع أعضاء السيرفر وتخزينهم
+          await message.guild.members.fetch({ force: true });
           let sentCount = 0;
 
           // تشغيل العملية في الخلفية بانتظام لتجنب حظر ديسكورد (Rate Limit)
@@ -983,7 +1010,7 @@ client.on('messageCreate', async message => {
 
           stockMarket.forEach(s => {
               embed.addFields({
-                  name: `${s.emoji} ${s.name} (\`${s.id}\`) ${s.trend}`,
+                  name: `${s.emoji}${s.name} (\`${s.id}\`) ${s.trend}`,
                   value: `💵 السعر الحالي: \`$${s.price.toLocaleString()}\``,
                   inline: true
               });
@@ -1035,7 +1062,7 @@ client.on('messageCreate', async message => {
           const newCorp = { guildId, name: corpName, logo: corpTag, ownerId: userId, members: [userId], capital: creationCost, assets: [], createdAt: Date.now() };
           await guildsColl.insertOne(newCorp);
 
-          return message.channel.send({ content: `🏢 **مبروك!** تم تأسيس شركة **${corpTag} ${corpName}** بنجاح! 🚀` });
+          return message.channel.send({ content: `🏢 **مبروك!** تم تأسيس شركة **${corpTag}${corpName}** بنجاح! 🚀` });
       }
 
       if (message.content === '!شركة' || message.content === '!شركتي') {
@@ -1044,7 +1071,7 @@ client.on('messageCreate', async message => {
 
           const embed = new EmbedBuilder()
               .setColor('#f1c40f')
-              .setTitle(`🏢 إدارة شركة: ${corp.logo} ${corp.name}`)
+              .setTitle(`🏢 إدارة شركة: ${corp.logo}${corp.name}`)
               .setDescription('مرحباً بك في لوحة تحكم شركتك التجارية. استخدم الأزرار أدناه لإدارة الهيئة:')
               .addFields(
                   { name: '👑 المؤسس', value: `<@${corp.ownerId}>`, inline: true },
@@ -1084,7 +1111,7 @@ client.on('messageCreate', async message => {
 
           corpAssetsMarket.forEach(asset => {
               embed.addFields({
-                  name: `${asset.emoji} ${asset.name}`,
+                  name: `${asset.emoji}${asset.name}`,
                   value: `💵 التكلفة: \`$${asset.price.toLocaleString()}\` | 📈 الربح الساعي: \`$${asset.profit.toLocaleString()}\``,
                   inline: false
               });
@@ -1144,7 +1171,7 @@ client.on('messageCreate', async message => {
           if (existing) return message.reply('❌ اسم الشركة الجديد مستخدم مسبقاً!');
 
           await guildsColl.updateOne({ _id: corp._id }, { $set: { name: newName } });
-          return message.reply(`✅ **تم تعديل اسم الشركة بنجاح إلى:** **${corp.logo} ${newName}** 🏢✨`);
+          return message.reply(`✅ **تم تعديل اسم الشركة بنجاح إلى:** **${corp.logo}${newName}** 🏢✨`);
       }
 
       if (message.content === '!ترتيب-الشركات') {
@@ -1259,7 +1286,7 @@ client.on('messageCreate', async message => {
 
       if (message.content === '!بنك' || message.content === '!ابنك') {
           const user = await getEconomyUser(guildId, userId);
-          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** | القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **${user.guard && user.guardShields > 0 ? `🛡️ مفعل (${user.guardShields} صدات)` : '❌'}** | وظيفتك: **${user.job}**`);
+          return message.reply(`💳 رصيدك: **$${user.balance.toLocaleString()}** \vert{} القرض: **$${(user.loan || 0).toLocaleString()}** | الحارس: **${user.guard && user.guardShields > 0 ? `🛡️ مفعل (${user.guardShields} صدات)` : '❌'}** | وظيفتك: **${user.job}**`);
       }
 
       if (message.content === '!راتب' || message.content === 'راتب') {
@@ -1325,7 +1352,7 @@ client.on('messageCreate', async message => {
                   { name: '💳 الرصيد المالي', value: `\`$${ecoData.balance.toLocaleString()}\``, inline: true },
                   { name: '👔 الوظيفة الحالية', value: `\`${ecoData.job}\``, inline: true },
                   { name: '⭐ رصيد النقاط', value: `\`${~~ptsData.points} نقطة\``, inline: true },
-                  { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} / ${xpNeeded})`, inline: false },
+                  { name: '🚀 المستوى (Level)', value: `\`Level ${ptsData.level}\` (XP: ${ptsData.xp} /${xpNeeded})`, inline: false },
                   { name: '🏠 عدد العقارات والأملاك', value: `\`${ecoData.properties.length} عقار\``, inline: true },
                   { name: '🔥 عدد الرسائل والتفاعل', value: `\`${ptsData.messagesCount} رسالة\``, inline: true }
               )
@@ -1374,7 +1401,7 @@ client.on('messageCreate', async message => {
           const sortedMarket = [...marketItems].sort((a, b) => a.price - b.price);
 
           sortedMarket.forEach(i => embed.addFields({ 
-              name: `${i.emoji} ${i.name} ${i.trend}`, 
+              name: `${i.emoji} ${i.name}${i.trend}`, 
               value: `💰 السعر: \`$${i.price.toLocaleString()}\` | 💸 ربح: \`$${i.profit.toLocaleString()}\``, 
               inline: true 
           }));
@@ -1446,7 +1473,7 @@ client.on('messageCreate', async message => {
               pageItems.forEach((item, idx) => {
                   const globalIdx = start + idx + 1;
                   embed.addFields({
-                      name: `${globalIdx}. ${item.emoji} ${item.name} ${item.count > 1 ? `(العدد: x${item.count})` : ''}`,
+                      name: `${globalIdx}.${item.emoji} ${item.name}${item.count > 1 ? `(العدد: x${item.count})` : ''}`,
                       value: `💰 القيمة: \`$${item.totalPrice.toLocaleString()}\` | 💸 الربح: \`$${item.totalProfit.toLocaleString()}\``,
                       inline: false
                   });
@@ -1746,7 +1773,7 @@ client.on('interactionCreate', async interaction => {
                 if (stock && qty > 0) {
                     const val = stock.price * qty;
                     totalVal += val;
-                    text += `• ${stock.emoji} ${stock.name}: \`x${qty}\` (القيمة: $\`${val.toLocaleString()}\`)\n`;
+                    text += `• ${stock.emoji}${stock.name}: \`x${qty}\` (القيمة: $\`${val.toLocaleString()}\`)\n`;
                 }
             }
             text += `\n💎 **إجمالي المحفظة:** $\`${totalVal.toLocaleString()}\``;
@@ -2010,8 +2037,7 @@ client.on('interactionCreate', async interaction => {
         await guildsColl.updateOne(
             { _id: corp._id },
             { 
-                $inc: { capital: -assetItem.price },
-                $push: { assets: assetId }
+                $inc: { capital: -assetItem.price },$push: { assets: assetId }
             }
         );
 
